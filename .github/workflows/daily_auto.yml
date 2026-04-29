@@ -14,9 +14,12 @@ on:
         default: "both"
 
 env:
-  KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
-  KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
-  KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+  KIS_MOCK_APP_KEY: ${{ secrets.KIS_MOCK_APP_KEY }}
+  KIS_MOCK_APP_SECRET: ${{ secrets.KIS_MOCK_APP_SECRET }}
+  KIS_MOCK_ACCOUNT_NO: ${{ secrets.KIS_MOCK_ACCOUNT_NO }}
+  KIS_REAL_APP_KEY: ${{ secrets.KIS_REAL_APP_KEY }}
+  KIS_REAL_APP_SECRET: ${{ secrets.KIS_REAL_APP_SECRET }}
+  KIS_REAL_ACCOUNT_NO: ${{ secrets.KIS_REAL_ACCOUNT_NO }}
   KIS_IS_MOCK: ${{ secrets.KIS_IS_MOCK }}
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
