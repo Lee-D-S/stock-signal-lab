@@ -1,0 +1,2 @@
+﻿ticker,name,status,error
+006360,GS건설,error,ConnectError('All connection attempts failed')

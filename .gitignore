@@ -1,0 +1,16 @@
+.env
+.mcp.json
+.claude/
+.token_cache.json
+.token_cache_real.json
+auto_invest.db
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+data/
+data/ohlcv_cache/
+data/dart_fundamental_cache/
+data/gemini_external_cache.json
+data/reports/

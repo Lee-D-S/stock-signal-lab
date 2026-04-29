@@ -1,0 +1,25 @@
+﻿condition,horizon,variant,description,is_current,horizon_mismatch,train_n,train_ic,train_mean_ret,train_win_rate,train_pf,val_n,val_ic,val_mean_ret,val_win_rate,val_pf,verdict
+per_low,long,per_low_10,0 < PER ≤ 10,False,True,0,,,,,0,,,,,- (데이터없음)
+per_low,long,per_low_15,0 < PER ≤ 15,True,True,0,,,,,0,,,,,- (데이터없음)
+per_low,long,per_low_20,0 < PER ≤ 20,False,True,0,,,,,0,,,,,- (데이터없음)
+per_low,long,per_low_25,0 < PER ≤ 25,False,True,0,,,,,0,,,,,- (데이터없음)
+pbr_low,long,pbr_low_1_0,0 < PBR ≤ 1.0,False,True,0,,,,,0,,,,,- (데이터없음)
+pbr_low,long,pbr_low_1_5,0 < PBR ≤ 1.5,True,True,0,,,,,0,,,,,- (데이터없음)
+pbr_low,long,pbr_low_2_0,0 < PBR ≤ 2.0,False,True,0,,,,,0,,,,,- (데이터없음)
+pbr_low,long,pbr_low_3_0,0 < PBR ≤ 3.0,False,True,0,,,,,0,,,,,- (데이터없음)
+roe_good,long,roe_good_5,ROE ≥ 5%,False,True,0,,,,,0,,,,,- (n:0/0)
+roe_good,long,roe_good_10,ROE ≥ 10%,True,True,0,,,,,0,,,,,- (n:0/0)
+roe_good,long,roe_good_15,ROE ≥ 15%,False,True,0,,,,,0,,,,,- (n:0/0)
+roe_good,long,roe_good_20,ROE ≥ 20%,False,True,0,,,,,0,,,,,- (n:0/0)
+debt_low,long,debt_low_80,부채비율 ≤ 80%,False,True,1114,-0.0226,3.91,49.9,1.77,1021,-0.0969,1.15,44.4,1.17,DROP
+debt_low,long,debt_low_100,부채비율 ≤ 100%,True,True,1378,-0.031,3.48,50.1,1.7,1341,-0.0293,3.29,47.9,1.54,DROP
+debt_low,long,debt_low_150,부채비율 ≤ 150%,False,True,1742,-0.0164,3.79,51.0,1.78,1657,-0.1126,2.78,45.7,1.44,DROP
+debt_low,long,debt_low_200,부채비율 ≤ 200%,False,True,2035,-0.046,3.38,51.1,1.69,1981,-0.0769,3.2,47.5,1.55,DROP
+roa_good,long,roa_good_3,ROA ≥ 3%,False,True,0,,,,,0,,,,,- (n:0/0)
+roa_good,long,roa_good_5,ROA ≥ 5%,True,True,0,,,,,0,,,,,- (n:0/0)
+roa_good,long,roa_good_7,ROA ≥ 7%,False,True,0,,,,,0,,,,,- (n:0/0)
+roa_good,long,roa_good_10,ROA ≥ 10%,False,True,0,,,,,0,,,,,- (n:0/0)
+op_margin_good,long,op_margin_3,영업이익률 ≥ 3%,False,True,1857,0.0214,3.35,53.4,1.73,1645,0.0221,4.01,50.0,1.75,CHECK
+op_margin_good,long,op_margin_5,영업이익률 ≥ 5%,True,True,1407,-0.0281,2.59,51.8,1.53,1402,0.0462,4.27,51.4,1.78,CHECK
+op_margin_good,long,op_margin_8,영업이익률 ≥ 8%,False,True,650,-0.0127,1.81,53.8,1.36,818,0.0057,3.67,50.5,1.7,CHECK
+op_margin_good,long,op_margin_10,영업이익률 ≥ 10%,False,True,557,-0.0114,1.76,54.0,1.37,635,0.0321,5.12,52.9,1.98,CHECK

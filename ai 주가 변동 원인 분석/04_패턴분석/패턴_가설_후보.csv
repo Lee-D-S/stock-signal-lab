@@ -1,0 +1,7 @@
+﻿scope,market_regime,direction,amount_tag,flow_category,dart_tag,window_category,event_count,usable_event_count,company_count,dominant_followup,dominant_count,dominant_rate,external_review_count,leading_signal_count,hypothesis_pass,leading_share
+국면별,변동성 장세,up,거래대금약함,외국인기관동반매수,DART공시동반,직접반응,14,14,10,상승지속,11,0.7857142857142857,0,14,True,1.0
+국면별,변동성 장세,down,거래대금약함,외국인기관동반매수,DART공시동반,직접반응,13,13,11,하락후반등,10,0.7692307692307693,13,13,True,1.0
+국면별,AI/전력기기 테마장,down,거래대금평균상회,수급엇갈림,주변공시부재,누적배경,13,12,10,하락후반등,9,0.75,5,13,True,1.0
+국면별,유동성/저금리 후반장,up,거래대금급증,외국인기관동반매도,DART공시동반,직접반응,12,12,8,상승실패,9,0.75,12,12,True,1.0
+국면별,금리 인상/긴축장,down,거래대금평균상회,수급엇갈림,주변공시부재,선반영,14,13,9,하락후반등,9,0.6923076923076923,6,14,True,1.0
+국면별,반도체 반등장,up,거래대금급증,외국인기관동반매도,DART공시동반,직접반응,20,20,11,상승실패,13,0.65,20,20,True,1.0

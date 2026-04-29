@@ -1,0 +1,19 @@
+﻿condition,horizon,variant,description,is_current,horizon_mismatch,train_n,train_ic,train_mean_ret,train_win_rate,train_pf,val_n,val_ic,val_mean_ret,val_win_rate,val_pf,verdict
+rsi_low,short,rsi_low_40,RSI ≤ 40,False,False,557,0.0462,5.2,60.5,2.31,596,0.0556,2.56,54.0,1.56,KEEP
+rsi_low,short,rsi_low_45,RSI ≤ 45,False,False,954,-0.0004,3.66,55.2,1.75,933,0.0187,1.93,49.7,1.38,DROP
+rsi_low,short,rsi_low_50,RSI ≤ 50,True,False,1367,0.0024,3.97,54.9,1.79,1325,-0.0132,2.15,47.8,1.4,DROP
+rsi_low,short,rsi_low_55,RSI ≤ 55,False,False,1808,0.0096,4.57,54.8,1.92,1693,-0.0347,2.16,48.0,1.39,DROP
+rsi_low,short,rsi_low_60,RSI ≤ 60,False,False,2197,0.0114,5.07,54.3,2.02,2006,-0.0608,2.28,47.5,1.4,DROP
+stoch_low,short,stoch_low_30,Stoch K ≤ 30,False,False,974,-0.0067,3.92,54.6,1.78,924,0.0133,2.62,49.8,1.47,DROP
+stoch_low,short,stoch_low_40,Stoch K ≤ 40,False,False,1245,-0.0259,3.97,52.9,1.77,1159,-0.0258,1.96,47.5,1.34,DROP
+stoch_low,short,stoch_low_50,Stoch K ≤ 50,True,False,1522,-0.0353,4.03,53.0,1.75,1388,-0.0462,1.98,47.0,1.33,DROP
+stoch_low,short,stoch_low_60,Stoch K ≤ 60,False,False,1836,-0.0151,4.6,53.9,1.89,1624,-0.0573,2.41,46.7,1.4,DROP
+vol_surge,short,vol_surge_1_2,Vol > 1.2× MA20,False,False,681,-0.0098,5.13,52.9,1.91,593,0.0215,5.79,49.2,2.09,DROP
+vol_surge,short,vol_surge_1_5,Vol > 1.5× MA20,True,False,384,-0.0015,5.56,54.2,2.02,356,-0.0013,5.71,47.2,1.98,DROP
+vol_surge,short,vol_surge_2_0,Vol > 2.0× MA20,False,False,189,0.0031,5.73,55.6,1.99,190,-0.0221,6.87,42.6,2.05,DROP
+vol_surge,short,vol_surge_3_0,Vol > 3.0× MA20,False,False,73,0.0136,8.26,58.9,2.22,81,-0.0289,9.16,39.5,2.21,DROP
+macd_positive,short,macd_positive_true,MACD hist > 0,True,False,1457,0.0342,6.44,54.2,2.42,1352,0.0012,4.44,47.6,1.81,CHECK
+macd_rising,short,macd_rising_true,MACD hist rising,True,False,1450,-0.0026,5.35,53.9,2.05,1265,-0.032,2.97,46.1,1.5,DROP
+obv_rising,short,obv_rising_true,OBV MA5 > MA20,True,False,1698,0.0414,7.6,53.7,2.59,1524,-0.0038,4.28,48.6,1.74,DROP
+bb_breakout,short,bb_breakout_true,Close > BB upper,True,False,185,0.0146,12.49,53.0,3.5,138,-0.0116,8.92,42.8,2.44,DROP
+fib_support,short,fib_support_true,Fib support ±2%,True,False,1431,-0.0703,3.85,50.0,1.64,1302,0.0026,3.92,49.0,1.69,DROP

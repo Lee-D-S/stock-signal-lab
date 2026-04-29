@@ -1,0 +1,77 @@
+name: 일별 자동 루틴
+
+on:
+  schedule:
+    # 평일 08:50 KST = 23:50 UTC (전날 일~목)
+    - cron: "50 23 * * 0-4"
+    # 평일 15:42 KST = 06:42 UTC (월~금)
+    - cron: "42 6 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "실행할 작업 (morning / afternoon / both)"
+        required: true
+        default: "both"
+
+env:
+  KIS_APP_KEY: ${{ secrets.KIS_APP_KEY }}
+  KIS_APP_SECRET: ${{ secrets.KIS_APP_SECRET }}
+  KIS_ACCOUNT_NO: ${{ secrets.KIS_ACCOUNT_NO }}
+  KIS_IS_MOCK: ${{ secrets.KIS_IS_MOCK }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  DART_API_KEY: ${{ secrets.DART_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  DASHBOARD_PORT: "8000"
+
+jobs:
+  morning-dart-check:
+    name: 오전 DART 공시 확인 (08:50 KST)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'morning' || github.event.inputs.job == 'both') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '50 23')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: DART 공시 확인 실행
+        run: python -u scripts/auto_morning_dart_check.py
+
+  afternoon-pipeline:
+    name: 오후 신호 생성 + 수급 재조회 (15:42 KST)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'afternoon' || github.event.inputs.job == 'both') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '42 6')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: 신호 생성
+        run: python -u scripts/run_signal_research_pipeline.py --mode daily
+
+      - name: 수급 재조회
+        run: python -u scripts/run_signal_research_pipeline.py --mode daily --recheck
+
+      - name: 결과 커밋 및 푸시
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "ai 주가 변동 원인 분석/"
+          git diff --cached --quiet && echo "변경 없음" || git commit -m "auto: 일별 신호 업데이트 $(date '+%Y-%m-%d')"
+          git push
