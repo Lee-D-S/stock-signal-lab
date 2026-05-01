@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,7 @@ GAP_CSV = BACKTEST_DIR / "가설_백테스트_갭_분류.csv"
 GAP_MD = BACKTEST_DIR / "가설_백테스트_갭_분류.md"
 STRATEGY_CSV = STRATEGY_DIR / "전략_조건_초안.csv"
 STRATEGY_MD = STRATEGY_DIR / "전략_조건_초안.md"
+SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
 
 KEEP_HYPOTHESES = ["H02", "H01", "H03", "H06", "H04"]
 
@@ -286,7 +289,25 @@ def build_strategy_markdown(draft: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="백테스트 갭 분류 및 조건 초안 스냅샷 생성")
+    parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="스냅샷 기준일 YYYY-MM-DD")
+    parser.add_argument(
+        "--promote-strategy",
+        action="store_true",
+        help="생성한 조건 초안을 active 전략_조건_초안.csv/md로 승격",
+    )
+    return parser.parse_args()
+
+
+def snapshot_paths(snapshot_date: str) -> tuple[Path, Path]:
+    out_dir = SNAPSHOT_DIR / snapshot_date
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / "전략_조건_초안.csv", out_dir / "전략_조건_초안.md"
+
+
 def main() -> None:
+    args = parse_args()
     trades = pd.read_csv(TRADES_CSV, encoding="utf-8-sig", dtype={"ticker": str})
     gaps = trades[trades["skip_reason"] == "event_date_not_in_cache"].copy()
     if not gaps.empty:
@@ -297,16 +318,23 @@ def main() -> None:
     GAP_MD.write_text(build_gap_report(gaps), encoding="utf-8")
 
     draft, draft_md = build_strategy_draft()
-    draft.to_csv(STRATEGY_CSV, index=False, encoding="utf-8-sig")
-    STRATEGY_MD.write_text(draft_md, encoding="utf-8")
+    snapshot_csv, snapshot_md = snapshot_paths(args.snapshot_date)
+    draft.to_csv(snapshot_csv, index=False, encoding="utf-8-sig")
+    snapshot_md.write_text(draft_md, encoding="utf-8")
+    if args.promote_strategy:
+        draft.to_csv(STRATEGY_CSV, index=False, encoding="utf-8-sig")
+        STRATEGY_MD.write_text(draft_md, encoding="utf-8")
 
     print(f"gaps={len(gaps)}")
     if not gaps.empty:
         print(gaps["gap_type"].value_counts().to_string())
     print(f"gap_csv={GAP_CSV}")
     print(f"gap_md={GAP_MD}")
-    print(f"strategy_csv={STRATEGY_CSV}")
-    print(f"strategy_md={STRATEGY_MD}")
+    print(f"strategy_snapshot_csv={snapshot_csv}")
+    print(f"strategy_snapshot_md={snapshot_md}")
+    if args.promote_strategy:
+        print(f"promoted_strategy_csv={STRATEGY_CSV}")
+        print(f"promoted_strategy_md={STRATEGY_MD}")
 
 
 if __name__ == "__main__":

@@ -1,2 +1,3 @@
 ﻿ticker,name,status,error
-006360,GS건설,error,ConnectError('All connection attempts failed')
+009150,삼성전기,error,ConnectError('All connection attempts failed')
+086520,에코프로,error,ConnectError('All connection attempts failed')

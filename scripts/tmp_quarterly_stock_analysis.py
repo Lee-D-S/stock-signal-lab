@@ -207,6 +207,32 @@ async def fetch_price_snapshot(ticker: str) -> dict[str, Any]:
     return data.get("output", {}) or {}
 
 
+async def fetch_stock_info(ticker: str) -> dict[str, Any]:
+    data = await get_marketdata(
+        "/uapi/domestic-stock/v1/quotations/search-stock-info",
+        params={"PRDT_TYPE_CD": "300", "PDNO": ticker},
+        tr_id="CTPF1002R",
+    )
+    return data.get("output", {}) or {}
+
+
+def listing_date_from_stock_info(stock_info: dict[str, Any]) -> pd.Timestamp | None:
+    date_values = [
+        stock_info.get("scts_mket_lstg_dt"),
+        stock_info.get("kosdaq_mket_lstg_dt"),
+        stock_info.get("frbd_mket_lstg_dt"),
+    ]
+    dates = [
+        pd.to_datetime(value, format="%Y%m%d", errors="coerce")
+        for value in date_values
+        if value
+    ]
+    valid_dates = [date for date in dates if pd.notna(date)]
+    if not valid_dates:
+        return None
+    return min(valid_dates)
+
+
 async def fetch_short_sale(ticker: str, start: str, end: str) -> pd.DataFrame:
     try:
         data = await get_marketdata(
@@ -1231,8 +1257,22 @@ async def make_report(
     return "\n".join(lines), event_records
 
 
-async def build_period(ticker: str, name: str, code: str, title: str, start: str, end: str, corp_code: str, financials: dict[str, dict[str, Any]], snapshot: dict[str, Any]) -> Path:
+async def build_period(
+    ticker: str,
+    name: str,
+    code: str,
+    title: str,
+    start: str,
+    end: str,
+    corp_code: str,
+    financials: dict[str, dict[str, Any]],
+    snapshot: dict[str, Any],
+    listing_date: pd.Timestamp | None = None,
+) -> Path | None:
     print(f"{name} {title} 수집 중: {start}~{end}")
+    if listing_date is not None and pd.Timestamp(end) < listing_date:
+        print(f"  skip: {name} {code} pre_listing(listing_date={listing_date.date()})")
+        return None
     lookback_start = (pd.Timestamp(start) - pd.DateOffset(months=6) - pd.Timedelta(days=7)).strftime("%Y-%m-%d")
     ohlcv, investor, short_df, disclosures, structured = await asyncio.gather(
         fetch_ohlcv(ticker, lookback_start, end),
@@ -1241,6 +1281,9 @@ async def build_period(ticker: str, name: str, code: str, title: str, start: str
         fetch_dart_disclosures(corp_code, lookback_start, end),
         fetch_dart_structured(corp_code, start, end),
     )
+    if ohlcv.empty:
+        print(f"  skip: {name} {code} OHLCV 없음(listing_unverified_or_data_unavailable)")
+        return None
     md, event_records = await make_report(ticker, name, code, title, start, end, ohlcv, investor, short_df, snapshot, disclosures, financials, structured)
     company_dir = OUT_DIR / name
     company_dir.mkdir(parents=True, exist_ok=True)
@@ -1265,10 +1308,14 @@ async def main() -> None:
     corp_map = await get_corp_code_map()
     corp_code = corp_map[args.ticker]
     print(f"{args.name} corp_code={corp_code}")
-    financials, snapshot = await asyncio.gather(fetch_financials(corp_code), fetch_price_snapshot(args.ticker))
+    financials, snapshot, stock_info = await asyncio.gather(fetch_financials(corp_code), fetch_price_snapshot(args.ticker), fetch_stock_info(args.ticker))
+    listing_date = listing_date_from_stock_info(stock_info)
+    print(f"listing_date={listing_date.date() if listing_date is not None else 'N/A'}")
     paths = []
     for code, title, start, end in PERIODS:
-        paths.append(await build_period(args.ticker, args.name, code, title, start, end, corp_code, financials, snapshot))
+        path = await build_period(args.ticker, args.name, code, title, start, end, corp_code, financials, snapshot, listing_date)
+        if path is not None:
+            paths.append(path)
         await asyncio.sleep(0.5)
     print("생성 완료")
     for p in paths:

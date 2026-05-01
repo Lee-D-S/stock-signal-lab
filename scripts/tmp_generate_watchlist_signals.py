@@ -31,6 +31,7 @@ STRATEGY_CSV = STRATEGY_DIR / "전략_조건_초안.csv"
 WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
 WATCHLIST_MD = STRATEGY_DIR / "관심종목_시그널_후보.md"
 SCAN_CSV = STRATEGY_DIR / "관심종목_시그널_스캔.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
 
 COMPANIES = [
     ("005930", "삼성전자", None),
@@ -61,6 +62,22 @@ COMPANIES = [
     ("241520", "DSC인베스트먼트", None),
     ("490470", "세미파이브", None),
 ]
+
+
+def load_companies(universe_csv: Path | None = None) -> list[tuple[str, str, str | None]]:
+    path = universe_csv or UNIVERSE_CSV
+    if path.exists():
+        universe = pd.read_csv(path, encoding="utf-8-sig", dtype={"ticker": str})
+        if not universe.empty and {"ticker", "name"}.issubset(universe.columns):
+            rows = []
+            for _, row in universe.iterrows():
+                ticker = str(row["ticker"]).zfill(6)
+                name = str(row["name"]).strip()
+                if ticker and name:
+                    rows.append((ticker, name, None))
+            if rows:
+                return rows
+    return COMPANIES
 
 
 def quarter_code_for_date(date: pd.Timestamp) -> str:
@@ -358,15 +375,18 @@ async def main() -> None:
     parser.add_argument("--date", help="YYYY-MM-DD. 생략하면 KIS가 반환하는 최신 거래일 기준")
     parser.add_argument("--lookback-days", type=int, default=220)
     parser.add_argument("--delay", type=float, default=0.35)
+    parser.add_argument("--universe-csv", type=Path, default=UNIVERSE_CSV, help="거래대금 상위 유니버스 CSV")
+    parser.add_argument("--strategy-csv", type=Path, default=STRATEGY_CSV, help="감시 조건 CSV. 기본값은 active 전략 조건")
     args = parser.parse_args()
 
     target_date = pd.Timestamp(args.date) if args.date else None
-    strategies = pd.read_csv(STRATEGY_CSV, encoding="utf-8-sig")
+    strategies = pd.read_csv(args.strategy_csv, encoding="utf-8-sig")
     corp_map = await get_corp_code_map()
+    companies = load_companies(args.universe_csv)
 
     scan_rows = []
     errors = []
-    for ticker, name, corp_ticker in COMPANIES:
+    for ticker, name, corp_ticker in companies:
         result = await analyze_company(ticker, name, corp_ticker, corp_map, strategies, target_date, args.lookback_days)
         for row in result:
             if row.get("status") == "error":
@@ -388,6 +408,9 @@ async def main() -> None:
         error_path = STRATEGY_DIR / "관심종목_시그널_오류.csv"
         pd.DataFrame(errors).to_csv(error_path, index=False, encoding="utf-8-sig")
         print(f"errors={len(errors)} error_csv={error_path}")
+    print(f"universe_source={args.universe_csv if args.universe_csv.exists() else 'COMPANIES'}")
+    print(f"strategy_source={args.strategy_csv}")
+    print(f"universe_count={len(companies)}")
     print(f"candidates={len(df)}")
     print(f"scanned={len(scan_df)} scan_csv={SCAN_CSV}")
     print(f"watchlist_csv={WATCHLIST_CSV}")

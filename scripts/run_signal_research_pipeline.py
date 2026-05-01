@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 
@@ -17,6 +19,7 @@ REVIEW_DIR = BASE_DIR / "05_가설검토"
 BACKTEST_DIR = BASE_DIR / "06_백테스트"
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 OBS_DIR = BASE_DIR / "08_관찰기록"
+SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,29 @@ BACKTEST_STEPS = [
     Step("기본 실전 백테스트", "tmp_realistic_backtest_hypotheses.py", ("--entry-mode", "next_open", "--hold-days", "20")),
     Step("실전 백테스트 전체 조건 비교", "tmp_batch_realistic_backtest_hypotheses.py"),
     Step("잔여 갭 분류/전략 조건 초안", "tmp_classify_gaps_and_draft_strategy.py"),
+]
+
+SNAPSHOT_OUTPUTS = [
+    DATA_DIR / "이벤트.csv",
+    DATA_DIR / "이벤트_분포_요약.md",
+    PATTERN_DIR / "패턴_분석_전체.csv",
+    PATTERN_DIR / "패턴_분석_시장국면별.csv",
+    PATTERN_DIR / "패턴_분석_5축.csv",
+    PATTERN_DIR / "패턴_가설_후보.csv",
+    PATTERN_DIR / "패턴_분석_요약.md",
+    REVIEW_DIR / "가설_이벤트_검토.csv",
+    REVIEW_DIR / "가설_이벤트_요약.csv",
+    REVIEW_DIR / "가설_이벤트_검토.md",
+    BACKTEST_DIR / "가설_백테스트_입력값.csv",
+    BACKTEST_DIR / "가설_대리_백테스트.csv",
+    BACKTEST_DIR / "가설_대리_백테스트.md",
+    BACKTEST_DIR / "가설_실전_백테스트_거래.csv",
+    BACKTEST_DIR / "가설_실전_백테스트_요약.csv",
+    BACKTEST_DIR / "가설_실전_백테스트.md",
+    BACKTEST_DIR / "가설_실전_백테스트_전체_설정.csv",
+    BACKTEST_DIR / "가설_실전_백테스트_전체_설정.md",
+    BACKTEST_DIR / "가설_백테스트_갭_분류.csv",
+    BACKTEST_DIR / "가설_백테스트_갭_분류.md",
 ]
 
 
@@ -56,6 +82,15 @@ def run_step(step: Step, dry_run: bool = False) -> None:
 
 
 def run_daily(args: argparse.Namespace) -> None:
+    if args.refresh_universe:
+        universe_args: list[str] = ["--top", str(args.universe_top)]
+        if args.date:
+            universe_args.extend(["--date", args.date])
+        run_step(
+            Step("거래대금 상위 유니버스 갱신", "run_daily_universe_refresh.py", tuple(universe_args), network=True),
+            dry_run=args.dry_run,
+        )
+
     watch_args: list[str] = []
     if args.date:
         watch_args.extend(["--date", args.date])
@@ -72,11 +107,40 @@ def run_daily(args: argparse.Namespace) -> None:
             Step("일별 후보 수급 재조회", "tmp_recheck_watchlist_flows.py", ("--delay", str(args.delay)), network=True),
             dry_run=args.dry_run,
         )
+        if not args.skip_observation_update:
+            run_step(
+                Step("확정 후보 관찰 로그 추가", "run_observation_update.py"),
+                dry_run=args.dry_run,
+            )
 
 
 def run_backtest(args: argparse.Namespace) -> None:
     for step in BACKTEST_STEPS:
-        run_step(step, dry_run=args.dry_run)
+        if step.script == "tmp_classify_gaps_and_draft_strategy.py":
+            step_args = [*step.args, "--snapshot-date", args.snapshot_date]
+            if args.promote_strategy:
+                step_args.append("--promote-strategy")
+            run_step(Step(step.name, step.script, tuple(step_args), step.network), dry_run=args.dry_run)
+        else:
+            run_step(step, dry_run=args.dry_run)
+    snapshot_backtest_outputs(args.snapshot_date, dry_run=args.dry_run)
+
+
+def snapshot_backtest_outputs(snapshot_date: str, dry_run: bool = False) -> None:
+    out_dir = SNAPSHOT_DIR / snapshot_date
+    print("\n==> 백테스트 산출물 날짜 스냅샷")
+    print(f"    {out_dir}")
+    if dry_run:
+        return
+    out_dir.mkdir(parents=True, exist_ok=True)
+    copied = 0
+    for src in SNAPSHOT_OUTPUTS:
+        if not src.exists():
+            continue
+        dst = out_dir / src.name
+        shutil.copy2(src, dst)
+        copied += 1
+    print(f"snapshot_files={copied} snapshot_dir={out_dir}")
 
 
 def run_full(args: argparse.Namespace) -> None:
@@ -122,6 +186,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lookback-days", type=int, default=220)
     parser.add_argument("--delay", type=float, default=0.35)
     parser.add_argument("--recheck", action="store_true", help="daily 후 KIS 수급 재조회까지 실행")
+    parser.add_argument("--refresh-universe", action="store_true", help="daily 전에 거래대금 상위 유니버스를 갱신")
+    parser.add_argument("--universe-top", type=int, default=30, help="거래대금 상위 유니버스 종목 수")
+    parser.add_argument("--skip-observation-update", action="store_true", help="recheck 후 확정 후보 관찰 로그 자동 추가를 건너뜀")
+    parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="backtest 산출물 스냅샷 기준일 YYYY-MM-DD")
+    parser.add_argument("--promote-strategy", action="store_true", help="backtest로 만든 조건 초안을 active 전략 조건으로 승격")
     parser.add_argument("--include-reports", action="store_true", help="full 모드에서 분기 보고서 배치 생성까지 실행")
     parser.add_argument("--daily", action="store_true", help="full 모드 마지막에 일별 후보 산출까지 실행")
     parser.add_argument("--dry-run", action="store_true", help="실행할 단계만 출력하고 실제 실행하지 않음")
