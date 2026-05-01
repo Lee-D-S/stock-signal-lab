@@ -32,6 +32,10 @@ def _get_real_lock() -> asyncio.Lock:
     return _real_token_lock
 
 
+def _remaining_minutes(token: TokenInfo) -> int:
+    return max(0, int((token.expires_at - time.time()) // 60))
+
+
 def _load_from_file() -> TokenInfo | None:
     try:
         if not _TOKEN_CACHE_FILE.exists():
@@ -56,14 +60,16 @@ async def get_access_token() -> str:
     global _token_cache
 
     if _token_cache and time.time() < _token_cache.expires_at - 60:
+        logger.info("KIS 토큰 재사용: memory_cache (잔여 %d분)", _remaining_minutes(_token_cache))
         return _token_cache.access_token
 
     file_token = _load_from_file()
     if file_token:
         _token_cache = file_token
-        logger.debug("파일 캐시에서 토큰 로드")
+        logger.info("KIS 토큰 재사용: file_cache (잔여 %d분)", _remaining_minutes(_token_cache))
         return _token_cache.access_token
 
+    logger.info("KIS 토큰 신규 발급: file_cache 만료 또는 없음")
     return await _issue_token()
 
 
@@ -73,6 +79,7 @@ async def get_real_access_token() -> str:
 
     # 1. 메모리 캐시
     if _real_token_cache and time.time() < _real_token_cache.expires_at - 60:
+        logger.info("KIS 실전 토큰 재사용: memory_cache (잔여 %d분)", _remaining_minutes(_real_token_cache))
         return _real_token_cache.access_token
 
     # 2. 파일 캐시 (프로세스 재시작 후에도 재사용 → 1분 제한 방지)
@@ -82,7 +89,7 @@ async def get_real_access_token() -> str:
             token = TokenInfo(**saved)
             if time.time() < token.expires_at - 60:
                 _real_token_cache = token
-                logger.debug("실전 토큰 파일 캐시 로드")
+                logger.info("KIS 실전 토큰 재사용: file_cache (잔여 %d분)", _remaining_minutes(_real_token_cache))
                 return _real_token_cache.access_token
     except Exception:
         pass
@@ -91,6 +98,7 @@ async def get_real_access_token() -> str:
     async with _get_real_lock():
         # 락 획득 후 재확인
         if _real_token_cache and time.time() < _real_token_cache.expires_at - 60:
+            logger.info("KIS 실전 토큰 재사용: memory_cache_after_lock (잔여 %d분)", _remaining_minutes(_real_token_cache))
             return _real_token_cache.access_token
 
         url = "https://openapi.koreainvestment.com:9443/oauth2/tokenP"
@@ -117,7 +125,7 @@ async def get_real_access_token() -> str:
         except Exception as e:
             logger.warning("실전 토큰 파일 저장 실패: %s", e)
 
-        logger.info("실전 서버 토큰 발급 완료")
+        logger.info("KIS 실전 토큰 신규 발급 완료 (잔여 %d분)", _remaining_minutes(_real_token_cache))
         return _real_token_cache.access_token
 
 
@@ -144,5 +152,5 @@ async def _issue_token() -> str:
         expires_at=time.time() + expires_in,
     )
     _save_to_file(_token_cache)
-    logger.info("새 토큰 발급 완료")
+    logger.info("KIS 토큰 신규 발급 완료 (잔여 %d분)", _remaining_minutes(_token_cache))
     return access_token
