@@ -4,14 +4,25 @@ on:
   schedule:
     # 평일 08:50 KST = 23:50 UTC (전날 일~목)
     - cron: "50 23 * * 0-4"
-    # 평일 15:42 KST = 06:42 UTC (월~금)
-    - cron: "42 6 * * 1-5"
+    # 평일 16:10 KST = 07:10 UTC (월~금)
+    - cron: "10 7 * * 1-5"
   workflow_dispatch:
     inputs:
       job:
-        description: "실행할 작업 (morning / afternoon / both)"
+        description: "실행할 작업 (morning / daily / both)"
         required: true
         default: "both"
+      date:
+        description: "기준일 YYYY-MM-DD. 비우면 KIS 최신 거래일"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-auto-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   KIS_MOCK_APP_KEY: ${{ secrets.KIS_MOCK_APP_KEY }}
@@ -48,14 +59,16 @@ jobs:
       - name: DART 공시 확인 실행
         run: python -u scripts/auto_morning_dart_check.py
 
-  afternoon-pipeline:
-    name: 오후 신호 생성 + 수급 재조회 (15:42 KST)
+  daily-research-pipeline:
+    name: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'afternoon' || github.event.inputs.job == 'both') ||
-      github.event_name == 'schedule' && startsWith(github.event.schedule, '42 6')
+      github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'daily' || github.event.inputs.job == 'both') ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '10 7')
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -65,16 +78,34 @@ jobs:
       - name: 의존성 설치
         run: pip install -r requirements.txt
 
-      - name: 신호 생성
-        run: python -u scripts/run_signal_research_pipeline.py --mode daily
+      - name: 일별 후보 탐지 및 관찰 로그 추가
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python -u scripts/run_signal_research_pipeline.py --mode daily --date "${{ github.event.inputs.date }}" --refresh-universe --recheck
+          else
+            python -u scripts/run_signal_research_pipeline.py --mode daily --refresh-universe --recheck
+          fi
 
-      - name: 수급 재조회
-        run: python -u scripts/run_signal_research_pipeline.py --mode daily --recheck
+      - name: 관찰 로그 D+ 추적 업데이트
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python -u scripts/run_observation_tracking_update.py --as-of "${{ github.event.inputs.date }}"
+          else
+            python -u scripts/run_observation_tracking_update.py
+          fi
+
+      - name: 일일 운영 요약 생성
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python -u scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}"
+          else
+            python -u scripts/run_daily_research_summary.py
+          fi
 
       - name: 결과 커밋 및 푸시
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "ai 주가 변동 원인 분석/"
-          git diff --cached --quiet && echo "변경 없음" || git commit -m "auto: 일별 신호 업데이트 $(date '+%Y-%m-%d')"
+          git diff --cached --quiet && echo "변경 없음" || git commit -m "auto: 일일 후보 및 관찰 업데이트 $(date '+%Y-%m-%d')"
           git push
