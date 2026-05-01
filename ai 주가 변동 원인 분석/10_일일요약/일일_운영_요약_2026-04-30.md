@@ -4,7 +4,7 @@
 
 - 스캔 종목 수: 30
 - 신규/미보유 기업 추정: 0
-- 보고서 생성 필요 추정: 15
+- 보고서 생성 필요 추정: 0
 
 ### 상위 유니버스
 
@@ -13,33 +13,33 @@
 | 1 | 005930 | 삼성전자 | 4984706020346 | existing | exists |
 | 2 | 000660 | SK하이닉스 | 4355325578994 | existing | exists |
 | 3 | 001440 | 대한전선 | 1887826030175 | existing | exists |
-| 4 | 006340 | 대원전선 | 1271887928065 | existing | report_needed |
+| 4 | 006340 | 대원전선 | 1271887928065 | existing | exists |
 | 5 | 042700 | 한미반도체 | 976313892000 | existing | exists |
 | 6 | 009150 | 삼성전기 | 764553041500 | existing | exists |
 | 7 | 066570 | LG전자 | 669211924750 | existing | exists |
-| 8 | 062040 | 산일전기 | 660362028750 | existing | report_needed |
-| 9 | 009830 | 한화솔루션 | 625551970175 | existing | report_needed |
-| 10 | 005380 | 현대차 | 621344074500 | existing | report_needed |
+| 8 | 062040 | 산일전기 | 660362028750 | existing | exists |
+| 9 | 009830 | 한화솔루션 | 625551970175 | existing | exists |
+| 10 | 005380 | 현대차 | 621344074500 | existing | exists |
 | 11 | 006400 | 삼성SDI | 601812980000 | existing | exists |
 | 12 | 402340 | SK스퀘어 | 530920383000 | existing | exists |
-| 13 | 025860 | 남해화학 | 509428622545 | existing | report_needed |
+| 13 | 025860 | 남해화학 | 509428622545 | existing | exists |
 | 14 | 010170 | 대한광통신 | 509115802595 | existing | exists |
 | 15 | 034020 | 두산에너빌리티 | 431277650800 | existing | exists |
 | 16 | 047040 | 대우건설 | 415433928850 | existing | exists |
-| 17 | 064350 | 현대로템 | 401995538000 | existing | report_needed |
-| 18 | 032830 | 삼성생명 | 393997303500 | existing | report_needed |
-| 19 | 050890 | 쏠리드 | 373166097915 | existing | report_needed |
-| 20 | 199820 | 제일일렉트릭 | 362315213205 | existing | report_needed |
+| 17 | 064350 | 현대로템 | 401995538000 | existing | exists |
+| 18 | 032830 | 삼성생명 | 393997303500 | existing | exists |
+| 19 | 050890 | 쏠리드 | 373166097915 | existing | exists |
+| 20 | 199820 | 제일일렉트릭 | 362315213205 | existing | exists |
 | 21 | 012450 | 한화에어로스페이스 | 335666994000 | existing | exists |
 | 22 | 322000 | HD현대에너지솔루션 | 332657410000 | existing | exists |
-| 23 | 010120 | LS ELECTRIC | 324239792250 | existing | report_needed |
-| 24 | 058470 | 리노공업 | 313587899150 | existing | report_needed |
-| 25 | 035420 | NAVER | 296339309000 | existing | report_needed |
+| 23 | 010120 | LS ELECTRIC | 324239792250 | existing | exists |
+| 24 | 058470 | 리노공업 | 313587899150 | existing | exists |
+| 25 | 035420 | NAVER | 296339309000 | existing | exists |
 | 26 | 329180 | HD현대중공업 | 280201230500 | existing | exists |
-| 27 | 105560 | KB금융 | 265026166256 | existing | report_needed |
+| 27 | 105560 | KB금융 | 265026166256 | existing | exists |
 | 28 | 005490 | POSCO홀딩스 | 263012627000 | existing | exists |
-| 29 | 024060 | 흥구석유 | 258701218100 | existing | report_needed |
-| 30 | 432720 | 퀄리타스반도체 | 234195354600 | existing | report_needed |
+| 29 | 024060 | 흥구석유 | 258701218100 | existing | exists |
+| 30 | 432720 | 퀄리타스반도체 | 234195354600 | existing | exists |
 
 ## 2. 전략 신호
 
