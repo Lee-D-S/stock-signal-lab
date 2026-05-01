@@ -23,6 +23,9 @@ DART_BASE_URL = "https://opendart.fss.or.kr/api"
 CORP_CODE_CACHE = Path("data/dart_corp_codes.json")
 CORP_INFO_CACHE = Path("data/dart_corp_info.json")
 CACHE_TTL_DAYS  = 30
+DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(total=120, sock_connect=30, sock_read=120)
+DOWNLOAD_RETRIES = 3
+DOWNLOAD_BACKOFF_SECONDS = 5
 
 _TARGET_ACCOUNTS = {
     "매출액", "수익(매출액)",
@@ -43,9 +46,20 @@ _ACCOUNT_FIELD = {
 async def _download_corp_codes() -> dict[str, str]:
     """DART에서 전체 법인코드 ZIP을 받아 종목코드 → 고유번호 매핑 반환."""
     url = f"{DART_BASE_URL}/corpCode.xml?crtfc_key={DART_API_KEY}"
+    last_error: Exception | None = None
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-            data = await resp.read()
+        for attempt in range(1, DOWNLOAD_RETRIES + 1):
+            try:
+                async with session.get(url, timeout=DOWNLOAD_TIMEOUT) as resp:
+                    data = await resp.read()
+                break
+            except (asyncio.TimeoutError, aiohttp.ClientError) as exc:
+                last_error = exc
+                if attempt >= DOWNLOAD_RETRIES:
+                    raise
+                await asyncio.sleep(DOWNLOAD_BACKOFF_SECONDS * attempt)
+        else:  # pragma: no cover - defensive fallback
+            raise last_error or RuntimeError("DART corp code download failed")
 
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
         xml_data = zf.read("CORPCODE.xml")
@@ -63,9 +77,20 @@ async def _download_corp_codes() -> dict[str, str]:
 async def _download_corp_info() -> dict[str, dict[str, str]]:
     """DART 전체 법인코드 ZIP을 받아 종목코드별 회사명/법인코드를 반환."""
     url = f"{DART_BASE_URL}/corpCode.xml?crtfc_key={DART_API_KEY}"
+    last_error: Exception | None = None
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-            data = await resp.read()
+        for attempt in range(1, DOWNLOAD_RETRIES + 1):
+            try:
+                async with session.get(url, timeout=DOWNLOAD_TIMEOUT) as resp:
+                    data = await resp.read()
+                break
+            except (asyncio.TimeoutError, aiohttp.ClientError) as exc:
+                last_error = exc
+                if attempt >= DOWNLOAD_RETRIES:
+                    raise
+                await asyncio.sleep(DOWNLOAD_BACKOFF_SECONDS * attempt)
+        else:  # pragma: no cover - defensive fallback
+            raise last_error or RuntimeError("DART corp info download failed")
 
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
         xml_data = zf.read("CORPCODE.xml")
