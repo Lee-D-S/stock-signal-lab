@@ -28,20 +28,14 @@ POSITIVE_DISCLOSURE_KEYWORDS = [
     "공급계약",
     "수주",
     "신규시설투자",
-    "투자판단",
     "자기주식취득",
     "현금ㆍ현물배당",
     "현금·현물배당",
     "무상증자",
     "특허권취득",
-    "영업(잠정)실적",
-    "매출액또는손익구조",
 ]
 
 NEGATIVE_DISCLOSURE_KEYWORDS = [
-    "유상증자",
-    "전환사채",
-    "신주인수권부사채",
     "감자",
     "횡령",
     "배임",
@@ -55,11 +49,26 @@ NEGATIVE_DISCLOSURE_KEYWORDS = [
     "회생절차",
 ]
 
+REVIEW_REQUIRED_DISCLOSURE_KEYWORDS = [
+    "영업(잠정)실적",
+    "잠정실적",
+    "매출액또는손익구조",
+    "매출액 또는 손익구조",
+    "투자판단",
+    "유상증자",
+    "전환사채",
+    "신주인수권부사채",
+    "최대주주",
+    "타법인주식",
+    "자산양수도",
+    "합병",
+    "분할",
+]
+
 NEUTRAL_DISCLOSURE_KEYWORDS = [
     "주주총회",
     "기업설명회",
     "임원",
-    "최대주주",
     "주식등의대량보유",
 ]
 
@@ -105,6 +114,8 @@ def disclosure_note(disclosures: list[dict]) -> str:
 
 def classify_disclosure_title(title: str) -> tuple[str, str]:
     normalized = title.replace(" ", "")
+    if any(keyword.replace(" ", "") in normalized for keyword in REVIEW_REQUIRED_DISCLOSURE_KEYWORDS):
+        return "본문확인필요", "review_required"
     if any(keyword.replace(" ", "") in normalized for keyword in NEGATIVE_DISCLOSURE_KEYWORDS):
         return "악재성/리스크", "negative"
     if any(keyword.replace(" ", "") in normalized for keyword in POSITIVE_DISCLOSURE_KEYWORDS):
@@ -126,6 +137,9 @@ def summarize_disclosure_interpretation(disclosures: list[dict]) -> tuple[str, s
     if "negative" in stances:
         stance = "negative"
         label = "악재성/리스크"
+    elif "review_required" in stances:
+        stance = "review_required"
+        label = "본문확인필요"
     elif "positive" in stances:
         stance = "positive"
         label = "호재성/보강"
@@ -154,6 +168,8 @@ def interpretation_for_observation(row: pd.Series, stance: str) -> str:
         return "공시 해석: 기존 후보 약화/리스크"
     if stance == "neutral":
         return "공시 해석: 방향성 판단 보류"
+    if stance == "review_required":
+        return "공시 해석: 본문 수치/맥락 확인 전 판단 보류"
     return "공시 해석: 제목만으로 판단 불가"
 
 
