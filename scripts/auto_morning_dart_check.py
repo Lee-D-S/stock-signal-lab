@@ -21,6 +21,12 @@ CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
 OBS_DIR = ROOT / "ai 주가 변동 원인 분석" / "08_관찰기록"
 OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
 OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
+OBS_MD = OBS_DIR / "관찰_로그.md"
+
+
+def safe_print(message: str) -> None:
+    encoding = sys.stdout.encoding or "utf-8"
+    print(message.encode(encoding, errors="replace").decode(encoding, errors="replace"))
 
 
 def load_watched_tickers() -> list[tuple[str, str]]:
@@ -35,6 +41,71 @@ def load_watched_tickers() -> list[tuple[str, str]]:
         return []
     active = df[df["result_label"].isna() | (df["result_label"] == "")]
     return list(zip(active["ticker"].str.zfill(6), active["name"]))
+
+
+def load_observation_frame() -> pd.DataFrame:
+    if OBS_UTF8_CSV.exists():
+        return pd.read_csv(OBS_UTF8_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+    if OBS_CP949_CSV.exists():
+        return pd.read_csv(OBS_CP949_CSV, encoding="cp949", dtype={"ticker": str})
+    return pd.DataFrame()
+
+
+def disclosure_note(disclosures: list[dict]) -> str:
+    names = []
+    for disclosure in disclosures[:3]:
+        rcept_dt = str(disclosure.get("rcept_dt", "")).strip()
+        report_nm = str(disclosure.get("report_nm", "")).strip()
+        if rcept_dt and report_nm:
+            names.append(f"{rcept_dt} {report_nm}")
+        elif report_nm:
+            names.append(report_nm)
+    return "오전 DART 공시: " + " / ".join(names)
+
+
+def update_observation_notes(notes_by_ticker: dict[str, str]) -> int:
+    if not notes_by_ticker:
+        return 0
+    df = load_observation_frame()
+    if df.empty or not {"ticker", "result_label", "review_note"}.issubset(df.columns):
+        return 0
+
+    changed = 0
+    df["ticker"] = df["ticker"].astype(str).str.zfill(6)
+    active_mask = df["result_label"].isna() | (df["result_label"].astype(str) == "")
+    for ticker, note in notes_by_ticker.items():
+        row_mask = active_mask & (df["ticker"] == ticker)
+        for idx in df[row_mask].index:
+            old_note = "" if pd.isna(df.at[idx, "review_note"]) else str(df.at[idx, "review_note"])
+            if note in old_note:
+                continue
+            df.at[idx, "review_note"] = f"{old_note}; {note}" if old_note else note
+            changed += 1
+
+    if changed:
+        df.to_csv(OBS_UTF8_CSV, index=False, encoding="utf-8-sig")
+        df.to_csv(OBS_CP949_CSV, index=False, encoding="cp949", errors="replace")
+    return changed
+
+
+def append_markdown_notes(today: datetime, notes_by_name: dict[str, str]) -> None:
+    if not notes_by_name:
+        return
+    date_text = today.strftime("%Y-%m-%d")
+    heading = f"## {date_text} 오전 DART 공시"
+    lines = [heading, ""]
+    for name, note in notes_by_name.items():
+        lines.append(f"- {name}: {note}")
+    lines.append("")
+    section = "\n".join(lines)
+
+    if OBS_MD.exists():
+        text = OBS_MD.read_text(encoding="utf-8-sig")
+        if heading in text:
+            return
+        OBS_MD.write_text(text.rstrip() + "\n\n" + section, encoding="utf-8")
+    else:
+        OBS_MD.write_text("# 일별 후보 관찰 로그\n\n" + section, encoding="utf-8")
 
 
 def load_corp_codes() -> dict[str, str]:
@@ -68,8 +139,8 @@ async def send_telegram(message: str) -> None:
     token = settings.telegram_bot_token
     chat_id = settings.telegram_chat_id
     if not token or not chat_id:
-        print("[telegram] 설정 없음, 출력만 합니다.")
-        print(message)
+        safe_print("[telegram] 설정 없음, 출력만 합니다.")
+        safe_print(message)
         return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     payload = {"chat_id": chat_id, "text": message, "parse_mode": "HTML"}
@@ -92,6 +163,8 @@ async def main() -> None:
 
     corp_codes = load_corp_codes()
     found: list[str] = []
+    notes_by_ticker: dict[str, str] = {}
+    notes_by_name: dict[str, str] = {}
 
     async with aiohttp.ClientSession() as session:
         for ticker, name in tickers:
@@ -109,9 +182,16 @@ async def main() -> None:
                 for d in disclosures[:3]:
                     lines.append(f"  • [{d.get('rcept_dt','')}] {d.get('report_nm','')}")
                 found.append("\n".join(lines))
+                note = disclosure_note(disclosures)
+                notes_by_ticker[ticker] = note
+                notes_by_name[f"{name} ({ticker})"] = note
             else:
                 print(f"[{name}] 신규 공시 없음")
             await asyncio.sleep(0.3)
+
+    updated_notes = update_observation_notes(notes_by_ticker)
+    append_markdown_notes(today, notes_by_name)
+    print(f"observation_disclosure_notes_updated={updated_notes}")
 
     if found:
         msg = f"🔔 <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n\n" + "\n\n".join(found)
@@ -119,7 +199,7 @@ async def main() -> None:
         msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n관찰 종목 신규 공시 없음"
 
     await send_telegram(msg)
-    print(msg)
+    safe_print(msg)
 
 
 if __name__ == "__main__":
