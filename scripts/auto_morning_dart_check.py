@@ -23,6 +23,46 @@ OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
 OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
 OBS_MD = OBS_DIR / "관찰_로그.md"
 
+POSITIVE_DISCLOSURE_KEYWORDS = [
+    "단일판매",
+    "공급계약",
+    "수주",
+    "신규시설투자",
+    "투자판단",
+    "자기주식취득",
+    "현금ㆍ현물배당",
+    "현금·현물배당",
+    "무상증자",
+    "특허권취득",
+    "영업(잠정)실적",
+    "매출액또는손익구조",
+]
+
+NEGATIVE_DISCLOSURE_KEYWORDS = [
+    "유상증자",
+    "전환사채",
+    "신주인수권부사채",
+    "감자",
+    "횡령",
+    "배임",
+    "소송",
+    "불성실공시",
+    "관리종목",
+    "거래정지",
+    "상장폐지",
+    "감사의견",
+    "영업정지",
+    "회생절차",
+]
+
+NEUTRAL_DISCLOSURE_KEYWORDS = [
+    "주주총회",
+    "기업설명회",
+    "임원",
+    "최대주주",
+    "주식등의대량보유",
+]
+
 
 def safe_print(message: str) -> None:
     encoding = sys.stdout.encoding or "utf-8"
@@ -63,8 +103,62 @@ def disclosure_note(disclosures: list[dict]) -> str:
     return "오전 DART 공시: " + " / ".join(names)
 
 
-def update_observation_notes(notes_by_ticker: dict[str, str]) -> int:
-    if not notes_by_ticker:
+def classify_disclosure_title(title: str) -> tuple[str, str]:
+    normalized = title.replace(" ", "")
+    if any(keyword.replace(" ", "") in normalized for keyword in NEGATIVE_DISCLOSURE_KEYWORDS):
+        return "악재성/리스크", "negative"
+    if any(keyword.replace(" ", "") in normalized for keyword in POSITIVE_DISCLOSURE_KEYWORDS):
+        return "호재성/보강", "positive"
+    if any(keyword.replace(" ", "") in normalized for keyword in NEUTRAL_DISCLOSURE_KEYWORDS):
+        return "중립/확인", "neutral"
+    return "미분류/확인필요", "unknown"
+
+
+def summarize_disclosure_interpretation(disclosures: list[dict]) -> tuple[str, str]:
+    labels: list[str] = []
+    stances: list[str] = []
+    for disclosure in disclosures[:3]:
+        report_nm = str(disclosure.get("report_nm", "")).strip()
+        label, stance = classify_disclosure_title(report_nm)
+        labels.append(label)
+        stances.append(stance)
+
+    if "negative" in stances:
+        stance = "negative"
+        label = "악재성/리스크"
+    elif "positive" in stances:
+        stance = "positive"
+        label = "호재성/보강"
+    elif "neutral" in stances:
+        stance = "neutral"
+        label = "중립/확인"
+    else:
+        stance = "unknown"
+        label = "미분류/확인필요"
+    return label, stance
+
+
+def interpretation_for_observation(row: pd.Series, stance: str) -> str:
+    use_type = "" if pd.isna(row.get("use_type")) else str(row.get("use_type"))
+    direction = "" if pd.isna(row.get("event_direction")) else str(row.get("event_direction"))
+
+    if stance == "positive":
+        if "회피" in use_type:
+            return "공시 해석: 회피 조건 약화 가능"
+        if direction == "down" or "반등" in use_type:
+            return "공시 해석: 반등 후보 보강"
+        return "공시 해석: 기존 후보 보강"
+    if stance == "negative":
+        if "회피" in use_type:
+            return "공시 해석: 회피 조건 보강"
+        return "공시 해석: 기존 후보 약화/리스크"
+    if stance == "neutral":
+        return "공시 해석: 방향성 판단 보류"
+    return "공시 해석: 제목만으로 판단 불가"
+
+
+def update_observation_notes(disclosures_by_ticker: dict[str, list[dict]]) -> int:
+    if not disclosures_by_ticker:
         return 0
     df = load_observation_frame()
     if df.empty or not {"ticker", "result_label", "review_note"}.issubset(df.columns):
@@ -73,9 +167,12 @@ def update_observation_notes(notes_by_ticker: dict[str, str]) -> int:
     changed = 0
     df["ticker"] = df["ticker"].astype(str).str.zfill(6)
     active_mask = df["result_label"].isna() | (df["result_label"].astype(str) == "")
-    for ticker, note in notes_by_ticker.items():
+    for ticker, disclosures in disclosures_by_ticker.items():
         row_mask = active_mask & (df["ticker"] == ticker)
         for idx in df[row_mask].index:
+            label, stance = summarize_disclosure_interpretation(disclosures)
+            interpretation = interpretation_for_observation(df.loc[idx], stance)
+            note = f"{disclosure_note(disclosures)} [{label}; {interpretation}]"
             old_note = "" if pd.isna(df.at[idx, "review_note"]) else str(df.at[idx, "review_note"])
             if note in old_note:
                 continue
@@ -88,14 +185,16 @@ def update_observation_notes(notes_by_ticker: dict[str, str]) -> int:
     return changed
 
 
-def append_markdown_notes(today: datetime, notes_by_name: dict[str, str]) -> None:
-    if not notes_by_name:
+def append_markdown_notes(today: datetime, disclosures_by_name: dict[str, list[dict]]) -> None:
+    if not disclosures_by_name:
         return
     date_text = today.strftime("%Y-%m-%d")
     heading = f"## {date_text} 오전 DART 공시"
     lines = [heading, ""]
-    for name, note in notes_by_name.items():
-        lines.append(f"- {name}: {note}")
+    for name, disclosures in disclosures_by_name.items():
+        label, _stance = summarize_disclosure_interpretation(disclosures)
+        note = disclosure_note(disclosures)
+        lines.append(f"- {name}: {note} [{label}]")
     lines.append("")
     section = "\n".join(lines)
 
@@ -163,8 +262,8 @@ async def main() -> None:
 
     corp_codes = load_corp_codes()
     found: list[str] = []
-    notes_by_ticker: dict[str, str] = {}
-    notes_by_name: dict[str, str] = {}
+    disclosures_by_ticker: dict[str, list[dict]] = {}
+    disclosures_by_name: dict[str, list[dict]] = {}
 
     async with aiohttp.ClientSession() as session:
         for ticker, name in tickers:
@@ -178,19 +277,20 @@ async def main() -> None:
                 print(f"[{name}] DART 조회 실패: {type(exc).__name__}: {exc}")
                 continue
             if disclosures:
+                label, _stance = summarize_disclosure_interpretation(disclosures)
                 lines = [f"📋 <b>{name} ({ticker})</b> 공시 {len(disclosures)}건"]
+                lines.append(f"  • 해석: {label}")
                 for d in disclosures[:3]:
                     lines.append(f"  • [{d.get('rcept_dt','')}] {d.get('report_nm','')}")
                 found.append("\n".join(lines))
-                note = disclosure_note(disclosures)
-                notes_by_ticker[ticker] = note
-                notes_by_name[f"{name} ({ticker})"] = note
+                disclosures_by_ticker[ticker] = disclosures
+                disclosures_by_name[f"{name} ({ticker})"] = disclosures
             else:
                 print(f"[{name}] 신규 공시 없음")
             await asyncio.sleep(0.3)
 
-    updated_notes = update_observation_notes(notes_by_ticker)
-    append_markdown_notes(today, notes_by_name)
+    updated_notes = update_observation_notes(disclosures_by_ticker)
+    append_markdown_notes(today, disclosures_by_name)
     print(f"observation_disclosure_notes_updated={updated_notes}")
 
     if found:
