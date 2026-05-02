@@ -18,14 +18,21 @@ from config import settings  # noqa: E402
 DART_API_KEY = settings.dart_api_key
 DART_BASE_URL = "https://opendart.fss.or.kr/api"
 CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
-OBS_CSV = ROOT / "ai 주가 변동 원인 분석" / "08_관찰기록" / "관찰_로그.csv"
+OBS_DIR = ROOT / "ai 주가 변동 원인 분석" / "08_관찰기록"
+OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
+OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
 
 
 def load_watched_tickers() -> list[tuple[str, str]]:
-    """관찰_로그.csv에서 관찰대상 종목 (ticker, name) 반환."""
-    if not OBS_CSV.exists():
+    """관찰 로그에서 아직 결과 라벨이 비어 있는 종목 (ticker, name) 반환."""
+    if OBS_UTF8_CSV.exists():
+        df = pd.read_csv(OBS_UTF8_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+    elif OBS_CP949_CSV.exists():
+        df = pd.read_csv(OBS_CP949_CSV, encoding="cp949", dtype={"ticker": str})
+    else:
         return []
-    df = pd.read_csv(OBS_CSV, dtype={"ticker": str})
+    if df.empty or not {"ticker", "name", "result_label"}.issubset(df.columns):
+        return []
     active = df[df["result_label"].isna() | (df["result_label"] == "")]
     return list(zip(active["ticker"].str.zfill(6), active["name"]))
 
@@ -92,7 +99,11 @@ async def main() -> None:
             if not corp_code:
                 print(f"[{name}] corp_code 없음 (ticker={ticker})")
                 continue
-            disclosures = await fetch_disclosures(session, corp_code, bgn, end)
+            try:
+                disclosures = await fetch_disclosures(session, corp_code, bgn, end)
+            except (asyncio.TimeoutError, aiohttp.ClientError) as exc:
+                print(f"[{name}] DART 조회 실패: {type(exc).__name__}: {exc}")
+                continue
             if disclosures:
                 lines = [f"📋 <b>{name} ({ticker})</b> 공시 {len(disclosures)}건"]
                 for d in disclosures[:3]:
