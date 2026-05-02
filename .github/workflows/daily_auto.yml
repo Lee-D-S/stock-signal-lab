@@ -107,5 +107,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "ai 주가 변동 원인 분석/"
-          git diff --cached --quiet && echo "변경 없음" || git commit -m "auto: 일일 후보 및 관찰 업데이트 $(date '+%Y-%m-%d')"
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git commit -m "auto: 일일 후보 및 관찰 업데이트 $(date '+%Y-%m-%d')"
+          git pull --rebase origin main
           git push
