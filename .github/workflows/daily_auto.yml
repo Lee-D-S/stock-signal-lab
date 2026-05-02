@@ -59,6 +59,22 @@ jobs:
       - name: DART 공시 확인 실행
         run: python -u scripts/auto_morning_dart_check.py
 
+      - name: 실패 텔레그램 알림
+        if: failure()
+        env:
+          JOB_NAME: 오전 DART 공시 확인 (08:50 KST)
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "telegram secrets missing; skip failure notification"
+            exit 0
+          fi
+          MESSAGE=$(printf "[auto-invest] GitHub Actions 실패\nworkflow: %s\njob: %s\nbranch: %s\nrun: %s" "$GITHUB_WORKFLOW" "$JOB_NAME" "$GITHUB_REF_NAME" "$RUN_URL")
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "disable_web_page_preview=true" >/dev/null
+
   daily-research-pipeline:
     name: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
     runs-on: ubuntu-latest
@@ -122,3 +138,19 @@ jobs:
           git commit -m "auto: 일일 후보 및 관찰 업데이트 $(date '+%Y-%m-%d')"
           git pull --rebase origin main
           git push
+
+      - name: 실패 텔레그램 알림
+        if: failure()
+        env:
+          JOB_NAME: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "telegram secrets missing; skip failure notification"
+            exit 0
+          fi
+          MESSAGE=$(printf "[auto-invest] GitHub Actions 실패\nworkflow: %s\njob: %s\nbranch: %s\nrun: %s" "$GITHUB_WORKFLOW" "$JOB_NAME" "$GITHUB_REF_NAME" "$RUN_URL")
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "disable_web_page_preview=true" >/dev/null
