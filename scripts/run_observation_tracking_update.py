@@ -292,8 +292,17 @@ def build_markdown(rows: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
-async def run(as_of: pd.Timestamp, delay: float, dry_run: bool) -> tuple[int, int]:
-    fieldnames, rows = read_rows(OBS_UTF8_CSV)
+async def run(
+    as_of: pd.Timestamp,
+    delay: float,
+    dry_run: bool,
+    obs_utf8_csv: Path = OBS_UTF8_CSV,
+    obs_cp949_csv: Path = OBS_CP949_CSV,
+    obs_md: Path = OBS_MD,
+) -> tuple[int, int]:
+    if not obs_utf8_csv.exists():
+        return 0, 0
+    fieldnames, rows = read_rows(obs_utf8_csv)
     changed_count = 0
     for row in rows:
         if not row.get("signal_date") or not row.get("ticker"):
@@ -303,9 +312,9 @@ async def run(as_of: pd.Timestamp, delay: float, dry_run: bool) -> tuple[int, in
             changed_count += 1
 
     if not dry_run and changed_count:
-        write_rows(OBS_UTF8_CSV, fieldnames, rows, "utf-8")
-        write_rows(OBS_CP949_CSV, fieldnames, rows, "cp949")
-        OBS_MD.write_text(build_markdown(rows), encoding="utf-8")
+        write_rows(obs_utf8_csv, fieldnames, rows, "utf-8")
+        write_rows(obs_cp949_csv, fieldnames, rows, "cp949")
+        obs_md.write_text(build_markdown(rows), encoding="utf-8")
     return len(rows), changed_count
 
 
@@ -314,15 +323,27 @@ def main() -> None:
     parser.add_argument("--as-of", help="YYYY-MM-DD. 생략하면 오늘")
     parser.add_argument("--delay", type=float, default=0.35)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--obs-utf8-csv", type=Path, default=OBS_UTF8_CSV)
+    parser.add_argument("--obs-cp949-csv", type=Path, default=OBS_CP949_CSV)
+    parser.add_argument("--obs-md", type=Path, default=OBS_MD)
     args = parser.parse_args()
 
     as_of = pd.Timestamp(args.as_of) if args.as_of else pd.Timestamp.today().normalize()
-    total, changed = asyncio.run(run(as_of, args.delay, args.dry_run))
+    total, changed = asyncio.run(
+        run(
+            as_of,
+            args.delay,
+            args.dry_run,
+            obs_utf8_csv=args.obs_utf8_csv,
+            obs_cp949_csv=args.obs_cp949_csv,
+            obs_md=args.obs_md,
+        )
+    )
     print(f"observations={total}")
     print(f"updated={changed}")
     print(f"as_of={as_of.strftime('%Y-%m-%d')}")
-    print(f"observation_csv={OBS_UTF8_CSV}")
-    print(f"observation_md={OBS_MD}")
+    print(f"observation_csv={args.obs_utf8_csv}")
+    print(f"observation_md={args.obs_md}")
 
 
 if __name__ == "__main__":

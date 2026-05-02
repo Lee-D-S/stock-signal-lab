@@ -166,7 +166,10 @@ def print_outputs() -> None:
         STRATEGY_DIR / "전략_조건_초안.md",
         STRATEGY_DIR / "관심종목_시그널_후보.md",
         STRATEGY_DIR / "관심종목_시그널_후보_확정.md",
+        STRATEGY_DIR / "신규조건_관심종목_시그널_후보.md",
+        STRATEGY_DIR / "신규조건_관심종목_시그널_후보_확정.md",
         OBS_DIR / "관찰_로그.md",
+        OBS_DIR / "신규조건_관찰_로그.md",
     ]
     print("\n주요 산출물:")
     for path in outputs:

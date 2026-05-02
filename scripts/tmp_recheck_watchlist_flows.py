@@ -80,11 +80,11 @@ def markdown_table(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def build_markdown(df: pd.DataFrame) -> str:
+def build_markdown(df: pd.DataFrame, title: str = "일별 전략 감시 후보 수급 재조회") -> str:
     confirmed = df[df["flow_recheck_status"] == "confirmed"].copy()
     pending = df[df["flow_recheck_status"] != "confirmed"].copy()
     lines = [
-        "# 일별 전략 감시 후보 수급 재조회",
+        f"# {title}",
         "",
         f"- 전체 재조회 대상: {len(df):,}건",
         f"- 확정 후보: {len(confirmed):,}건",
@@ -175,12 +175,18 @@ async def recheck_row(row: pd.Series) -> dict[str, Any]:
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--delay", type=float, default=0.45)
+    parser.add_argument("--candidates-csv", type=Path, default=CANDIDATES_CSV)
+    parser.add_argument("--confirmed-csv", type=Path, default=CONFIRMED_CSV)
+    parser.add_argument("--confirmed-md", type=Path, default=CONFIRMED_MD)
+    parser.add_argument("--title", default="일별 전략 감시 후보 수급 재조회")
     args = parser.parse_args()
 
-    candidates = pd.read_csv(CANDIDATES_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+    candidates = pd.read_csv(args.candidates_csv, encoding="utf-8-sig", dtype={"ticker": str})
+    args.confirmed_csv.parent.mkdir(parents=True, exist_ok=True)
+    args.confirmed_md.parent.mkdir(parents=True, exist_ok=True)
     if candidates.empty:
-        candidates.to_csv(CONFIRMED_CSV, index=False, encoding="utf-8-sig")
-        CONFIRMED_MD.write_text(build_markdown(candidates), encoding="utf-8")
+        candidates.to_csv(args.confirmed_csv, index=False, encoding="utf-8-sig")
+        args.confirmed_md.write_text(build_markdown(candidates, args.title), encoding="utf-8")
         print("candidates=0")
         return
 
@@ -191,12 +197,12 @@ async def main() -> None:
 
     out = pd.DataFrame(rows)
     out = out.sort_values(["flow_recheck_status", "priority", "ticker"]).reset_index(drop=True)
-    out.to_csv(CONFIRMED_CSV, index=False, encoding="utf-8-sig")
-    CONFIRMED_MD.write_text(build_markdown(out), encoding="utf-8")
+    out.to_csv(args.confirmed_csv, index=False, encoding="utf-8-sig")
+    args.confirmed_md.write_text(build_markdown(out, args.title), encoding="utf-8")
     print(f"rechecked={len(out)}")
     print(out["flow_recheck_status"].value_counts().to_string())
-    print(f"confirmed_csv={CONFIRMED_CSV}")
-    print(f"confirmed_md={CONFIRMED_MD}")
+    print(f"confirmed_csv={args.confirmed_csv}")
+    print(f"confirmed_md={args.confirmed_md}")
 
 
 if __name__ == "__main__":

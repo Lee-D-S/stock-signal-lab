@@ -326,9 +326,9 @@ def markdown_table(df: pd.DataFrame) -> str:
     return "\n".join(lines)
 
 
-def build_markdown(df: pd.DataFrame, target_date: str) -> str:
+def build_markdown(df: pd.DataFrame, target_date: str, title: str = "일별 전략 감시 후보") -> str:
     lines = [
-        "# 일별 전략 감시 후보",
+        f"# {title}",
         "",
         f"- 기준일: {target_date}",
         f"- 후보 수: {len(df):,}건",
@@ -377,6 +377,10 @@ async def main() -> None:
     parser.add_argument("--delay", type=float, default=0.35)
     parser.add_argument("--universe-csv", type=Path, default=UNIVERSE_CSV, help="거래대금 상위 유니버스 CSV")
     parser.add_argument("--strategy-csv", type=Path, default=STRATEGY_CSV, help="감시 조건 CSV. 기본값은 active 전략 조건")
+    parser.add_argument("--scan-csv", type=Path, default=SCAN_CSV, help="전체 스캔 결과 CSV")
+    parser.add_argument("--watchlist-csv", type=Path, default=WATCHLIST_CSV, help="후보 결과 CSV")
+    parser.add_argument("--watchlist-md", type=Path, default=WATCHLIST_MD, help="후보 결과 Markdown")
+    parser.add_argument("--title", default="일별 전략 감시 후보", help="Markdown 제목")
     args = parser.parse_args()
 
     target_date = pd.Timestamp(args.date) if args.date else None
@@ -396,13 +400,16 @@ async def main() -> None:
         await asyncio.sleep(args.delay)
 
     scan_df = pd.DataFrame(scan_rows)
-    scan_df.to_csv(SCAN_CSV, index=False, encoding="utf-8-sig")
+    args.scan_csv.parent.mkdir(parents=True, exist_ok=True)
+    args.watchlist_csv.parent.mkdir(parents=True, exist_ok=True)
+    args.watchlist_md.parent.mkdir(parents=True, exist_ok=True)
+    scan_df.to_csv(args.scan_csv, index=False, encoding="utf-8-sig")
     df = scan_df[scan_df["is_candidate"] == True].copy() if not scan_df.empty and "is_candidate" in scan_df.columns else pd.DataFrame()
     if not df.empty:
         df = df.sort_values(["priority", "signal_date", "ticker"]).reset_index(drop=True)
-    df.to_csv(WATCHLIST_CSV, index=False, encoding="utf-8-sig")
+    df.to_csv(args.watchlist_csv, index=False, encoding="utf-8-sig")
     out_date = args.date or ("latest" if df.empty else str(df["signal_date"].max()))
-    WATCHLIST_MD.write_text(build_markdown(df, out_date), encoding="utf-8")
+    args.watchlist_md.write_text(build_markdown(df, out_date, args.title), encoding="utf-8")
 
     if errors:
         error_path = STRATEGY_DIR / "관심종목_시그널_오류.csv"
@@ -412,9 +419,9 @@ async def main() -> None:
     print(f"strategy_source={args.strategy_csv}")
     print(f"universe_count={len(companies)}")
     print(f"candidates={len(df)}")
-    print(f"scanned={len(scan_df)} scan_csv={SCAN_CSV}")
-    print(f"watchlist_csv={WATCHLIST_CSV}")
-    print(f"watchlist_md={WATCHLIST_MD}")
+    print(f"scanned={len(scan_df)} scan_csv={args.scan_csv}")
+    print(f"watchlist_csv={args.watchlist_csv}")
+    print(f"watchlist_md={args.watchlist_md}")
 
 
 if __name__ == "__main__":

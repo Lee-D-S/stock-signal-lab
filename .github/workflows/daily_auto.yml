@@ -113,6 +113,14 @@ jobs:
             python -u scripts/run_signal_research_pipeline.py --mode daily --refresh-universe --recheck
           fi
 
+      - name: 신규 조건 별도 관찰
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python -u scripts/run_new_condition_observation.py --date "${{ github.event.inputs.date }}" --delay 0.35
+          else
+            python -u scripts/run_new_condition_observation.py --delay 0.35
+          fi
+
       - name: 관찰 로그 D+ 추적 업데이트
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then

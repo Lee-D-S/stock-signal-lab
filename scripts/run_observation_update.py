@@ -19,6 +19,43 @@ OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
 OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
 OBS_MD = OBS_DIR / "관찰_로그.md"
 
+OBS_FIELDNAMES = [
+    "signal_date",
+    "ticker",
+    "name",
+    "hypothesis_id",
+    "use_type",
+    "decision_status",
+    "decision_note",
+    "event_direction",
+    "event_chg_pct",
+    "event_close",
+    "amount_tag",
+    "dart_tag",
+    "window_category",
+    "flow_category_confirmed",
+    "foreign_5d",
+    "institution_5d",
+    "individual_5d",
+    "planned_entry_rule",
+    "planned_hold_days",
+    "backtest_avg_score_pct",
+    "backtest_hit_rate",
+    "next_trading_day",
+    "next_open",
+    "next_close",
+    "d_plus_5_close",
+    "d_plus_10_close",
+    "d_plus_20_close",
+    "next_open_return_pct",
+    "next_close_return_pct",
+    "d_plus_5_return_pct",
+    "d_plus_10_return_pct",
+    "d_plus_20_return_pct",
+    "result_label",
+    "review_note",
+]
+
 
 PLANNED_ENTRY_RULES = {
     "H01": "다음 거래일 과도한 갭 상승이 없고 장초반 급락이 아니면 분할 진입 검토. 갭 급등 시 추격 금지",
@@ -65,6 +102,8 @@ def fmt_signed_int(value: Any) -> str:
 
 
 def read_observation_rows(path: Path, encoding: str) -> tuple[list[str], list[dict[str, str]]]:
+    if not path.exists():
+        return OBS_FIELDNAMES.copy(), []
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
         rows = list(reader)
@@ -130,15 +169,20 @@ def observation_key(row: dict[str, str]) -> tuple[str, str, str]:
     )
 
 
-def append_confirmed_to_csv(dry_run: bool = False) -> tuple[list[dict[str, str]], int]:
-    confirmed = pd.read_csv(CONFIRMED_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+def append_confirmed_to_csv(
+    confirmed_csv: Path = CONFIRMED_CSV,
+    obs_utf8_csv: Path = OBS_UTF8_CSV,
+    obs_cp949_csv: Path = OBS_CP949_CSV,
+    dry_run: bool = False,
+) -> tuple[list[dict[str, str]], int]:
+    confirmed = pd.read_csv(confirmed_csv, encoding="utf-8-sig", dtype={"ticker": str})
     if confirmed.empty:
         return [], 0
     confirmed = confirmed[confirmed["flow_recheck_status"] == "confirmed"].copy()
     if confirmed.empty:
         return [], 0
 
-    fieldnames, rows = read_observation_rows(OBS_UTF8_CSV, "utf-8")
+    fieldnames, rows = read_observation_rows(obs_utf8_csv, "utf-8")
     existing = {observation_key(row) for row in rows}
     new_rows: list[dict[str, str]] = []
 
@@ -152,8 +196,10 @@ def append_confirmed_to_csv(dry_run: bool = False) -> tuple[list[dict[str, str]]
         existing.add(key)
 
     if not dry_run and new_rows:
-        write_observation_rows(OBS_UTF8_CSV, "utf-8", fieldnames, rows)
-        write_observation_rows(OBS_CP949_CSV, "cp949", fieldnames, rows)
+        obs_utf8_csv.parent.mkdir(parents=True, exist_ok=True)
+        obs_cp949_csv.parent.mkdir(parents=True, exist_ok=True)
+        write_observation_rows(obs_utf8_csv, "utf-8", fieldnames, rows)
+        write_observation_rows(obs_cp949_csv, "cp949", fieldnames, rows)
 
     return new_rows, len(confirmed)
 
@@ -171,11 +217,31 @@ def markdown_candidate_row(row: dict[str, str]) -> str:
     )
 
 
-def update_markdown(new_rows: list[dict[str, str]], dry_run: bool = False) -> None:
+def default_markdown(title: str) -> str:
+    return "\n".join(
+        [
+            f"# {title}",
+            "",
+            "## 목적",
+            "",
+            "확정 후보가 실제로 이후 수익률로 이어지는지 추적하기 위한 관찰 로그다.",
+            "",
+            "## 추적 항목",
+            "",
+        ]
+    )
+
+
+def update_markdown(
+    new_rows: list[dict[str, str]],
+    obs_md: Path = OBS_MD,
+    title: str = "일별 후보 관찰 로그",
+    dry_run: bool = False,
+) -> None:
     if not new_rows:
         return
 
-    text = OBS_MD.read_text(encoding="utf-8-sig")
+    text = obs_md.read_text(encoding="utf-8-sig") if obs_md.exists() else default_markdown(title)
     grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in new_rows:
         grouped[row["signal_date"]].append(row)
@@ -221,24 +287,35 @@ def update_markdown(new_rows: list[dict[str, str]], dry_run: bool = False) -> No
             text = text.rstrip() + "\n\n" + "\n".join(section)
 
     if not dry_run:
-        OBS_MD.write_text(text, encoding="utf-8")
+        obs_md.parent.mkdir(parents=True, exist_ok=True)
+        obs_md.write_text(text, encoding="utf-8")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="확정 후보를 관찰 로그에 중복 없이 추가")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--confirmed-csv", type=Path, default=CONFIRMED_CSV)
+    parser.add_argument("--obs-utf8-csv", type=Path, default=OBS_UTF8_CSV)
+    parser.add_argument("--obs-cp949-csv", type=Path, default=OBS_CP949_CSV)
+    parser.add_argument("--obs-md", type=Path, default=OBS_MD)
+    parser.add_argument("--title", default="일별 후보 관찰 로그")
     args = parser.parse_args()
 
-    new_rows, confirmed_count = append_confirmed_to_csv(dry_run=args.dry_run)
-    update_markdown(new_rows, dry_run=args.dry_run)
+    new_rows, confirmed_count = append_confirmed_to_csv(
+        confirmed_csv=args.confirmed_csv,
+        obs_utf8_csv=args.obs_utf8_csv,
+        obs_cp949_csv=args.obs_cp949_csv,
+        dry_run=args.dry_run,
+    )
+    update_markdown(new_rows, obs_md=args.obs_md, title=args.title, dry_run=args.dry_run)
 
     print(f"confirmed={confirmed_count}")
     print(f"added={len(new_rows)}")
     if new_rows:
         for row in new_rows:
             print(f"- {row['signal_date']} {row['ticker']} {row['name']} {row['hypothesis_id']}")
-    print(f"observation_csv={OBS_UTF8_CSV}")
-    print(f"observation_md={OBS_MD}")
+    print(f"observation_csv={args.obs_utf8_csv}")
+    print(f"observation_md={args.obs_md}")
 
 
 if __name__ == "__main__":

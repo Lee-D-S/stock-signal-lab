@@ -18,7 +18,10 @@ SCAN_CSV = STRATEGY_DIR / "관심종목_시그널_스캔.csv"
 WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
 CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
 ERROR_CSV = STRATEGY_DIR / "관심종목_시그널_오류.csv"
+NEW_WATCHLIST_CSV = STRATEGY_DIR / "신규조건_관심종목_시그널_후보.csv"
+NEW_CONFIRMED_CSV = STRATEGY_DIR / "신규조건_관심종목_시그널_후보_확정.csv"
 OBS_CSV = OBS_DIR / "관찰_로그(이상).csv"
+NEW_OBS_CSV = OBS_DIR / "신규조건_관찰_로그(이상).csv"
 PERFORMANCE_CSV = OBS_DIR / "관찰_성과_요약.csv"
 SUMMARY_DIR = BASE_DIR / "10_일일요약"
 
@@ -78,7 +81,10 @@ def build_summary(target_date: str) -> str:
     watchlist = read_csv(WATCHLIST_CSV, dtype={"ticker": str})
     confirmed = read_csv(CONFIRMED_CSV, dtype={"ticker": str})
     errors = read_csv(ERROR_CSV, dtype={"ticker": str})
+    new_watchlist = read_csv(NEW_WATCHLIST_CSV, dtype={"ticker": str})
+    new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
+    new_observations = read_csv(NEW_OBS_CSV, dtype={"ticker": str})
     performance = read_csv(PERFORMANCE_CSV)
 
     signal_date = target_date or latest_signal_date(watchlist, confirmed, observations) or "latest"
@@ -142,6 +148,29 @@ def build_summary(target_date: str) -> str:
         "",
         markdown_table(
             confirmed,
+            [
+                "priority",
+                "hypothesis_id",
+                "use_type",
+                "ticker",
+                "name",
+                "signal_date",
+                "direction",
+                "chg_pct",
+                "amount_tag",
+                "flow_category_recheck",
+                "suggested_response",
+            ],
+        ),
+        "",
+        "### 신규 조건 별도 관찰 후보",
+        "",
+        f"- 신규 조건 초기 후보: {fmt_int(len(new_watchlist))}",
+        f"- 신규 조건 확정 후보: {fmt_int(len(new_confirmed[new_confirmed['flow_recheck_status'] == 'confirmed']) if not new_confirmed.empty and 'flow_recheck_status' in new_confirmed.columns else len(new_confirmed))}",
+        f"- 신규 조건 누적 관찰 후보: {fmt_int(len(new_observations))}",
+        "",
+        markdown_table(
+            new_confirmed,
             [
                 "priority",
                 "hypothesis_id",
