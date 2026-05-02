@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       job:
-        description: "실행할 작업 (morning / daily / both)"
+        description: "실행할 작업 (morning / daily / both / telegram-test)"
         required: true
         default: "both"
       date:
@@ -39,6 +39,20 @@ env:
   DASHBOARD_PORT: "8000"
 
 jobs:
+  telegram-alert-test:
+    name: 텔레그램 알림 테스트
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'telegram-test'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 텔레그램 테스트 메시지 전송
+        run: python -u scripts/send_github_action_telegram_alert.py --status test --job-name "텔레그램 알림 테스트"
+
   morning-dart-check:
     name: 오전 DART 공시 확인 (08:50 KST)
     runs-on: ubuntu-latest
@@ -59,21 +73,13 @@ jobs:
       - name: DART 공시 확인 실행
         run: python -u scripts/auto_morning_dart_check.py
 
+      - name: 성공 텔레그램 알림
+        if: success()
+        run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
+
       - name: 실패 텔레그램 알림
         if: failure()
-        env:
-          JOB_NAME: 오전 DART 공시 확인 (08:50 KST)
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "telegram secrets missing; skip failure notification"
-            exit 0
-          fi
-          MESSAGE=$(printf "[auto-invest] GitHub Actions 실패\nworkflow: %s\njob: %s\nbranch: %s\nrun: %s" "$GITHUB_WORKFLOW" "$JOB_NAME" "$GITHUB_REF_NAME" "$RUN_URL")
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "disable_web_page_preview=true" >/dev/null
+        run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
 
   daily-research-pipeline:
     name: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
@@ -139,18 +145,10 @@ jobs:
           git pull --rebase origin main
           git push
 
+      - name: 성공 텔레그램 알림
+        if: success()
+        run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
+
       - name: 실패 텔레그램 알림
         if: failure()
-        env:
-          JOB_NAME: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-            echo "telegram secrets missing; skip failure notification"
-            exit 0
-          fi
-          MESSAGE=$(printf "[auto-invest] GitHub Actions 실패\nworkflow: %s\njob: %s\nbranch: %s\nrun: %s" "$GITHUB_WORKFLOW" "$JOB_NAME" "$GITHUB_REF_NAME" "$RUN_URL")
-          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "disable_web_page_preview=true" >/dev/null
+        run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
