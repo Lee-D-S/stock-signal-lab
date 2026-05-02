@@ -10,6 +10,7 @@
 import asyncio
 import io
 import json
+import os
 import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -20,8 +21,9 @@ from config import settings
 
 DART_API_KEY  = settings.dart_api_key
 DART_BASE_URL = "https://opendart.fss.or.kr/api"
-CORP_CODE_CACHE = Path("data/dart_corp_codes.json")
-CORP_INFO_CACHE = Path("data/dart_corp_info.json")
+ROOT = Path(__file__).resolve().parents[2]
+CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
+CORP_INFO_CACHE = ROOT / "data" / "dart_corp_info.json"
 CACHE_TTL_DAYS  = 30
 DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(total=120, sock_connect=30, sock_read=120)
 DOWNLOAD_RETRIES = 3
@@ -41,6 +43,27 @@ _ACCOUNT_FIELD = {
     "부채총계":    "total_debt",
     "자본총계":    "equity",
 }
+
+
+def _is_github_actions() -> bool:
+    return os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+
+
+def _is_cache_fresh(path: Path) -> bool:
+    if not path.exists():
+        return False
+    mtime = datetime.fromtimestamp(path.stat().st_mtime)
+    return datetime.now() - mtime < timedelta(days=CACHE_TTL_DAYS)
+
+
+def _load_json_cache(path: Path) -> dict | None:
+    try:
+        if path.exists():
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as exc:
+        print(f"DART 캐시 로드 실패: {path} ({exc!r})")
+    return None
 
 
 async def _download_corp_codes() -> dict[str, str]:
@@ -113,14 +136,26 @@ async def get_corp_code_map() -> dict[str, str]:
     """종목코드 → DART 고유번호 매핑. 로컬 캐시 우선, 만료 시 자동 갱신."""
     CORP_CODE_CACHE.parent.mkdir(parents=True, exist_ok=True)
 
-    if CORP_CODE_CACHE.exists():
-        mtime = datetime.fromtimestamp(CORP_CODE_CACHE.stat().st_mtime)
-        if datetime.now() - mtime < timedelta(days=CACHE_TTL_DAYS):
-            with open(CORP_CODE_CACHE, encoding="utf-8") as f:
-                return json.load(f)
+    cached = _load_json_cache(CORP_CODE_CACHE)
+    if cached and _is_cache_fresh(CORP_CODE_CACHE):
+        print(f"DART 법인코드 캐시 사용: {CORP_CODE_CACHE} ({len(cached):,}개)")
+        return cached
+    if cached and _is_github_actions():
+        print(f"DART 법인코드 캐시 사용: stale_allowed_on_actions ({len(cached):,}개)")
+        return cached
+    if _is_github_actions():
+        print(f"DART 법인코드 캐시 없음: Actions에서는 전체 다운로드를 건너뜀 ({CORP_CODE_CACHE})")
+        return {}
 
     print("DART 법인코드 다운로드 중...")
-    mapping = await _download_corp_codes()
+    try:
+        mapping = await _download_corp_codes()
+    except Exception as exc:
+        if cached:
+            print(f"DART 법인코드 다운로드 실패, 기존 캐시 사용: {exc!r}")
+            return cached
+        print(f"DART 법인코드 다운로드 실패, 빈 매핑으로 계속 진행: {exc!r}")
+        return {}
     with open(CORP_CODE_CACHE, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False)
     print(f"법인코드 캐시 저장 완료 ({len(mapping):,}개)")
@@ -131,14 +166,26 @@ async def get_corp_info_map() -> dict[str, dict[str, str]]:
     """종목코드 -> {corp_code, corp_name} 매핑. 로컬 캐시 우선, 만료 시 자동 갱신."""
     CORP_INFO_CACHE.parent.mkdir(parents=True, exist_ok=True)
 
-    if CORP_INFO_CACHE.exists():
-        mtime = datetime.fromtimestamp(CORP_INFO_CACHE.stat().st_mtime)
-        if datetime.now() - mtime < timedelta(days=CACHE_TTL_DAYS):
-            with open(CORP_INFO_CACHE, encoding="utf-8") as f:
-                return json.load(f)
+    cached = _load_json_cache(CORP_INFO_CACHE)
+    if cached and _is_cache_fresh(CORP_INFO_CACHE):
+        print(f"DART 회사정보 캐시 사용: {CORP_INFO_CACHE} ({len(cached):,}개)")
+        return cached
+    if cached and _is_github_actions():
+        print(f"DART 회사정보 캐시 사용: stale_allowed_on_actions ({len(cached):,}개)")
+        return cached
+    if _is_github_actions():
+        print(f"DART 회사정보 캐시 없음: Actions에서는 전체 다운로드를 건너뜀 ({CORP_INFO_CACHE})")
+        return {}
 
     print("DART 회사명/법인코드 다운로드 중...")
-    mapping = await _download_corp_info()
+    try:
+        mapping = await _download_corp_info()
+    except Exception as exc:
+        if cached:
+            print(f"DART 회사정보 다운로드 실패, 기존 캐시 사용: {exc!r}")
+            return cached
+        print(f"DART 회사정보 다운로드 실패, 빈 매핑으로 계속 진행: {exc!r}")
+        return {}
     with open(CORP_INFO_CACHE, "w", encoding="utf-8") as f:
         json.dump(mapping, f, ensure_ascii=False)
     print(f"회사명/법인코드 캐시 저장 완료 ({len(mapping):,}개)")

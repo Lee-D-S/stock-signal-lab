@@ -78,6 +78,11 @@ jobs:
       - name: 의존성 설치
         run: pip install -r requirements.txt
 
+      - name: 실행 커밋 및 DART 캐시 확인
+        run: |
+          git rev-parse --short HEAD
+          ls -l data/dart_corp_codes.json data/dart_corp_info.json || true
+
       - name: 일별 후보 탐지 및 관찰 로그 추가
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
