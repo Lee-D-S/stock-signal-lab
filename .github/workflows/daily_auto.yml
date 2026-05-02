@@ -99,6 +99,9 @@ jobs:
             python -u scripts/run_observation_tracking_update.py
           fi
 
+      - name: 관찰 성과 요약 생성
+        run: python -u scripts/run_observation_performance_summary.py
+
       - name: 일일 운영 요약 생성
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then

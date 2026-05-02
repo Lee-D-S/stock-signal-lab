@@ -53,7 +53,7 @@
 
 | priority | hypothesis_id | use_type | ticker | name | signal_date | direction | chg_pct | amount_tag | flow_category_recheck | suggested_response |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1.0 | H02 | 반등 감시 후보 | 005930 | 삼성전자 | 2026-04-30 | down | -2.433628318584069 | 거래대금약함 | 외국인기관동반매수 | 하락 이벤트 다음 거래일 반등 확인 후 단기 진입 검토 |
+| 1.0 | H02 | 반등 감시 후보 | 005930 | 삼성전자 | 2026-04-30 | down | -2.43% | 거래대금약함 | 외국인기관동반매수 | 하락 이벤트 다음 거래일 반등 확인 후 단기 진입 검토 |
 
 ## 3. 관찰 로그
 
@@ -66,6 +66,13 @@
 | signal_date | ticker | name | hypothesis_id | use_type | event_close | next_close_return_pct | d_plus_5_return_pct | d_plus_10_return_pct | d_plus_20_return_pct | result_label |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-04-30 | 005930 | 삼성전자 | H02 | 반등 감시 후보 | 220500 |  |  |  |  |  |
+
+### 조건별 관찰 성과
+
+| hypothesis_id | use_type | sample_count | completed_count | next_close_avg_return_pct | d_plus_5_avg_return_pct | d_plus_10_avg_return_pct | d_plus_20_avg_return_pct | positive_label_count | negative_label_count | result_status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| H01 | 매수 후보 | 1 | 1 | -1.63% |  |  |  | 0 | 0 | 표본 부족 |
+| H02 | 반등 감시 후보 | 2 | 1 | +2.94% |  |  |  | 1 | 0 | 표본 부족 |
 
 ## 4. 다음 확인
 

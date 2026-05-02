@@ -1,0 +1,3 @@
+﻿hypothesis_id,use_type,sample_count,completed_count,positive_label_count,negative_label_count,neutral_label_count,result_label_distribution,next_close_count,next_close_avg_return_pct,next_close_median_return_pct,next_close_positive_rate_pct,d_plus_5_count,d_plus_5_avg_return_pct,d_plus_5_median_return_pct,d_plus_5_positive_rate_pct,d_plus_10_count,d_plus_10_avg_return_pct,d_plus_10_median_return_pct,d_plus_10_positive_rate_pct,d_plus_20_count,d_plus_20_avg_return_pct,d_plus_20_median_return_pct,d_plus_20_positive_rate_pct,result_status
+H01,매수 후보,1,1,0,0,1,단기 되돌림 1,1,-1.63,-1.63,0.0,0,,,,0,,,,0,,,,표본 부족
+H02,반등 감시 후보,2,1,1,0,0,단기 반등 1,1,2.94,2.94,100.0,0,,,,0,,,,0,,,,표본 부족

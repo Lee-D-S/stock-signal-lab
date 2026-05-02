@@ -19,6 +19,7 @@ WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
 CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
 ERROR_CSV = STRATEGY_DIR / "관심종목_시그널_오류.csv"
 OBS_CSV = OBS_DIR / "관찰_로그(이상).csv"
+PERFORMANCE_CSV = OBS_DIR / "관찰_성과_요약.csv"
 SUMMARY_DIR = BASE_DIR / "10_일일요약"
 
 
@@ -37,6 +38,17 @@ def fmt_int(value: Any) -> str:
     return f"{int(value):,}"
 
 
+def fmt_table_cell(column: str, value: Any) -> str:
+    if value is None or pd.isna(value):
+        return ""
+    if column.endswith("_pct"):
+        try:
+            return f"{float(value):+.2f}%"
+        except (TypeError, ValueError):
+            return str(value)
+    return str(value)
+
+
 def markdown_table(df: pd.DataFrame, columns: list[str], max_rows: int = 30) -> str:
     if df.empty:
         return "_없음_"
@@ -48,7 +60,7 @@ def markdown_table(df: pd.DataFrame, columns: list[str], max_rows: int = 30) -> 
         "| " + " | ".join("---" for _ in view.columns) + " |",
     ]
     for _, row in view.iterrows():
-        lines.append("| " + " | ".join(str(row[col]).replace("|", "\\|") for col in view.columns) + " |")
+        lines.append("| " + " | ".join(fmt_table_cell(col, row[col]).replace("|", "\\|") for col in view.columns) + " |")
     return "\n".join(lines)
 
 
@@ -67,6 +79,7 @@ def build_summary(target_date: str) -> str:
     confirmed = read_csv(CONFIRMED_CSV, dtype={"ticker": str})
     errors = read_csv(ERROR_CSV, dtype={"ticker": str})
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
+    performance = read_csv(PERFORMANCE_CSV)
 
     signal_date = target_date or latest_signal_date(watchlist, confirmed, observations) or "latest"
     if not observations.empty and "signal_date" in observations.columns and signal_date != "latest":
@@ -166,6 +179,25 @@ def build_summary(target_date: str) -> str:
                 "d_plus_10_return_pct",
                 "d_plus_20_return_pct",
                 "result_label",
+            ],
+        ),
+        "",
+        "### 조건별 관찰 성과",
+        "",
+        markdown_table(
+            performance,
+            [
+                "hypothesis_id",
+                "use_type",
+                "sample_count",
+                "completed_count",
+                "next_close_avg_return_pct",
+                "d_plus_5_avg_return_pct",
+                "d_plus_10_avg_return_pct",
+                "d_plus_20_avg_return_pct",
+                "positive_label_count",
+                "negative_label_count",
+                "result_status",
             ],
         ),
         "",
