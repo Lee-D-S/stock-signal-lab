@@ -81,8 +81,12 @@ def markdown_table(df: pd.DataFrame) -> str:
 
 
 def build_markdown(df: pd.DataFrame, title: str = "일별 전략 감시 후보 수급 재조회") -> str:
-    confirmed = df[df["flow_recheck_status"] == "confirmed"].copy()
-    pending = df[df["flow_recheck_status"] != "confirmed"].copy()
+    if df.empty or "flow_recheck_status" not in df.columns:
+        confirmed = df.iloc[:0].copy()
+        pending = df.iloc[:0].copy()
+    else:
+        confirmed = df[df["flow_recheck_status"] == "confirmed"].copy()
+        pending = df[df["flow_recheck_status"] != "confirmed"].copy()
     lines = [
         f"# {title}",
         "",
