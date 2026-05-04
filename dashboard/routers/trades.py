@@ -14,9 +14,9 @@ router = APIRouter(prefix="/trades", tags=["trades"])
 async def get_trades(
     start: date | None = Query(None, description="시작일 (YYYY-MM-DD)"),
     end: date | None = Query(None, description="종료일 (YYYY-MM-DD)"),
-    ticker: str | None = Query(None),
-    side: str | None = Query(None, description="buy 또는 sell"),
-    limit: int = Query(100, le=500),
+    ticker: str | None = Query(None, max_length=10, pattern=r"^[A-Z0-9]+$"),
+    side: str | None = Query(None, description="buy 또는 sell", pattern=r"^(buy|sell)$"),
+    limit: int = Query(100, le=100),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(TradeLog).order_by(TradeLog.created_at.desc()).limit(limit)

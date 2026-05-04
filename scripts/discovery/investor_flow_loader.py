@@ -41,11 +41,6 @@ def _read_cached_frame(parquet_path: Path, pickle_path: Path) -> pd.DataFrame | 
             return pd.read_parquet(parquet_path)
         except (OSError, ValueError, ImportError) as exc:
             logger.warning("failed to read investor flow parquet cache %s: %s", parquet_path, exc)
-    if pickle_path.exists():
-        try:
-            return pd.read_pickle(pickle_path)
-        except (OSError, ValueError, ImportError, EOFError) as exc:
-            logger.warning("failed to read investor flow pickle cache %s: %s", pickle_path, exc)
     return None
 
 
@@ -54,7 +49,6 @@ def _write_cached_frame(df: pd.DataFrame, parquet_path: Path, pickle_path: Path)
         df.to_parquet(parquet_path, index=False)
     except (OSError, ValueError, ImportError) as exc:
         logger.warning("failed to write investor flow parquet cache %s: %s", parquet_path, exc)
-        df.to_pickle(pickle_path)
 
 
 def _parse_investor_rows(rows: list[dict[str, Any]]) -> pd.DataFrame:

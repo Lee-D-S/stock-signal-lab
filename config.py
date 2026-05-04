@@ -40,8 +40,9 @@ class Settings(BaseSettings):
     dart_api_key: str = ""
 
     # 대시보드
-    dashboard_host: str = "0.0.0.0"
+    dashboard_host: str = "127.0.0.1"
     dashboard_port: int = 8000
+    dashboard_api_key: str = ""  # 설정 시 POST 엔드포인트 인증 활성화
 
     # 매매 설정
     max_order_amount: int = 100000

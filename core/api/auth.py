@@ -111,7 +111,8 @@ async def get_real_access_token() -> str:
         async with httpx.AsyncClient() as http:
             resp = await http.post(url, json=payload, timeout=10)
             if not resp.is_success:
-                logger.error("실전 서버 토큰 발급 실패 [%s]: %s", resp.status_code, resp.text)
+                logger.error("실전 서버 토큰 발급 실패 [%s]", resp.status_code)
+                logger.debug("실전 서버 토큰 발급 실패 응답 본문: %s", resp.text)
             resp.raise_for_status()
             data = resp.json()
 
