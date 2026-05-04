@@ -186,7 +186,7 @@ python scripts/run_walkforward.py --ma-align 60,120,240 --start 2020-01-01 --end
 
 ## 주가 변동 원인 분석 프로젝트 (`ai 주가 변동 원인 분석/`)
 
-개별 종목의 주가 변동 원인을 분기별로 분석해 반복 패턴을 찾고, 실전 매매 시그널로 연결하는 리서치 프로젝트. 자동매매 시스템과는 별개로 동작하며 `scripts/tmp_*.py` 스크립트로 산출물을 생성한다.
+개별 종목의 주가 변동 원인을 분기별로 분석해 반복 패턴을 찾고, 실전 매매 시그널로 연결하는 리서치 프로젝트. 자동매매 시스템과는 별개로 동작한다. 전체 현황은 `프로젝트_현황_총정리.md` 참고.
 
 ### 디렉토리 구조
 
@@ -199,13 +199,86 @@ ai 주가 변동 원인 분석/
   04_패턴분석/    # 패턴_분석_*.csv, 패턴_가설_후보.csv
   05_가설검토/    # 가설_이벤트_검토.*, 가설_이벤트_요약.csv
   06_백테스트/    # 대리/실전 백테스트 결과, OHLCV 캐시 보강 결과
-  07_전략신호/    # 전략_조건_초안.*, 관심종목_시그널_후보.*, 확정.*
-  08_관찰기록/    # 관찰_로그.*
+  07_전략신호/    # 전략_조건_초안.*, 관심종목_시그널_후보.*, 확정.*, 거래대금_상위_유니버스.*
+  08_관찰기록/    # 관찰_로그.*, 관찰_성과_요약.*
+  09_조건스냅샷/  # 날짜별 디렉토리 — 가설 검토·백테스트·이벤트 전체 스냅샷
+  10_일일요약/    # 일별 운영 요약 리포트 (일일_운영_요약_YYYY-MM-DD.md)
+  프로젝트_현황_총정리.md  # 목적·흐름·스크립트 전체 설명
 ```
 
-### 분석 파이프라인 (`scripts/tmp_*.py`)
+### 일일 운영 파이프라인
 
-각 스크립트는 독립 실행형이며 순서대로 실행한다. `tmp_quarterly_stock_analysis.py`는 KIS API 공통 라이브러리로 직접 실행하지 않는다.
+**통합 실행 (권장):**
+
+```bash
+# daily 모드 — 유니버스 갱신 → 시그널 스캔 → 관찰 로그 추가 → 외국인 순매수 추적
+python scripts/run_signal_research_pipeline.py --mode daily
+
+# backtest 모드 — 가설 백테스트 → 스냅샷 저장
+python scripts/run_signal_research_pipeline.py --mode backtest
+
+# full 모드 — backtest 후 daily까지 한 번에 실행
+python scripts/run_signal_research_pipeline.py --mode full
+```
+
+**단계별 개별 실행:**
+
+```bash
+# 거래대금 상위 유니버스 갱신 (07_전략신호/거래대금_상위_유니버스.*)
+python scripts/run_daily_universe_refresh.py
+
+# 신규 기업 보고서 생성 (거래대금 상위 중 보고서 없는 종목 → 00_기업별분석/)
+python scripts/run_new_company_reports.py
+
+# 확정 후보 관찰 로그 추가 (07_전략신호 → 08_관찰기록)
+python scripts/run_observation_update.py
+
+# 관찰 로그 D+1/D+5/D+10/D+20 수익률 추적 업데이트
+python scripts/run_observation_tracking_update.py
+
+# 관찰 성과 집계 (08_관찰기록/관찰_성과_요약.*)
+python scripts/run_observation_performance_summary.py
+
+# 신규 스냅샷 조건 관찰 로그 추가 (09_조건스냅샷 → 08_관찰기록)
+python scripts/run_new_condition_observation.py
+
+# 외국인 연속 순매수 후보 관찰 기록 및 D+ 추적 (기본 min-streak=2)
+python scripts/run_foreign_flow_observation.py --min-streak 2
+
+# 단기(MA5>20>60>120) + 장기(MA60>120>240) 정배열 종목 관찰 기록/추적 (08_관찰기록/)
+python scripts/run_alignment_observation.py --pool-size 300
+
+# 팩터 스코어링 결과 관찰 기록/추적 — run_scoring.py screen 결과를 누적 (08_관찰기록/)
+# run_scoring.py --mode screen 을 먼저 실행해야 한다
+python scripts/run_scoring_observation.py --threshold 0.60
+
+# 외국인 연속 순매수/순매도 빠른 조회 (기본 10일, --days로 변경)
+python scripts/foreign_consec_buy.py --days 3
+
+# 일일 리서치 요약 생성 — Gemini 활용 (10_일일요약/)
+python scripts/run_daily_research_summary.py
+
+# 신규 스냅샷 조건 검토 (09_조건스냅샷 내 최신 날짜 기준)
+python scripts/review_new_snapshot_conditions.py
+```
+
+### 조건 임계값 탐색 (`run_condition_search.py`)
+
+```bash
+# 단기 조건 검증 (hold_days=1, 5, 10, 20)
+python scripts/run_condition_search.py \
+    --load-records scripts/discovery/results/records_hold1.parquet \
+    --train-end 2022-12-31 --val-end 2024-12-31 --horizon short
+
+# 장기 조건 검증 (hold_days=60 이상)
+python scripts/run_condition_search.py \
+    --load-records scripts/discovery/results/records_hold60.parquet \
+    --train-end 2022-12-31 --val-end 2024-12-31 --horizon long
+```
+
+### 초기 분석 파이프라인 (`scripts/tmp_*.py`)
+
+전략 조건을 처음 발굴할 때 순서대로 실행한다. `tmp_quarterly_stock_analysis.py`는 KIS API 공통 라이브러리로 직접 실행하지 않는다.
 
 ```bash
 # 1. 기업별 분기 보고서 생성 (00_기업별분석/ → events.jsonl 생성)
@@ -232,12 +305,19 @@ python scripts/tmp_classify_gaps_and_draft_strategy.py
 # 7. 관심종목 시그널 생성 (07 생성)
 python scripts/tmp_generate_watchlist_signals.py
 
-# 8. 수급 재조회 — 장 중(09:00~15:40)에만 실행 가능 (07→08 생성)
+# 8. 수급 재조회 — 15:40 이후에만 실행 가능 (07→08 생성)
 python scripts/tmp_recheck_watchlist_flows.py
+```
+
+### 자동화 스크립트
+
+```bash
+# 평일 08:50 자동 실행 — 관찰 종목 DART 공시 확인 후 텔레그램 알림
+python scripts/auto_morning_dart_check.py
 ```
 
 ### Windows 주의사항
 
-`aiohttp`를 사용하는 스크립트(`tmp_recheck_watchlist_flows.py` 등)는 Windows에서 `asyncio.WindowsProactorEventLoopPolicy()`를 사용해야 한다. `WindowsSelectorEventLoopPolicy`는 `socket.socketpair()` 오류를 유발한다.
+`aiohttp`를 사용하는 스크립트(`tmp_recheck_watchlist_flows.py`, `run_foreign_flow_observation.py` 등)는 Windows에서 `asyncio.WindowsProactorEventLoopPolicy()`를 사용해야 한다. `WindowsSelectorEventLoopPolicy`는 `socket.socketpair()` 오류를 유발한다.
 
 KIS 수급 API(`FHPTJ04160001`)는 `TIME LIMIT 00:00~15:40` 제한이 있어 **15:40 이후에만** 호출 가능하다. 장 중에는 `pending_api_error`가 반환된다.

@@ -122,6 +122,38 @@ def run_daily(args: argparse.Namespace) -> None:
             dry_run=args.dry_run,
         )
 
+    if not args.skip_scoring_observation:
+        # run_scoring.py / run_alignment_observation.py 는 날짜 인자를 지원하지 않아
+        # 항상 오늘 기준으로 실행된다 — --date 로 과거를 돌릴 때는 이 단계를 skip 해야 한다.
+        run_step(
+            Step(
+                "팩터 스코어링 스크린",
+                "run_scoring.py",
+                ("--mode", "screen", "--by", "marcap", "--to", str(args.scoring_pool_size)),
+                network=True,
+            ),
+            dry_run=args.dry_run,
+        )
+        run_step(
+            Step(
+                "팩터 스코어 관찰 기록/추적",
+                "run_scoring_observation.py",
+                ("--threshold", str(args.scoring_threshold)),
+            ),
+            dry_run=args.dry_run,
+        )
+
+    if not args.skip_alignment_observation:
+        run_step(
+            Step(
+                "단기/장기 정배열 관찰 기록/추적",
+                "run_alignment_observation.py",
+                ("--pool-size", str(args.alignment_pool_size)),
+                network=True,
+            ),
+            dry_run=args.dry_run,
+        )
+
 
 def run_backtest(args: argparse.Namespace) -> None:
     for step in BACKTEST_STEPS:
@@ -206,6 +238,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skip-foreign-flow-observation", action="store_true", help="외국인 연속 순매수 관찰 기록/추적을 건너뜀")
     parser.add_argument("--foreign-flow-top", type=int, default=50, help="외국인 연속 순매수 최대 기록 후보 수")
     parser.add_argument("--foreign-flow-pool-size", type=int, default=120, help="외국인 연속 순매수 스캔 대상 거래대금 상위 후보 수")
+    parser.add_argument("--skip-scoring-observation", action="store_true", help="팩터 스코어링 스크린 + 관찰 기록/추적을 건너뜀")
+    parser.add_argument("--scoring-threshold", type=float, default=0.60, help="팩터 스코어 관찰 기록 임계값 (기본: 0.60)")
+    parser.add_argument("--scoring-pool-size", type=int, default=300, help="팩터 스코어링 스캔 종목 수 (기본: 300)")
+    parser.add_argument("--skip-alignment-observation", action="store_true", help="단기/장기 정배열 관찰 기록/추적을 건너뜀")
+    parser.add_argument("--alignment-pool-size", type=int, default=300, help="정배열 스캔 시총 상위 N개 (기본: 300)")
     parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="backtest 산출물 스냅샷 기준일 YYYY-MM-DD")
     parser.add_argument("--promote-strategy", action="store_true", help="backtest로 만든 조건 초안을 active 전략 조건으로 승격")
     parser.add_argument("--include-reports", action="store_true", help="full 모드에서 분기 보고서 배치 생성까지 실행")
