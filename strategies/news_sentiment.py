@@ -17,6 +17,23 @@ from .base import BaseStrategy
 
 logger = logging.getLogger(__name__)
 
+_INJECTION_PATTERNS = [
+    re.compile(r"(ignore|forget|disregard).{0,30}(instruction|previous|above)", re.IGNORECASE),
+    re.compile(r"(new|override).{0,20}(task|directive|instruction|system)", re.IGNORECASE),
+    re.compile(r"(무시|잊어|취소).{0,20}(지시|명령|이전)", re.IGNORECASE),
+    re.compile(r"(매수|매도|buy|sell).{0,30}(신호|signal).{0,20}(내줘|해줘|하라|하세요)", re.IGNORECASE),
+    re.compile(r"\d{6}.{0,20}(매수|매도)", re.IGNORECASE),
+]
+
+
+def _sanitize_text(text: str, max_len: int = 200) -> str:
+    text = text[:max_len]
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(text):
+            raise ValueError(f"인젝션 의심: {text[:80]}")
+    return text
+
+
 # 뉴스 RSS 소스
 NEWS_SOURCES = [
     "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258",  # 네이버 증권 뉴스
@@ -156,11 +173,18 @@ class NewsSentimentStrategy(BaseStrategy):
 
     async def _analyze(self, article: dict) -> list[dict]:
         """Gemini API로 기사 감성 분석"""
+        try:
+            title = _sanitize_text(article["title"])
+            summary = _sanitize_text(article.get("summary", "없음"))
+        except ValueError as e:
+            logger.warning(f"[NewsSentiment] 기사 스킵 (인젝션 의심): {e}")
+            return []
+
         prompt = f"""
 다음 뉴스 기사 제목을 분석해서 특정 상장 기업에 호재인지 악재인지 판단해주세요.
 
-기사 제목: {article['title']}
-요약: {article.get('summary', '없음')}
+기사 제목: {title}
+요약: {summary}
 
 답변 규칙:
 1. 반드시 아래 JSON 형식으로만 답변하세요 (설명 없이 JSON만)

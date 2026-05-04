@@ -1,7 +1,7 @@
 import logging
 import sys
 from asyncio.subprocess import PIPE
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 import asyncio
 
@@ -24,6 +24,56 @@ from strategies.news_sentiment import NewsSentimentStrategy
 
 logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
+
+
+class _SpendLimitGuard:
+    """일별 총 매수 금액 한도 관리. 자정에 자동 리셋."""
+
+    def __init__(self) -> None:
+        self._date: date = date.today()
+        self._spent: int = 0
+
+    def check_and_record(self, amount: int) -> None:
+        today = date.today()
+        if today != self._date:
+            self._date = today
+            self._spent = 0
+        if self._spent + amount > settings.max_daily_spend:
+            raise RuntimeError(
+                f"일별 매수 한도 초과: 누적 {self._spent:,}원 + {amount:,}원 > {settings.max_daily_spend:,}원"
+            )
+        self._spent += amount
+
+
+class _CircuitBreaker:
+    """연속 손실 N회 시 전략 전체 자동 중단."""
+
+    def __init__(self) -> None:
+        self._consecutive_losses: int = 0
+        self._halted: bool = False
+
+    @property
+    def is_halted(self) -> bool:
+        return self._halted
+
+    def record_sell(self, profit: float) -> None:
+        if profit < 0:
+            self._consecutive_losses += 1
+            if self._consecutive_losses >= settings.max_consecutive_losses:
+                self._halted = True
+                logger.error(
+                    f"[CircuitBreaker] 연속 손실 {self._consecutive_losses}회 — 전략 자동 중단"
+                )
+        else:
+            self._consecutive_losses = 0
+
+    def reset(self) -> None:
+        self._consecutive_losses = 0
+        self._halted = False
+
+
+_spend_guard = _SpendLimitGuard()
+_circuit_breaker = _CircuitBreaker()
 
 # 전략 등록 — 여기에 추가하면 자동으로 실행됨
 MA_STRATEGY = MACrossStrategy(
@@ -58,6 +108,9 @@ async def run_strategy(strategy: BaseStrategy) -> None:
     """단일 전략 실행"""
     if not strategy.enabled or not is_market_open():
         return
+    if _circuit_breaker.is_halted:
+        logger.warning(f"[CircuitBreaker] 차단 상태 — {strategy.name} 실행 건너뜀")
+        return
 
     tickers = strategy.tickers
 
@@ -88,6 +141,10 @@ async def run_strategy(strategy: BaseStrategy) -> None:
                         await _record_trade(ticker, name, "sell", qty, current_price, strategy.name, reason, result.get("order_id", ""))
                         await telegram.notify_sell(ticker, name, qty, current_price, reason)
                         await _remove_position(ticker)
+                        profit = (current_price - avg_price) * qty
+                        _circuit_breaker.record_sell(profit)
+                        if _circuit_breaker.is_halted:
+                            await telegram.notify_error("CircuitBreaker", f"연속 손실 {settings.max_consecutive_losses}회 달성 — 전략 자동 중단")
                         logger.info(f"[{strategy.name}] 매도: {name}({ticker}) {qty}주 @ {current_price:,}원")
                 continue
 
@@ -96,6 +153,12 @@ async def run_strategy(strategy: BaseStrategy) -> None:
             if buy_signal:
                 qty = strategy.get_order_quantity(current_price, settings.max_order_amount)
                 if qty > 0 and await _can_buy_more():
+                    order_amount = qty * current_price
+                    try:
+                        _spend_guard.check_and_record(order_amount)
+                    except RuntimeError as e:
+                        logger.warning(f"[SpendLimit] {e}")
+                        continue
                     result = await broker.buy(ticker, qty, current_price)
                     await _record_trade(ticker, name, "buy", qty, current_price, strategy.name, reason, result.get("order_id", ""))
                     await telegram.notify_buy(ticker, name, qty, current_price, reason)
@@ -182,6 +245,8 @@ async def run_daily_summary() -> None:
         total_profit += (sell.price - buy_price) * sell.quantity
 
     await telegram.notify_daily_summary(total_profit=total_profit, trade_count=len(trades))
+    _circuit_breaker.reset()
+    logger.info("[CircuitBreaker] 일일 리셋 완료")
 
 
 async def run_foreign_flow_observation() -> None:

@@ -46,10 +46,12 @@ class Settings(BaseSettings):
 
     # 매매 설정
     max_order_amount: int = 100000
+    max_daily_spend: int = 1_000_000      # 일별 총 매수 한도 (KRW)
     max_positions: int = 10
     news_crawl_interval_min: int = 10
-    stop_loss_pct: float = -0.05   # 손절 기준 (-5%)
-    take_profit_pct: float = 0.10  # 익절 기준 (+10%)
+    stop_loss_pct: float = -0.05          # 손절 기준 (-5%)
+    take_profit_pct: float = 0.10         # 익절 기준 (+10%)
+    max_consecutive_losses: int = 3       # 연속 손실 서킷브레이커 임계값
 
     @property
     def kis_base_url(self) -> str:
