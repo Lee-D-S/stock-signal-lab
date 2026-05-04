@@ -123,34 +123,27 @@ def run_daily(args: argparse.Namespace) -> None:
         )
 
     if not args.skip_scoring_observation:
-        # run_scoring.py / run_alignment_observation.py 는 날짜 인자를 지원하지 않아
-        # 항상 오늘 기준으로 실행된다 — --date 로 과거를 돌릴 때는 이 단계를 skip 해야 한다.
+        scoring_screen_args: list[str] = ["--mode", "screen", "--by", "marcap", "--to", str(args.scoring_pool_size)]
+        if args.date:
+            scoring_screen_args.extend(["--date", args.date])
         run_step(
-            Step(
-                "팩터 스코어링 스크린",
-                "run_scoring.py",
-                ("--mode", "screen", "--by", "marcap", "--to", str(args.scoring_pool_size)),
-                network=True,
-            ),
+            Step("팩터 스코어링 스크린", "run_scoring.py", tuple(scoring_screen_args), network=True),
             dry_run=args.dry_run,
         )
+        scoring_obs_args: list[str] = ["--threshold", str(args.scoring_threshold)]
+        if args.date:
+            scoring_obs_args.extend(["--date", args.date])
         run_step(
-            Step(
-                "팩터 스코어 관찰 기록/추적",
-                "run_scoring_observation.py",
-                ("--threshold", str(args.scoring_threshold)),
-            ),
+            Step("팩터 스코어 관찰 기록/추적", "run_scoring_observation.py", tuple(scoring_obs_args)),
             dry_run=args.dry_run,
         )
 
     if not args.skip_alignment_observation:
+        alignment_args: list[str] = ["--pool-size", str(args.alignment_pool_size)]
+        if args.date:
+            alignment_args.extend(["--date", args.date])
         run_step(
-            Step(
-                "단기/장기 정배열 관찰 기록/추적",
-                "run_alignment_observation.py",
-                ("--pool-size", str(args.alignment_pool_size)),
-                network=True,
-            ),
+            Step("단기/장기 정배열 관찰 기록/추적", "run_alignment_observation.py", tuple(alignment_args), network=True),
             dry_run=args.dry_run,
         )
 

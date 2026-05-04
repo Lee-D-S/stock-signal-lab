@@ -211,8 +211,20 @@ ai 주가 변동 원인 분석/
 **통합 실행 (권장):**
 
 ```bash
-# daily 모드 — 유니버스 갱신 → 시그널 스캔 → 관찰 로그 추가 → 외국인 순매수 추적
+# daily 모드 — 유니버스 갱신 → 시그널 스캔 → 관찰 로그 추가 → 팩터 스코어 스크린/추적 → 정배열 추적
 python scripts/run_signal_research_pipeline.py --mode daily
+
+# daily 모드에서 특정 단계 스킵
+python scripts/run_signal_research_pipeline.py --mode daily --skip-scoring-observation --skip-alignment-observation
+
+# daily 모드에서 팩터 스코어 임계값 변경 (기본 0.60)
+python scripts/run_signal_research_pipeline.py --mode daily --scoring-threshold 0.70
+
+# daily 모드에서 팩터 스코어링 풀 크기 변경 (기본 300)
+python scripts/run_signal_research_pipeline.py --mode daily --scoring-pool-size 500
+
+# daily 모드에서 정배열 스캔 풀 크기 변경 (기본 300)
+python scripts/run_signal_research_pipeline.py --mode daily --alignment-pool-size 500
 
 # backtest 모드 — 가설 백테스트 → 스냅샷 저장
 python scripts/run_signal_research_pipeline.py --mode backtest
@@ -245,12 +257,14 @@ python scripts/run_new_condition_observation.py
 # 외국인 연속 순매수 후보 관찰 기록 및 D+ 추적 (기본 min-streak=2)
 python scripts/run_foreign_flow_observation.py --min-streak 2
 
+# 팩터 스코어링 스크린 (시총 상위 N개 유니버스)
+python scripts/run_scoring.py --mode screen --by marcap --to 300
+
+# 팩터 스코어 관찰 기록/추적 — run_scoring.py --mode screen 의 오늘 결과를 임계값 이상 누적 (08_관찰기록/)
+python scripts/run_scoring_observation.py --threshold 0.60
+
 # 단기(MA5>20>60>120) + 장기(MA60>120>240) 정배열 종목 관찰 기록/추적 (08_관찰기록/)
 python scripts/run_alignment_observation.py --pool-size 300
-
-# 팩터 스코어링 결과 관찰 기록/추적 — run_scoring.py screen 결과를 누적 (08_관찰기록/)
-# run_scoring.py --mode screen 을 먼저 실행해야 한다
-python scripts/run_scoring_observation.py --threshold 0.60
 
 # 외국인 연속 순매수/순매도 빠른 조회 (기본 10일, --days로 변경)
 python scripts/foreign_consec_buy.py --days 3

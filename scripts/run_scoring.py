@@ -71,6 +71,8 @@ def parse_args() -> argparse.Namespace:
                    help="threshold 모드: 원시 레코드 parquet 저장 경로")
     p.add_argument("--load-raw",      default=None,
                    help="threshold 모드: 기존 레코드 로드 (수집 단계 생략)")
+    p.add_argument("--date",          default=None,
+                   help="screen 모드: 기준일 YYYY-MM-DD (기본: 오늘). 지정 시 OHLCV를 그 날짜까지 잘라 계산")
     return p.parse_args()
 
 
@@ -143,13 +145,15 @@ async def _run_threshold(args: argparse.Namespace, weights: dict) -> None:
 
 async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
     import asyncio
+    from datetime import date as date_type
 
     from screener_lib.data import get_ohlcv
     from screener_lib.universe import get_stock_universe
 
-    threshold = args.threshold if args.threshold is not None else 0.60
+    threshold   = args.threshold if args.threshold is not None else 0.60
+    target_date = date_type.fromisoformat(args.date) if args.date else date_type.today()
 
-    print(f"[screen] 유니버스 조회 중... (by={args.by}, top={args.to})")
+    print(f"[screen] 유니버스 조회 중... (by={args.by}, top={args.to}, date={target_date})")
     universe = await get_stock_universe(by=args.by)
     stocks   = universe[:args.to]
     print(f"[screen] {len(stocks)}개 종목 스코어 계산 중 (임계값: {threshold:.0%})")
@@ -158,7 +162,14 @@ async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
     for i, stock in enumerate(stocks, 1):
         ticker = stock["ticker"]
         df, _  = await get_ohlcv(ticker)
-        if df.empty or len(df) < 60:
+        if df.empty:
+            continue
+
+        # target_date 이후 데이터 제거 — 과거 날짜 재실행 시 미래 누출 방지
+        df["_d"] = df["date"].apply(lambda d: d.date() if hasattr(d, "date") else d)
+        df = df[df["_d"] <= target_date].drop(columns=["_d"]).reset_index(drop=True)
+
+        if len(df) < 60:
             continue
 
         score, details = score_ticker(df, weights=weights)
@@ -183,11 +194,10 @@ async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
 
     _print_screen_results(candidates, threshold, len(results))
 
-    # CSV 저장
+    # CSV 저장 — 기준일 기반 파일명
     out_dir = Path("scripts/scoring/results")
     out_dir.mkdir(parents=True, exist_ok=True)
-    from datetime import date
-    csv_path = out_dir / f"screen_{date.today().isoformat()}.csv"
+    csv_path = out_dir / f"screen_{target_date.isoformat()}.csv"
     _save_screen_csv(results, threshold, csv_path)
     print(f"[screen] 전체 결과 저장: {csv_path}")
 

@@ -1,13 +1,13 @@
 """팩터 스코어링 결과 일별 관찰 기록 및 D+ 수익률 추적.
 
-run_scoring.py --mode screen 이 저장한 오늘 CSV를 읽어
+run_scoring.py --mode screen 이 저장한 CSV를 읽어
 임계값 이상 종목을 08_관찰기록/스코어_관찰_로그.csv 에 누적하고
 기존 행의 D+ 수익률을 업데이트한다.
 
 Usage:
-    python scripts/run_scoring_observation.py
+    python scripts/run_scoring_observation.py                    # 오늘 기준
     python scripts/run_scoring_observation.py --threshold 0.70
-    python scripts/run_scoring_observation.py --date 2026-05-01
+    python scripts/run_scoring_observation.py --date 2026-05-01  # 과거 재실행
 """
 from __future__ import annotations
 
@@ -139,11 +139,12 @@ def _save(df: pd.DataFrame) -> None:
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="팩터 스코어 관찰 기록/추적 (오늘 기준 전용)")
+    parser = argparse.ArgumentParser(description="팩터 스코어 관찰 기록/추적")
     parser.add_argument("--threshold", type=float, default=0.60)
+    parser.add_argument("--date", default=None, help="기준일 YYYY-MM-DD (기본: 오늘). run_scoring.py --date 와 맞춰서 사용")
     args = parser.parse_args()
 
-    today     = date.today()
+    today     = date.fromisoformat(args.date) if args.date else date.today()
     today_str = today.isoformat()
 
     screen_csv = SCREEN_DIR / f"screen_{today_str}.csv"

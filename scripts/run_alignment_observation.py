@@ -1,10 +1,11 @@
 """단기/장기 이동평균선 정배열 일별 관찰 기록 및 D+ 수익률 추적.
 
 Usage:
-    python scripts/run_alignment_observation.py                  # 기본 (시총 상위 300)
+    python scripts/run_alignment_observation.py                        # 오늘 기준
     python scripts/run_alignment_observation.py --pool-size 500
+    python scripts/run_alignment_observation.py --date 2026-04-30     # 과거 날짜 재실행
 
-항상 오늘 날짜 기준으로 실행된다. 과거 날짜 재실행은 지원하지 않는다.
+--date를 지정하면 OHLCV를 그 날짜까지만 잘라 계산한다 (과거 재현 가능).
 """
 from __future__ import annotations
 
@@ -102,12 +103,23 @@ async def scan_ticker(
     name: str,
     change_rate: str,
     pool_date: date,
+    target_date: date,
 ) -> dict | None:
-    """종목 OHLCV 조회 후 단기/장기 정배열 여부와 D+ 수익률 데이터 반환."""
+    """종목 OHLCV 조회 후 단기/장기 정배열 여부와 D+ 수익률 데이터 반환.
+
+    target_date 까지의 데이터만 사용해 정배열을 판단한다 (과거 재현 지원).
+    """
     from screener_lib.data import get_ohlcv
 
     df, _ = await get_ohlcv(ticker)
-    if df.empty or len(df) < 240:
+    if df.empty:
+        return None
+
+    # target_date 이후 데이터 제거 — 과거 날짜 재실행 시 미래 누출 방지
+    df["_date"] = df["date"].apply(lambda d: d.date() if hasattr(d, "date") else d)
+    df = df[df["_date"] <= target_date].drop(columns=["_date"]).reset_index(drop=True)
+
+    if len(df) < 240:
         return None
 
     closes = df["close"].tolist()
@@ -278,12 +290,13 @@ def _save(df: pd.DataFrame, path: Path, cols: list[str]) -> None:
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="단기/장기 정배열 관찰 기록/추적 (오늘 기준 전용)")
+    parser = argparse.ArgumentParser(description="단기/장기 정배열 관찰 기록/추적")
     parser.add_argument("--pool-size", type=int, default=300, help="시총 상위 N개 (기본: 300)")
+    parser.add_argument("--date", default=None, help="기준일 YYYY-MM-DD (기본: 오늘). 지정 시 그 날짜까지 OHLCV를 잘라 계산")
     parser.add_argument("--delay", type=float, default=0.35)
     args = parser.parse_args()
 
-    today     = date.today()
+    today     = date.fromisoformat(args.date) if args.date else date.today()
     today_str = today.isoformat()
 
     from screener_lib.universe import get_stock_universe
@@ -301,7 +314,7 @@ async def main() -> None:
         name        = stock.get("name", "")
         change_rate = stock.get("change_rate", "0")
 
-        result = await scan_ticker(ticker, name, change_rate, today)
+        result = await scan_ticker(ticker, name, change_rate, today, target_date=today)
         if result:
             if result["short"]:
                 short_new.append(result["short"])
