@@ -135,9 +135,9 @@ jobs:
       - name: 일일 운영 요약 생성
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python -u scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}"
+            python -u scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}" --telegram
           else
-            python -u scripts/run_daily_research_summary.py
+            python -u scripts/run_daily_research_summary.py --telegram
           fi
 
       - name: 결과 커밋 및 푸시

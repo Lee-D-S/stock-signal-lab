@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -265,9 +269,130 @@ def build_summary(target_date: str) -> str:
     return "\n".join(lines)
 
 
+def build_telegram_message(target_date: str) -> str:
+    confirmed = read_csv(CONFIRMED_CSV, dtype={"ticker": str})
+    new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
+    foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
+    observations = read_csv(OBS_CSV, dtype={"ticker": str})
+    performance = read_csv(PERFORMANCE_CSV)
+
+    signal_date = target_date or latest_signal_date(confirmed, observations) or pd.Timestamp.today().strftime("%Y-%m-%d")
+
+    confirmed_today = pd.DataFrame()
+    if not confirmed.empty and "signal_date" in confirmed.columns:
+        confirmed_today = confirmed[confirmed["signal_date"].astype(str) == signal_date]
+
+    confirmed_lines: list[str] = []
+    for _, row in confirmed_today.iterrows():
+        name = row.get("name", row.get("ticker", "?"))
+        hid = row.get("hypothesis_id", "?")
+        use_type = row.get("use_type", "")
+        confirmed_lines.append(f"  · {name} ({hid} {use_type})")
+
+    new_conf_count = 0
+    if not new_confirmed.empty:
+        if "flow_recheck_status" in new_confirmed.columns:
+            new_conf_count = int((new_confirmed["flow_recheck_status"] == "confirmed").sum())
+        else:
+            new_conf_count = len(new_confirmed)
+
+    obs_today_count = 0
+    if not observations.empty and "signal_date" in observations.columns:
+        obs_today_count = int((observations["signal_date"].astype(str) == signal_date).sum())
+
+    perf_lines: list[str] = []
+    if not performance.empty:
+        for _, row in performance.iterrows():
+            hid = row.get("hypothesis_id", "?")
+            cnt = int(row.get("sample_count", 0))
+            status = str(row.get("result_status", "표본 부족"))
+            perf_lines.append(f"  {hid}: {cnt}건 ({status})")
+
+    lines = [
+        f"[auto-invest] 일일 요약 {signal_date}",
+        "",
+        "■ 전략 신호",
+        f"확정 후보: {len(confirmed_lines)}건",
+        *(confirmed_lines or ["  (없음)"]),
+        f"신규 조건 확정: {new_conf_count}건",
+        f"외국인 연속 순매수 후보: {len(foreign_flow_watchlist)}건",
+        "",
+        "■ 관찰 로그",
+        f"누적: {len(observations)}건 | 오늘 신규: {obs_today_count}건",
+    ]
+    if perf_lines:
+        lines += ["", "■ 조건별 성과"]
+        lines.extend(perf_lines)
+
+    return "\n".join(lines)
+
+
+def send_telegram(text: str) -> None:
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not token or not chat_id:
+        print("telegram secrets missing; skip summary notification")
+        return
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = urllib.parse.urlencode({"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}).encode("utf-8")
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, data=payload, method="POST"), timeout=20) as resp:
+            resp.read()
+        print("telegram summary sent")
+    except Exception as exc:
+        print(f"telegram summary failed: {exc}")
+
+
+def update_routine_doc(observations: pd.DataFrame) -> None:
+    """운영_루틴.md의 '현재 관찰 중인 종목' 섹션을 관찰 로그 기준으로 갱신."""
+    routine_path = PLAN_DIR / "운영_루틴.md"
+    if not routine_path.exists():
+        return
+
+    today = pd.Timestamp.today().strftime("%Y-%m-%d")
+
+    if not observations.empty and "result_label" in observations.columns:
+        active = observations[observations["result_label"].isna() | (observations["result_label"].astype(str).str.strip() == "")]
+    else:
+        active = observations
+
+    rows: list[str] = []
+    for _, row in active.iterrows():
+        name = str(row.get("name", ""))
+        ticker = str(row.get("ticker", "")).zfill(6)
+        hid = str(row.get("hypothesis_id", ""))
+        sig_date = str(row.get("signal_date", ""))
+        d5 = str(row.get("d_plus_5_return_pct", "")).strip() or "-"
+        d10 = str(row.get("d_plus_10_return_pct", "")).strip() or "-"
+        d20 = str(row.get("d_plus_20_return_pct", "")).strip() or "-"
+        label = str(row.get("result_label", "")).strip() or "-"
+        rows.append(f"| {name} | {ticker} | {hid} | {sig_date} | {d5} | {d10} | {d20} | {label} |")
+
+    header = f"## 현재 관찰 중인 종목 ({today} 기준)"
+    table_lines = [
+        "| 종목 | 코드 | 가설 | 신호일 | D+5 | D+10 | D+20 | result_label |",
+        "|------|------|------|--------|-----|------|------|--------------|",
+        *(rows or ["| (없음) | | | | | | | |"]),
+    ]
+    new_section = header + "\n\n" + "\n".join(table_lines)
+
+    content = routine_path.read_text(encoding="utf-8")
+    updated = re.sub(
+        r"## 현재 관찰 중인 종목 \(.*?기준\).*",
+        new_section,
+        content,
+        flags=re.DOTALL,
+    )
+    if updated == content:
+        updated = content.rstrip() + "\n\n" + new_section + "\n"
+    routine_path.write_text(updated, encoding="utf-8")
+    print(f"routine doc updated: {routine_path.name}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="일일 운영 요약 생성")
     parser.add_argument("--date", help="YYYY-MM-DD. 생략하면 후보/관찰 로그의 최신 signal_date")
+    parser.add_argument("--telegram", action="store_true", help="텔레그램으로 핵심 요약 전송")
     args = parser.parse_args()
 
     SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
@@ -280,6 +405,11 @@ def main() -> None:
     latest_path.write_text(summary, encoding="utf-8")
     print(f"summary_md={dated_path}")
     print(f"latest_md={latest_path}")
+
+    if args.telegram:
+        send_telegram(build_telegram_message(target_date))
+
+    update_routine_doc(read_csv(OBS_CSV, dtype={"ticker": str}))
 
 
 if __name__ == "__main__":
