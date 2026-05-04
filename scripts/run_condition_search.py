@@ -8,7 +8,7 @@ IC·평균수익률·승률·Profit Factor를 train/validation 구간으로 분�
 조건마다 신호의 정보 유효 기간(information horizon)이 다르다.
 같은 조건이라도 hold_days가 달라지면 성과가 완전히 달라질 수 있다.
 
-  short  (5·10·20일):  빠른 가격 반응 — RSI, Stoch, MACD, 거래량, OBV, BB, 단기 MA
+  short  (1·5·10·20일): 빠른 가격 반응 — RSI, Stoch, MACD, 거래량, OBV, BB, 단기 MA
   medium (20·60일):    스윙·추세 지속 — 거래량, OBV, 수급, 업종 모멘텀, MA 정배열
   long   (60·120·240일): 기업 가치·큰 추세 — PER, PBR, ROE, ROA, 부채비율, 장기 MA
 
@@ -17,9 +17,9 @@ IC·평균수익률·승률·Profit Factor를 train/validation 구간으로 분�
 
 ## 권장 실행 예시
 
-    # 단기 조건 검증 (records: hold_days=5 또는 10 또는 20)
+    # 단기 조건 검증 (records: hold_days=1, 5, 10 또는 20)
     python scripts/run_condition_search.py \\
-        --load-records scripts/discovery/results/records_hold5.parquet \\
+        --load-records scripts/discovery/results/records_hold1.parquet \\
         --train-end 2022-12-31 --val-end 2024-12-31 --horizon short
 
     # 장기 조건 검증 (records: hold_days=60 이상)
@@ -37,8 +37,16 @@ IC·평균수익률·승률·Profit Factor를 train/validation 구간으로 분�
         --load-records scripts/discovery/results/records.parquet \\
         --conditions rsi_low,stoch_low,vol_surge
 
+    # 외국인 순매수 연속 조건 검증
+    python scripts/run_condition_search.py \\
+        --load-records scripts/discovery/results/records_hold5.parquet \\
+        --with-investor-flow \\
+        --conditions foreign_buy_streak,foreign_buy_all,foreign_buy_strength
+
 ## records 파일 준비 (hold_days별 분리 수집)
 
+    python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
+        --hold-days 1  --save-records scripts/discovery/results/records_hold1.parquet
     python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
         --hold-days 5  --save-records scripts/discovery/results/records_hold5.parquet
     python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
@@ -58,7 +66,7 @@ from pathlib import Path
 import pandas as pd
 
 if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -78,7 +86,7 @@ _RESULTS_DIR = Path(__file__).parent / "condition_search" / "results"
 
 # horizon → 적합한 hold_days 집합
 _HORIZON_HOLD_DAYS: dict[str, set[int]] = {
-    "short":  {5, 10, 20},
+    "short":  {1, 5, 10, 20},
     "medium": {20, 60},
     "long":   {60, 120, 240},
 }
@@ -136,6 +144,15 @@ _VARIANTS: list[ConditionVariant] = [
     ConditionVariant("ma_align_long", "ma_align_long_true", "ma_align_long", 0.5, ">=", "MA60 > MA120 > MA240", _M, is_current=True),
     ConditionVariant("bb_squeeze", "bb_squeeze_true", "bb_squeeze", 0.5, ">=", "BB width shrinking", _M, is_current=True),
 
+    # ── investor flow · SHORT (외국인 순매수 다음날/단기 반응 검증) ─────────────
+    ConditionVariant("foreign_buy_streak", "foreign_buy_streak_2", "foreign_net_buy_streak", 2, ">=", "외국인 순매수 2일 연속", _S),
+    ConditionVariant("foreign_buy_streak", "foreign_buy_streak_3", "foreign_net_buy_streak", 3, ">=", "외국인 순매수 3일 연속", _S),
+    ConditionVariant("foreign_buy_all", "foreign_buy_2d_all", "foreign_net_buy_2d_all", 0.5, ">=", "최근 2거래일 모두 외국인 순매수", _S),
+    ConditionVariant("foreign_buy_all", "foreign_buy_3d_all", "foreign_net_buy_3d_all", 0.5, ">=", "최근 3거래일 모두 외국인 순매수", _S),
+    ConditionVariant("foreign_buy_strength", "foreign_buy_vol_0_5pct", "foreign_net_buy_today_volume_ratio", 0.005, ">=", "외국인 순매수 ≥ 당일거래량 0.5%", _S),
+    ConditionVariant("foreign_buy_strength", "foreign_buy_vol_1pct", "foreign_net_buy_today_volume_ratio", 0.01, ">=", "외국인 순매수 ≥ 당일거래량 1%", _S),
+    ConditionVariant("foreign_buy_strength", "foreign_buy_vol_2pct", "foreign_net_buy_today_volume_ratio", 0.02, ">=", "외국인 순매수 ≥ 당일거래량 2%", _S),
+
     # ── per_low · LONG (기업 가치, 60/120/240일) ──────────────────────────────
     ConditionVariant("per_low", "per_low_10", "per", 10, "<=", "0 < PER ≤ 10", _L,                  min_val=0.0),
     ConditionVariant("per_low", "per_low_15", "per", 15, "<=", "0 < PER ≤ 15", _L, is_current=True, min_val=0.0),
@@ -177,11 +194,16 @@ _VARIANTS: list[ConditionVariant] = [
 # ── 통계 계산 ─────────────────────────────────────────────────────────────────
 
 def _apply_signal(series: pd.Series, op: str, threshold: float, min_val: float | None) -> pd.Series:
-    if op == "<=":   sig = series <= threshold
-    elif op == ">=": sig = series >= threshold
-    elif op == ">":  sig = series > threshold
-    elif op == "<":  sig = series < threshold
-    else: raise ValueError(f"unknown operator: {op}")
+    if op == "<=":
+        sig = series <= threshold
+    elif op == ">=":
+        sig = series >= threshold
+    elif op == ">":
+        sig = series > threshold
+    elif op == "<":
+        sig = series < threshold
+    else:
+        raise ValueError(f"unknown operator: {op}")
     if min_val is not None:
         sig = sig & (series > min_val)
     return sig
@@ -206,7 +228,7 @@ def _compute_stats(
     if feature not in df.columns:
         return {"n": 0, "valid": False, "missing_col": True}
 
-    feat   = df[feature]
+    feat   = pd.to_numeric(df[feature], errors="coerce")
     signal = _apply_signal(feat, op, threshold, min_val)
     avail  = feat.notna() & df["future_return"].notna() & period_mask
     n_sig  = int((signal & avail).sum())
@@ -326,7 +348,7 @@ def _fn(val) -> str:
         return "    N/A"
 
 
-_HORIZON_LABEL = {"short": "SHORT (5/10/20일)", "medium": "MEDIUM (20/60일)", "long": "LONG (60/120/240일)"}
+_HORIZON_LABEL = {"short": "SHORT (1/5/10/20일)", "medium": "MEDIUM (20/60일)", "long": "LONG (60/120/240일)"}
 _HORIZON_ORDER = ["short", "medium", "long"]
 
 
@@ -363,7 +385,7 @@ def _print_results(
         print(f"  [{label}]  권장 hold_days: {recommended}")
         if len(mismatch_conds) > 0 and records_hold_days is not None:
             print(f"  WARN: records hold_days={records_hold_days}는 이 horizon({horizon})에 적합하지 않음 "
-                  f"- 결과 참고용으로만 볼 것")
+                  "- 결과 참고용으로만 볼 것")
         print(f"{'-' * W}")
 
         for condition, group in h_df.groupby("condition", sort=False):
@@ -445,7 +467,7 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "horizon별 권장 hold_days:\n"
-            "  short  → 5, 10, 20일\n"
+            "  short  → 1, 5, 10, 20일\n"
             "  medium → 20, 60일\n"
             "  long   → 60, 120, 240일\n"
         ),
@@ -483,6 +505,11 @@ def parse_args() -> argparse.Namespace:
                    help="재무 데이터 수집 종료 연도 (기본: 2024)")
     p.add_argument("--fund-force-refresh", action="store_true",
                    help="DART 재무 캐시 무시하고 재조회")
+    # ── 수급 옵션 ─────────────────────────────────────────────────────────────
+    p.add_argument("--with-investor-flow", action="store_true",
+                   help="KIS 투자자 일별 데이터를 records에 조인해 외국인 순매수 조건 검증 활성화")
+    p.add_argument("--investor-flow-force-refresh", action="store_true",
+                   help="외국인 수급 캐시 무시하고 재조회")
     return p.parse_args()
 
 
@@ -541,6 +568,19 @@ async def main() -> None:
             covered = records[["roe", "roa", "op_margin", "debt_ratio"]].notna().any(axis=1).sum()
             print(f"[main] 재무 조인 완료 - {covered:,}/{before:,}개 레코드에 재무 데이터 추가")
 
+    # ── 1c. 외국인 수급 조인 (--with-investor-flow) ──────────────────────────
+    if args.with_investor_flow:
+        from discovery.investor_flow_loader import enrich_records_with_investor_flow
+        before = len(records)
+        tickers = records["ticker"].nunique()
+        print(f"[main] KIS 투자자 일별 수급 조인 중 ({tickers:,}개 종목)...")
+        records = await enrich_records_with_investor_flow(
+            records,
+            force_refresh=args.investor_flow_force_refresh,
+        )
+        covered = records["foreign_net_buy_streak"].notna().sum()
+        print(f"[main] 수급 조인 완료 - {covered:,}/{before:,}개 레코드에 외국인 수급 데이터 추가")
+
     # ── 2. variant 필터링 ─────────────────────────────────────────────────────
     variants = _VARIANTS
     if args.horizon:
@@ -549,7 +589,7 @@ async def main() -> None:
         target   = set(args.conditions.split(","))
         variants = [v for v in variants if v.condition in target]
     if not variants:
-        print(f"[main] 필터 조건에 해당하는 variant가 없습니다. --horizon / --conditions 확인.")
+        print("[main] 필터 조건에 해당하는 variant가 없습니다. --horizon / --conditions 확인.")
         return
 
     # hold_days 감지: --hold-days 미지정 시 파일명에서 추론 시도

@@ -198,12 +198,12 @@ def _compute_features(df: pd.DataFrame) -> dict | None:
     if len(df) < _MIN_ROWS:
         return None
     try:
-        ind          = calc_all(df)
+        ind = calc_all(df)
         ind["close"] = float(df["close"].iloc[-1])
         if ind["close"] <= 0:
             return None
         return {f.name: f.compute(ind) for f in _FEATURES}
-    except Exception:
+    except (TypeError, ValueError, ZeroDivisionError):
         return None
 
 
@@ -219,7 +219,8 @@ async def collect_samples(
     """분석 기간 내 전체 종목의 (날짜, 특징값, 미래수익률) 레코드 수집.
 
     Returns:
-        DataFrame columns: ticker, date, future_return, <FEATURE_COLS...>
+        DataFrame columns: ticker, date, close, volume, trade_amount,
+            future_return, <FEATURE_COLS...>
     """
     buf_start = (pd.Timestamp(start) - timedelta(days=365)).strftime("%Y-%m-%d")
     start_ts  = pd.Timestamp(start)
@@ -256,9 +257,13 @@ async def collect_samples(
                 continue
 
             close_t = df["close"].iloc[idx]
+            volume_t = df["volume"].iloc[idx]
             record  = {
                 "ticker":        ticker,
                 "date":          df["date"].iloc[idx],
+                "close":         float(close_t),
+                "volume":        float(volume_t),
+                "trade_amount":  float(close_t * volume_t),
                 "future_return": float((df["close"].iloc[idx + hold_days] - close_t) / close_t),
             }
             record.update(feat)
