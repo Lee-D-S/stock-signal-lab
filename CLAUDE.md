@@ -173,6 +173,29 @@ python scripts/run_walkforward.py --ma-align 60,120,240 --rsi-max 40 --start 202
 # data/dart_universe_cache/{start}_{end}.json 에 캐시됨
 python scripts/run_walkforward.py --ma-align 60,120,240 --start 2020-01-01 --end 2024-12-31 --train-years 3 --test-years 1 --historical-universe
 python scripts/run_walkforward.py --ma-align 60,120,240 --start 2020-01-01 --end 2024-12-31 --train-years 3 --test-years 1 --historical-universe --max-tickers 500
+
+# run_dca_backtest.py — ETF 시간 기반 DCA 백테스트 (주간 25만원 vs 월간 100만원 vs Buy-and-Hold)
+# 결과는 scripts/dca/results/ 에 저장 (매수 이력 CSV + 전략별 요약 dca_summary.csv)
+# 기본 기간: KODEX200=2019~2024, TIGER미국S&P500=2021~2024 (티커별 자동 설정)
+python scripts/run_dca_backtest.py                                              # 두 ETF 모두 기본 기간
+python scripts/run_dca_backtest.py --ticker 069500                              # KODEX 200만
+python scripts/run_dca_backtest.py --ticker 360750                              # TIGER 미국S&P500만
+python scripts/run_dca_backtest.py --ticker 069500 --start 2020-01-01 --end 2024-12-31  # 기간 직접 지정
+
+# run_dual_momentum_backtest.py — 듀얼 모멘텀 백테스트 (Antonacci 방식, KODEX200 vs TIGER S&P500 vs 현금)
+# 매월 12개월 수익률 비교 → 상대 모멘텀 + 절대 모멘텀 (둘 다 음수면 현금)
+# 결과는 scripts/dca/results/ 에 저장
+python scripts/run_dual_momentum_backtest.py
+python scripts/run_dual_momentum_backtest.py --capital 20000000
+python scripts/run_dual_momentum_backtest.py --lookback 6
+
+# run_asset_allocation_backtest.py — 정적 자산배분 백테스트 (고정 비중 + 주기적 리밸런싱)
+# 기본: KODEX200 50% / TIGER S&P500 50%, 분기 리밸런싱 vs BaH(리밸런싱 없음) 비교
+# 결과는 scripts/dca/results/ 에 저장
+python scripts/run_asset_allocation_backtest.py
+python scripts/run_asset_allocation_backtest.py --capital 20000000
+python scripts/run_asset_allocation_backtest.py --rebalance-freq monthly
+python scripts/run_asset_allocation_backtest.py --weights 069500=0.6,360750=0.4
 ```
 
 ### screener.py 지표 추가 방법
