@@ -54,6 +54,21 @@ LONG_COLS = [
     "result_label", "review_note",
 ]
 
+SUMMARY_CSV  = OBS_DIR / "정배열_관찰_일별요약.csv"
+SUMMARY_COLS = ["run_date", "pool_size", "short_new", "long_new"]
+
+
+def _append_summary(run_date: str, pool_size: int, short_new: int, long_new: int) -> None:
+    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    df = pd.read_csv(SUMMARY_CSV, encoding="utf-8-sig") if SUMMARY_CSV.exists() else pd.DataFrame(columns=SUMMARY_COLS)
+    df = df[df["run_date"].astype(str) != run_date]
+    row = pd.DataFrame(
+        [{"run_date": run_date, "pool_size": pool_size, "short_new": short_new, "long_new": long_new}],
+        columns=SUMMARY_COLS,
+    )
+    pd.concat([df, row], ignore_index=True).to_csv(SUMMARY_CSV, index=False, encoding="utf-8-sig")
+    print(f"[alignment-obs] 일별 요약: {run_date} pool={pool_size} short={short_new} long={long_new}")
+
 
 def _sma(closes: list[float], period: int) -> float | None:
     if len(closes) < period:
@@ -347,6 +362,7 @@ async def main() -> None:
         await asyncio.sleep(args.delay)
 
     print(f"[alignment-obs] 스캔 완료: 단기 {len(short_new)}개, 장기 {len(long_new)}개")
+    _append_summary(today_str, len(stocks), len(short_new), len(long_new))
 
     for label, csv_path, cols, new_rows in [
         ("단기", SHORT_CSV, SHORT_COLS, short_new),

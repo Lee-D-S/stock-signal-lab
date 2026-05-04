@@ -123,12 +123,20 @@ async def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     today = datetime.date.today().strftime("%Y-%m-%d")
     csv_path = out_dir / f"screener_{today}.csv"
-    base_cols = ["run_date", "ticker", "name", "price", "change_rate", "trade_amount",
+    base_cols = ["run_date", "pool_size", "matched_count", "ticker", "name", "price", "change_rate", "trade_amount",
                  "rsi", "macd_hist", "stoch_k", "obv_rising", "vol_above_ma"]
     ma_cols = [f"ma{p}" for p in (args.ma_align or [])]
     all_cols = base_cols + ma_cols
+    pool_size = len(stocks)
     if not results:
-        pd.DataFrame(columns=all_cols).to_csv(csv_path, index=False, encoding="utf-8-sig")
+        pd.DataFrame(
+            [{"run_date": today, "pool_size": pool_size, "matched_count": 0,
+              "ticker": "", "name": "", "price": None, "change_rate": None,
+              "trade_amount": None, "rsi": None, "macd_hist": None,
+              "stoch_k": None, "obv_rising": None, "vol_above_ma": None,
+              **{f"ma{p}": None for p in (args.ma_align or [])}}],
+            columns=all_cols,
+        ).to_csv(csv_path, index=False, encoding="utf-8-sig")
         print(f"[screener] 결과 없음 → {csv_path.name}")
     else:
         rows = []
@@ -136,6 +144,8 @@ async def main() -> None:
             ind = r["ind"]
             row = {
                 "run_date": today,
+                "pool_size": pool_size,
+                "matched_count": len(results),
                 "ticker": r["ticker"],
                 "name": r["name"],
                 "price": r["price"],

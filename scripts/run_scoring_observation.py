@@ -44,6 +44,21 @@ LOG_COLS = [
     "result_label", "review_note",
 ]
 
+SUMMARY_CSV  = OBS_DIR / "스코어_관찰_일별요약.csv"
+SUMMARY_COLS = ["run_date", "threshold", "pool_screened", "new_signals"]
+
+
+def _append_summary(run_date: str, threshold: float, pool_screened: int, new_signals: int) -> None:
+    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    df = pd.read_csv(SUMMARY_CSV, encoding="utf-8-sig") if SUMMARY_CSV.exists() else pd.DataFrame(columns=SUMMARY_COLS)
+    df = df[df["run_date"].astype(str) != run_date]
+    row = pd.DataFrame(
+        [{"run_date": run_date, "threshold": threshold, "pool_screened": pool_screened, "new_signals": new_signals}],
+        columns=SUMMARY_COLS,
+    )
+    pd.concat([df, row], ignore_index=True).to_csv(SUMMARY_CSV, index=False, encoding="utf-8-sig")
+    print(f"[score-obs] 일별 요약: {run_date} pool={pool_screened} new={new_signals}")
+
 
 def _load_log(path: Path) -> pd.DataFrame:
     if path.exists():
@@ -163,6 +178,7 @@ async def main() -> None:
         log_df = _load_log(LOG_CSV)
         log_df = await _update_returns(log_df, today)
         _save(log_df)
+        _append_summary(today_str, args.threshold, 0, 0)
         return
 
     above = screen_df[screen_df["score"] >= args.threshold].copy()
@@ -172,6 +188,7 @@ async def main() -> None:
         log_df = _load_log(LOG_CSV)
         log_df = await _update_returns(log_df, today)
         _save(log_df)
+        _append_summary(today_str, args.threshold, len(screen_df), 0)
         return
 
     # 현재가 조회 (event_close 채우기)
@@ -206,6 +223,7 @@ async def main() -> None:
 
     log_df = _load_log(LOG_CSV)
 
+    deduped_count = 0
     if new_rows:
         new_df = pd.DataFrame(new_rows)
         existing_keys = set(
@@ -218,10 +236,12 @@ async def main() -> None:
         ]
         if not deduped.empty:
             log_df = pd.concat([log_df, deduped], ignore_index=True)
-            print(f"[score-obs] 신규 추가: {len(deduped)}개")
+            deduped_count = len(deduped)
+            print(f"[score-obs] 신규 추가: {deduped_count}개")
 
     log_df = await _update_returns(log_df, today)
     _save(log_df)
+    _append_summary(today_str, args.threshold, len(screen_df), deduped_count)
 
 
 if __name__ == "__main__":
