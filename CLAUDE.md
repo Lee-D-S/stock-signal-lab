@@ -149,9 +149,10 @@ python scripts/run_discovery.py --load-records scripts/discovery/results/records
 # threshold 모드: Train 구간 스코어-수익률 통계 → 권장 임계값 도출
 python scripts/run_scoring.py --mode threshold --start 2020-01-01 --end 2022-12-31
 python scripts/run_scoring.py --mode threshold --load-raw scripts/scoring/results/raw.parquet
-# screen 모드: 오늘 유니버스 스코어링 → 임계값 이상 종목 출력
+# screen 모드: 오늘 유니버스 스코어링 → 임계값 이상 종목 출력 (OHLCV를 지정 날짜까지 자른 후 계산)
 python scripts/run_scoring.py --mode screen --threshold 0.70
 python scripts/run_scoring.py --mode screen --threshold 0.70 --ic-weights scripts/discovery/results/2020_2022_hold20_ic_ranking.csv
+python scripts/run_scoring.py --mode screen --threshold 0.70 --date 2026-05-01
 
 # run_backtest.py — 조건 조합 백테스트: T일 스크리닝 → T+1일 시가 매수 시뮬레이션 (BACKTEST_PLAN.md)
 # 첫 실행 시 KIS API로 OHLCV 다운로드 후 data/ohlcv_cache/ 에 parquet 캐시 저장 (discovery 캐시 공유)
@@ -214,6 +215,9 @@ ai 주가 변동 원인 분석/
 # daily 모드 — 유니버스 갱신 → 시그널 스캔 → 관찰 로그 추가 → 팩터 스코어 스크린/추적 → 정배열 추적
 python scripts/run_signal_research_pipeline.py --mode daily
 
+# daily 모드에서 과거 특정 날짜 재실행 (--date 는 scoring/alignment 세 단계 모두에 일관되게 전달됨)
+python scripts/run_signal_research_pipeline.py --mode daily --date 2026-05-01
+
 # daily 모드에서 특정 단계 스킵
 python scripts/run_signal_research_pipeline.py --mode daily --skip-scoring-observation --skip-alignment-observation
 
@@ -259,12 +263,17 @@ python scripts/run_foreign_flow_observation.py --min-streak 2
 
 # 팩터 스코어링 스크린 (시총 상위 N개 유니버스)
 python scripts/run_scoring.py --mode screen --by marcap --to 300
+python scripts/run_scoring.py --mode screen --by marcap --to 300 --date 2026-05-01
 
-# 팩터 스코어 관찰 기록/추적 — run_scoring.py --mode screen 의 오늘 결과를 임계값 이상 누적 (08_관찰기록/)
+# 팩터 스코어 관찰 기록/추적 — run_scoring.py --mode screen 의 결과를 임계값 이상 누적 (08_관찰기록/)
+# --date 를 지정하면 해당 날짜의 screen_{date}.csv 를 읽음
 python scripts/run_scoring_observation.py --threshold 0.60
+python scripts/run_scoring_observation.py --threshold 0.60 --date 2026-05-01
 
 # 단기(MA5>20>60>120) + 장기(MA60>120>240) 정배열 종목 관찰 기록/추적 (08_관찰기록/)
+# --date 를 지정하면 OHLCV를 그 날짜까지 잘라 계산
 python scripts/run_alignment_observation.py --pool-size 300
+python scripts/run_alignment_observation.py --pool-size 300 --date 2026-05-01
 
 # 외국인 연속 순매수/순매도 빠른 조회 (기본 10일, --days로 변경)
 python scripts/foreign_consec_buy.py --days 3
