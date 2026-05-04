@@ -153,7 +153,18 @@ async def main() -> None:
         print("  → run_scoring.py --mode screen 을 먼저 실행하세요.")
         return
 
-    screen_df = pd.read_csv(screen_csv, encoding="utf-8-sig")
+    try:
+        screen_df = pd.read_csv(screen_csv, encoding="utf-8-sig")
+    except Exception:
+        screen_df = pd.DataFrame()
+
+    if screen_df.empty or "score" not in screen_df.columns:
+        print("[score-obs] 스크린 파일이 비어 있음: D+ 추적만 실행")
+        log_df = _load_log(LOG_CSV)
+        log_df = await _update_returns(log_df, today)
+        _save(log_df)
+        return
+
     above = screen_df[screen_df["score"] >= args.threshold].copy()
     print(f"[score-obs] 임계값 {args.threshold:.0%} 이상: {len(above)}개")
 

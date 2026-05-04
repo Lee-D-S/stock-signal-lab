@@ -131,13 +131,16 @@ SQLite via SQLAlchemy async (`aiosqlite`):
 
 ```bash
 # screener.py — 기술적/펀더멘털/밸류에이션 조건 조합 (AND 로직)
+# 결과는 scripts/screener/results/screener_YYYY-MM-DD.csv 에 항상 저장 (0건이면 헤더만)
 python scripts/screener.py --by marcap --to 300 --ma-align 60,120,240 --rsi-max 50 --obv-rising
 python scripts/screener.py --by marcap --per-max 15 --roe-min 10 --ma-align 60,120,240
 
 # ma_alignment.py — 단기 정배열 (MA5>MA20>MA60>MA120)
+# 결과는 scripts/screener/results/단기정배열_YYYY-MM-DD.csv 에 항상 저장 (0건이면 matched_count=0 행)
 python scripts/ma_alignment.py --by marcap --to 300
 
 # ma_alignment_240.py — 장기 정배열 (MA60>MA120>MA240)
+# 결과는 scripts/screener/results/장기정배열_YYYY-MM-DD.csv 에 항상 저장 (0건이면 matched_count=0 행)
 python scripts/ma_alignment_240.py --by marcap --to 300
 
 # run_discovery.py — 팩터 리서치: 지표 IC 분석 → 유망 조건 후보 발굴 (FACTOR_RESEARCH_PLAN.md)
@@ -145,11 +148,12 @@ python scripts/ma_alignment_240.py --by marcap --to 300
 python scripts/run_discovery.py --start 2020-01-01 --end 2022-12-31
 python scripts/run_discovery.py --load-records scripts/discovery/results/records.parquet --hold-days 10
 
-# run_scoring.py — 팩터 스코어링: 5개 군 충족률 합산 → 임계값 결정 + 오늘 스크리닝 (SCORING_PLAN.md)
+# run_scoring.py — 팩터 스코어링: 5개 군 충족률 합산 → 임계값 결정 + 스크리닝 (SCORING_PLAN.md)
 # threshold 모드: Train 구간 스코어-수익률 통계 → 권장 임계값 도출
 python scripts/run_scoring.py --mode threshold --start 2020-01-01 --end 2022-12-31
 python scripts/run_scoring.py --mode threshold --load-raw scripts/scoring/results/raw.parquet
-# screen 모드: 오늘 유니버스 스코어링 → 임계값 이상 종목 출력 (OHLCV를 지정 날짜까지 자른 후 계산)
+# screen 모드: 유니버스 스코어링 → 임계값 이상 종목 출력. CSV는 결과 없어도 항상 저장
+# (OHLCV를 --date 지정 시 그 날짜까지 잘라 계산 → 과거 재현 가능, 기본값=오늘)
 python scripts/run_scoring.py --mode screen --threshold 0.70
 python scripts/run_scoring.py --mode screen --threshold 0.70 --ic-weights scripts/discovery/results/2020_2022_hold20_ic_ranking.csv
 python scripts/run_scoring.py --mode screen --threshold 0.70 --date 2026-05-01
@@ -266,6 +270,7 @@ python scripts/run_scoring.py --mode screen --by marcap --to 300
 python scripts/run_scoring.py --mode screen --by marcap --to 300 --date 2026-05-01
 
 # 팩터 스코어 관찰 기록/추적 — run_scoring.py --mode screen 의 결과를 임계값 이상 누적 (08_관찰기록/)
+# screen CSV가 비어 있으면 D+ 추적만 실행하고 정상 종료 (에러 없음)
 # --date 를 지정하면 해당 날짜의 screen_{date}.csv 를 읽음
 python scripts/run_scoring_observation.py --threshold 0.60
 python scripts/run_scoring_observation.py --threshold 0.60 --date 2026-05-01

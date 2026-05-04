@@ -10,8 +10,11 @@ Usage:
 
 import argparse
 import asyncio
+import datetime
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent.parent))  # 프로젝트 루트 (core.* 임포트용)
 sys.path.insert(0, str(Path(__file__).parent))         # scripts/ (screener_lib 임포트용)
@@ -114,6 +117,41 @@ async def main() -> None:
 
     print()
     print_results(results, args)
+
+    # CSV 저장 — 결과 없어도 항상 저장
+    out_dir = Path(__file__).parent / "screener" / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    today = datetime.date.today().strftime("%Y-%m-%d")
+    csv_path = out_dir / f"screener_{today}.csv"
+    base_cols = ["run_date", "ticker", "name", "price", "change_rate", "trade_amount",
+                 "rsi", "macd_hist", "stoch_k", "obv_rising", "vol_above_ma"]
+    ma_cols = [f"ma{p}" for p in (args.ma_align or [])]
+    all_cols = base_cols + ma_cols
+    if not results:
+        pd.DataFrame(columns=all_cols).to_csv(csv_path, index=False, encoding="utf-8-sig")
+        print(f"[screener] 결과 없음 → {csv_path.name}")
+    else:
+        rows = []
+        for r in results:
+            ind = r["ind"]
+            row = {
+                "run_date": today,
+                "ticker": r["ticker"],
+                "name": r["name"],
+                "price": r["price"],
+                "change_rate": r["change_rate"],
+                "trade_amount": r["trade_amount"],
+                "rsi": ind.get("rsi"),
+                "macd_hist": ind.get("macd_hist"),
+                "stoch_k": ind.get("stoch_k"),
+                "obv_rising": ind.get("obv_rising"),
+                "vol_above_ma": ind.get("vol_above_ma"),
+            }
+            for p in (args.ma_align or []):
+                row[f"ma{p}"] = ind.get(f"ma{p}")
+            rows.append(row)
+        pd.DataFrame(rows, columns=all_cols).to_csv(csv_path, index=False, encoding="utf-8-sig")
+        print(f"[screener] {len(results)}개 저장 → {csv_path.name}")
 
 
 if __name__ == "__main__":

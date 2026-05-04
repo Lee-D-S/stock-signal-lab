@@ -10,6 +10,10 @@ Usage:
 import argparse
 import asyncio
 import sys
+from datetime import date
+from pathlib import Path
+
+import pandas as pd
 
 sys.path.insert(0, ".")
 
@@ -195,10 +199,35 @@ async def main():
 
     results.sort(key=lambda x: float(x["change_rate"]), reverse=True)
 
+    # CSV 저장 — 결과 없어도 항상 저장
+    out_dir = Path(__file__).parent / "screener" / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    today = date.today().strftime("%Y-%m-%d")
+    csv_path = out_dir / f"단기정배열_{today}.csv"
+    cols = ["signal_date", "pool_size", "matched_count", "ticker", "name",
+            "price", "change_rate", "ma5", "ma20", "ma60", "ma120"]
+    pool_size = len(stocks)
+
     print()
     if not results:
         print("정배열 종목 없음")
+        pd.DataFrame(
+            [{"signal_date": today, "pool_size": pool_size, "matched_count": 0,
+              "ticker": "", "name": "", "price": None, "change_rate": None,
+              "ma5": None, "ma20": None, "ma60": None, "ma120": None}],
+            columns=cols,
+        ).to_csv(csv_path, index=False, encoding="utf-8-sig")
+        print(f"[단기정배열] 결과 없음 → {csv_path.name}")
         return
+
+    rows = [
+        {"signal_date": today, "pool_size": pool_size, "matched_count": len(results),
+         "ticker": r["ticker"], "name": r["name"], "price": r["price"],
+         "change_rate": r["change_rate"],
+         "ma5": r["ma5"], "ma20": r["ma20"], "ma60": r["ma60"], "ma120": r["ma120"]}
+        for r in results
+    ]
+    pd.DataFrame(rows, columns=cols).to_csv(csv_path, index=False, encoding="utf-8-sig")
 
     print(f"정배열 종목: {len(results)}개\n")
     header = (
@@ -214,6 +243,7 @@ async def main():
             f"{r['ma5']:>9,.1f}  {r['ma20']:>9,.1f}  "
             f"{r['ma60']:>9,.1f}  {r['ma120']:>9,.1f}"
         )
+    print(f"\n[단기정배열] {len(results)}개 저장 → {csv_path.name}")
 
 
 if __name__ == "__main__":

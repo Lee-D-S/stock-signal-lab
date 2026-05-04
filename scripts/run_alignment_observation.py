@@ -98,6 +98,46 @@ def _return_pct(event_close: float, future: float | None) -> float | None:
     return round((future - event_close) / event_close * 100, 2)
 
 
+async def _fetch_ohlcv_with_dates(ticker: str, target_date: date) -> tuple[list[date], list[float], list[float]]:
+    """날짜 포함 OHLCV 조회. target_date 이하 데이터만 반환 (오래된 순).
+
+    Returns:
+        (dates, closes, opens)
+    """
+    from core.api.client import get_marketdata
+    from datetime import timedelta
+
+    date_to   = target_date.strftime("%Y%m%d")
+    date_from = (target_date - timedelta(days=420)).strftime("%Y%m%d")
+    try:
+        data = await get_marketdata(
+            "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": ticker,
+                "FID_INPUT_DATE_1": date_from,
+                "FID_INPUT_DATE_2": date_to,
+                "FID_PERIOD_DIV_CODE": "D",
+            },
+            tr_id="FHKST03010100",
+        )
+        rows = data.get("output2", [])
+        dates_out, closes_out, opens_out = [], [], []
+        for r in reversed(rows):  # API는 최신순 → 오래된 순으로 변환
+            d_str = r.get("stck_bsop_date", "")
+            if not d_str or not r.get("stck_clpr"):
+                continue
+            d = date(int(d_str[:4]), int(d_str[4:6]), int(d_str[6:]))
+            if d > target_date:
+                continue
+            dates_out.append(d)
+            closes_out.append(float(r["stck_clpr"]))
+            opens_out.append(float(r.get("stck_oprc") or r["stck_clpr"]))
+        return dates_out, closes_out, opens_out
+    except Exception:
+        return [], [], []
+
+
 async def scan_ticker(
     ticker: str,
     name: str,
@@ -109,20 +149,10 @@ async def scan_ticker(
 
     target_date 까지의 데이터만 사용해 정배열을 판단한다 (과거 재현 지원).
     """
-    from screener_lib.data import get_ohlcv
+    dates, closes, opens_list = await _fetch_ohlcv_with_dates(ticker, target_date)
 
-    df, _ = await get_ohlcv(ticker)
-    if df.empty:
+    if len(closes) < 240:
         return None
-
-    # target_date 이후 데이터 제거 — 과거 날짜 재실행 시 미래 누출 방지
-    df["_date"] = df["date"].apply(lambda d: d.date() if hasattr(d, "date") else d)
-    df = df[df["_date"] <= target_date].drop(columns=["_date"]).reset_index(drop=True)
-
-    if len(df) < 240:
-        return None
-
-    closes = df["close"].tolist()
 
     # 단기 정배열
     mas_s = {p: _sma(closes, p) for p in [5, 20, 60, 120]}
@@ -140,15 +170,10 @@ async def scan_ticker(
         return None
 
     price      = float(closes[-1])
-    event_date = df["date"].iloc[-1]
-    if hasattr(event_date, "date"):
-        event_date = event_date.date()
+    event_date = dates[-1]  # target_date 이하 마지막 거래일
 
-    dates = [d.date() if hasattr(d, "date") else d for d in df["date"].tolist()]
     closes_by_date: dict[date, float] = dict(zip(dates, closes))
-
-    opens_raw = df["open"].tolist() if "open" in df.columns else closes
-    opens_by_date: dict[date, float] = dict(zip(dates, opens_raw))
+    opens_by_date:  dict[date, float] = dict(zip(dates, opens_list))
 
     def _nth_trading(n: int) -> date | None:
         sorted_dates = sorted(d for d in dates if d > event_date)
@@ -219,8 +244,6 @@ async def _update_returns(df: pd.DataFrame, today: date) -> pd.DataFrame:
     if df.empty:
         return df
 
-    from screener_lib.data import get_ohlcv
-
     return_cols = [
         ("d_plus_1_open_return_pct",  1, "open"),
         ("d_plus_1_close_return_pct", 1, "close"),
@@ -233,7 +256,8 @@ async def _update_returns(df: pd.DataFrame, today: date) -> pd.DataFrame:
     if not needs_update_mask.any():
         return df
 
-    ohlcv_cache: dict[str, pd.DataFrame] = {}
+    # D+ 추적은 항상 오늘까지의 전체 데이터 필요
+    ohlcv_cache: dict[str, tuple[list[date], list[float], list[float]]] = {}
 
     for idx in df[needs_update_mask].index:
         row         = df.loc[idx]
@@ -245,16 +269,12 @@ async def _update_returns(df: pd.DataFrame, today: date) -> pd.DataFrame:
             continue
 
         if ticker not in ohlcv_cache:
-            ohlcv, _ = await get_ohlcv(ticker)
-            ohlcv_cache[ticker] = ohlcv
+            ohlcv_cache[ticker] = await _fetch_ohlcv_with_dates(ticker, today)
 
-        ohlcv = ohlcv_cache[ticker]
-        if ohlcv.empty:
+        dates_list, closes_list, opens_list = ohlcv_cache[ticker]
+        if not closes_list:
             continue
 
-        dates_list  = [d.date() if hasattr(d, "date") else d for d in ohlcv["date"].tolist()]
-        closes_list = ohlcv["close"].tolist()
-        opens_list  = ohlcv["open"].tolist() if "open" in ohlcv.columns else closes_list
         closes_by_d: dict[date, float] = dict(zip(dates_list, closes_list))
         opens_by_d:  dict[date, float] = dict(zip(dates_list, opens_list))
 
@@ -326,7 +346,7 @@ async def main() -> None:
 
         await asyncio.sleep(args.delay)
 
-    print(f"[alignment-obs] 스캔 완료 — 단기 {len(short_new)}개, 장기 {len(long_new)}개")
+    print(f"[alignment-obs] 스캔 완료: 단기 {len(short_new)}개, 장기 {len(long_new)}개")
 
     for label, csv_path, cols, new_rows in [
         ("단기", SHORT_CSV, SHORT_COLS, short_new),

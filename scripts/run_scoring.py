@@ -143,11 +143,49 @@ async def _run_threshold(args: argparse.Namespace, weights: dict) -> None:
     print(f"[threshold] 통계 저장: {csv_path}")
 
 
+async def _fetch_ohlcv_to_date(ticker: str, target_date) -> "pd.DataFrame":
+    """target_date 이하 OHLCV DataFrame 반환 (date 컬럼 포함, 오래된 순)."""
+    import pandas as pd
+    from datetime import timedelta
+    from core.api.client import get_marketdata
+
+    date_to   = target_date.strftime("%Y%m%d")
+    date_from = (target_date - timedelta(days=420)).strftime("%Y%m%d")
+    try:
+        data = await get_marketdata(
+            "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": ticker,
+                "FID_INPUT_DATE_1": date_from,
+                "FID_INPUT_DATE_2": date_to,
+                "FID_PERIOD_DIV_CODE": "D",
+            },
+            tr_id="FHKST03010100",
+        )
+        rows = data.get("output2", [])
+        records = []
+        for r in rows:
+            if not r.get("stck_clpr"):
+                continue
+            records.append({
+                "open":   float(r.get("stck_oprc") or 0),
+                "high":   float(r.get("stck_hgpr") or 0),
+                "low":    float(r.get("stck_lwpr") or 0),
+                "close":  float(r["stck_clpr"]),
+                "volume": float(r.get("acml_vol") or 0),
+            })
+        if not records:
+            return pd.DataFrame()
+        return pd.DataFrame(records[::-1]).reset_index(drop=True)  # 최신순 → 오래된 순
+    except Exception:
+        return pd.DataFrame()
+
+
 async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
     import asyncio
     from datetime import date as date_type
 
-    from screener_lib.data import get_ohlcv
     from screener_lib.universe import get_stock_universe
 
     threshold   = args.threshold if args.threshold is not None else 0.60
@@ -161,13 +199,7 @@ async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
     results = []
     for i, stock in enumerate(stocks, 1):
         ticker = stock["ticker"]
-        df, _  = await get_ohlcv(ticker)
-        if df.empty:
-            continue
-
-        # target_date 이후 데이터 제거 — 과거 날짜 재실행 시 미래 누출 방지
-        df["_d"] = df["date"].apply(lambda d: d.date() if hasattr(d, "date") else d)
-        df = df[df["_d"] <= target_date].drop(columns=["_d"]).reset_index(drop=True)
+        df     = await _fetch_ohlcv_to_date(ticker, target_date)
 
         if len(df) < 60:
             continue
@@ -185,19 +217,21 @@ async def _run_screen(args: argparse.Namespace, weights: dict) -> None:
 
         await asyncio.sleep(0.1)
 
+    # CSV 저장 — 결과 없어도 항상 저장
+    out_dir = Path("scripts/scoring/results")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / f"screen_{target_date.isoformat()}.csv"
+
     if not results:
-        print("[screen] 결과 없음")
+        print("[screen] 결과 없음 (빈 파일 저장)")
+        _save_screen_csv([], threshold, csv_path)
+        print(f"[screen] 저장: {csv_path}")
         return
 
     results.sort(key=lambda x: x["score"], reverse=True)
     candidates = [r for r in results if r["score"] >= threshold][: args.top_n]
 
     _print_screen_results(candidates, threshold, len(results))
-
-    # CSV 저장 — 기준일 기반 파일명
-    out_dir = Path("scripts/scoring/results")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = out_dir / f"screen_{target_date.isoformat()}.csv"
     _save_screen_csv(results, threshold, csv_path)
     print(f"[screen] 전체 결과 저장: {csv_path}")
 
@@ -256,7 +290,13 @@ def _save_screen_csv(results: list[dict], threshold: float, csv_path: Path) -> N
         rows.append(row)
 
     import pandas as pd
-    pd.DataFrame(rows).to_csv(csv_path, index=False, encoding="utf-8-sig")
+    cols = ["ticker", "name", "score", "above_threshold",
+            "momentum_fill", "momentum_met", "momentum_total",
+            "trend_fill", "trend_met", "trend_total",
+            "value_fill", "value_met", "value_total",
+            "fundamental_fill", "fundamental_met", "fundamental_total",
+            "volatility_fill", "volatility_met", "volatility_total"]
+    pd.DataFrame(rows, columns=cols if not rows else None).to_csv(csv_path, index=False, encoding="utf-8-sig")
 
 
 if __name__ == "__main__":
