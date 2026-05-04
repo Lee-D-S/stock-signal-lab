@@ -1,5 +1,9 @@
 import logging
+import sys
+from asyncio.subprocess import PIPE
 from datetime import datetime
+from pathlib import Path
+import asyncio
 
 import holidays
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,6 +23,7 @@ from strategies.news_sector import NewsSectorAnalyzer
 from strategies.news_sentiment import NewsSentimentStrategy
 
 logger = logging.getLogger(__name__)
+ROOT = Path(__file__).resolve().parent.parent
 
 # 전략 등록 — 여기에 추가하면 자동으로 실행됨
 MA_STRATEGY = MACrossStrategy(
@@ -179,6 +184,27 @@ async def run_daily_summary() -> None:
     await telegram.notify_daily_summary(total_profit=total_profit, trade_count=len(trades))
 
 
+async def run_foreign_flow_observation() -> None:
+    """장마감 후 외국인 연속 순매수 후보를 기록하고 D+ 수익률을 갱신."""
+    try:
+        cmd = [sys.executable, "-u", str(ROOT / "scripts" / "run_foreign_flow_observation.py")]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            cwd=ROOT,
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if stdout:
+            logger.info("[ForeignFlowObservation]\n%s", stdout.decode("utf-8", errors="replace").strip())
+        if stderr:
+            logger.warning("[ForeignFlowObservation stderr]\n%s", stderr.decode("utf-8", errors="replace").strip())
+        if proc.returncode != 0:
+            raise RuntimeError(f"run_foreign_flow_observation.py failed: {proc.returncode}")
+    except Exception as e:
+        logger.error(f"외국인 연속 순매수 관찰 오류: {e}")
+
+
 def create_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="Asia/Seoul")
 
@@ -222,6 +248,16 @@ def create_scheduler() -> AsyncIOScheduler:
         hour=15,
         minute=40,
         id="sector_validation",
+    )
+
+    # 외국인 연속 순매수 관찰 기록 및 D+ 추적: 평일 16:20
+    scheduler.add_job(
+        run_foreign_flow_observation,
+        "cron",
+        day_of_week="mon-fri",
+        hour=16,
+        minute=20,
+        id="foreign_flow_observation",
     )
 
     return scheduler

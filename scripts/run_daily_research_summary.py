@@ -20,8 +20,10 @@ CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
 ERROR_CSV = STRATEGY_DIR / "관심종목_시그널_오류.csv"
 NEW_WATCHLIST_CSV = STRATEGY_DIR / "신규조건_관심종목_시그널_후보.csv"
 NEW_CONFIRMED_CSV = STRATEGY_DIR / "신규조건_관심종목_시그널_후보_확정.csv"
+FOREIGN_FLOW_WATCHLIST_CSV = STRATEGY_DIR / "외국인순매수_연속_후보.csv"
 OBS_CSV = OBS_DIR / "관찰_로그(이상).csv"
 NEW_OBS_CSV = OBS_DIR / "신규조건_관찰_로그(이상).csv"
+FOREIGN_FLOW_OBS_CSV = OBS_DIR / "외국인순매수_관찰_로그(이상).csv"
 PERFORMANCE_CSV = OBS_DIR / "관찰_성과_요약.csv"
 SUMMARY_DIR = BASE_DIR / "10_일일요약"
 
@@ -83,8 +85,10 @@ def build_summary(target_date: str) -> str:
     errors = read_csv(ERROR_CSV, dtype={"ticker": str})
     new_watchlist = read_csv(NEW_WATCHLIST_CSV, dtype={"ticker": str})
     new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
+    foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
     new_observations = read_csv(NEW_OBS_CSV, dtype={"ticker": str})
+    foreign_flow_observations = read_csv(FOREIGN_FLOW_OBS_CSV, dtype={"ticker": str})
     performance = read_csv(PERFORMANCE_CSV)
 
     signal_date = target_date or latest_signal_date(watchlist, confirmed, observations) or "latest"
@@ -183,6 +187,27 @@ def build_summary(target_date: str) -> str:
                 "amount_tag",
                 "flow_category_recheck",
                 "suggested_response",
+            ],
+        ),
+        "",
+        "### 외국인 연속 순매수 관찰",
+        "",
+        f"- 기준일 후보: {fmt_int(len(foreign_flow_watchlist))}",
+        f"- 누적 관찰: {fmt_int(len(foreign_flow_observations))}",
+        "",
+        markdown_table(
+            foreign_flow_watchlist,
+            [
+                "signal_date",
+                "ticker",
+                "name",
+                "foreign_net_buy_streak",
+                "foreign_qty",
+                "foreign_net_buy_2d_qty",
+                "foreign_net_buy_3d_qty",
+                "foreign_volume_ratio_pct",
+                "matched_conditions",
+                "event_close",
             ],
         ),
         "",

@@ -113,6 +113,15 @@ def run_daily(args: argparse.Namespace) -> None:
                 dry_run=args.dry_run,
             )
 
+    if not args.skip_foreign_flow_observation:
+        foreign_flow_args: list[str] = ["--top", str(args.foreign_flow_top), "--pool-size", str(args.foreign_flow_pool_size)]
+        if args.date:
+            foreign_flow_args.extend(["--date", args.date])
+        run_step(
+            Step("외국인 연속 순매수 관찰 기록/추적", "run_foreign_flow_observation.py", tuple(foreign_flow_args), network=True),
+            dry_run=args.dry_run,
+        )
+
 
 def run_backtest(args: argparse.Namespace) -> None:
     for step in BACKTEST_STEPS:
@@ -168,8 +177,10 @@ def print_outputs() -> None:
         STRATEGY_DIR / "관심종목_시그널_후보_확정.md",
         STRATEGY_DIR / "신규조건_관심종목_시그널_후보.md",
         STRATEGY_DIR / "신규조건_관심종목_시그널_후보_확정.md",
+        STRATEGY_DIR / "외국인순매수_연속_후보.md",
         OBS_DIR / "관찰_로그.md",
         OBS_DIR / "신규조건_관찰_로그.md",
+        OBS_DIR / "외국인순매수_관찰_로그.md",
     ]
     print("\n주요 산출물:")
     for path in outputs:
@@ -192,6 +203,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refresh-universe", action="store_true", help="daily 전에 거래대금 상위 유니버스를 갱신")
     parser.add_argument("--universe-top", type=int, default=30, help="거래대금 상위 유니버스 종목 수")
     parser.add_argument("--skip-observation-update", action="store_true", help="recheck 후 확정 후보 관찰 로그 자동 추가를 건너뜀")
+    parser.add_argument("--skip-foreign-flow-observation", action="store_true", help="외국인 연속 순매수 관찰 기록/추적을 건너뜀")
+    parser.add_argument("--foreign-flow-top", type=int, default=50, help="외국인 연속 순매수 최대 기록 후보 수")
+    parser.add_argument("--foreign-flow-pool-size", type=int, default=120, help="외국인 연속 순매수 스캔 대상 거래대금 상위 후보 수")
     parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="backtest 산출물 스냅샷 기준일 YYYY-MM-DD")
     parser.add_argument("--promote-strategy", action="store_true", help="backtest로 만든 조건 초안을 active 전략 조건으로 승격")
     parser.add_argument("--include-reports", action="store_true", help="full 모드에서 분기 보고서 배치 생성까지 실행")
