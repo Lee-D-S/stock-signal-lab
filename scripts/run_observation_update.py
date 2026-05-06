@@ -41,6 +41,10 @@ OBS_FIELDNAMES = [
     "planned_hold_days",
     "backtest_avg_score_pct",
     "backtest_hit_rate",
+    "valuation_class",
+    "valuation_profit_trend",
+    "valuation_trap_check",
+    "valuation_memo",
     "next_trading_day",
     "next_open",
     "next_close",
@@ -107,7 +111,14 @@ def read_observation_rows(path: Path, encoding: str) -> tuple[list[str], list[di
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
         rows = list(reader)
-        return list(reader.fieldnames or []), rows
+        fieldnames = list(reader.fieldnames or [])
+        for field in OBS_FIELDNAMES:
+            if field not in fieldnames:
+                fieldnames.append(field)
+        for row in rows:
+            for field in fieldnames:
+                row.setdefault(field, "")
+        return fieldnames, rows
 
 
 def write_observation_rows(path: Path, encoding: str, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
@@ -144,6 +155,10 @@ def confirmed_to_observation(row: pd.Series, fieldnames: list[str]) -> dict[str,
         "planned_hold_days": fmt_int(row.get("preferred_hold_days")),
         "backtest_avg_score_pct": fmt_pct(row.get("backtest_avg_score_pct")),
         "backtest_hit_rate": fmt_hit_rate(row.get("backtest_hit_rate")),
+        "valuation_class": as_str(row.get("valuation_class")),
+        "valuation_profit_trend": as_str(row.get("valuation_profit_trend")),
+        "valuation_trap_check": as_str(row.get("valuation_trap_check")),
+        "valuation_memo": as_str(row.get("valuation_memo")),
         "next_trading_day": "",
         "next_open": "",
         "next_close": "",
@@ -210,10 +225,15 @@ def markdown_candidate_row(row: dict[str, str]) -> str:
     institution = fmt_signed_int(row["institution_5d"])
     chg = float(row["event_chg_pct"]) if row["event_chg_pct"] else 0.0
     chg_text = f"{chg:+.2f}%"
+    valuation = row.get("valuation_class", "")
+    trap = row.get("valuation_trap_check", "")
+    valuation_note = f" / 밸류에이션: {valuation}" if valuation else ""
+    if trap and trap != "특이 리스크 제한적":
+        valuation_note += f" ({trap})"
     return (
         f"| {row['name']} | {row['ticker']} | {row['hypothesis_id']} | {row['use_type']} | "
         f"{chg_text}, {row['amount_tag']} | {flow} (외국인 {foreign} / 기관 {institution}) | "
-        f"{row['decision_note']} |"
+        f"{row['decision_note']}{valuation_note} |"
     )
 
 

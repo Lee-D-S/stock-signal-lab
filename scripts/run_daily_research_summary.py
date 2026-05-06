@@ -167,6 +167,9 @@ def build_summary(target_date: str) -> str:
                 "chg_pct",
                 "amount_tag",
                 "flow_category_recheck",
+                "valuation_class",
+                "valuation_profit_trend",
+                "valuation_trap_check",
                 "suggested_response",
             ],
         ),
@@ -270,6 +273,7 @@ def build_summary(target_date: str) -> str:
 
 
 def build_telegram_message(target_date: str) -> str:
+    universe = read_csv(UNIVERSE_CSV, dtype={"ticker": str})
     confirmed = read_csv(CONFIRMED_CSV, dtype={"ticker": str})
     new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
     foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
@@ -287,7 +291,12 @@ def build_telegram_message(target_date: str) -> str:
         name = row.get("name", row.get("ticker", "?"))
         hid = row.get("hypothesis_id", "?")
         use_type = row.get("use_type", "")
-        confirmed_lines.append(f"  · {name} ({hid} {use_type})")
+        valuation = str(row.get("valuation_class", "") or "").strip()
+        trap = str(row.get("valuation_trap_check", "") or "").strip()
+        valuation_note = f" / {valuation}" if valuation else ""
+        if trap and trap != "특이 리스크 제한적":
+            valuation_note += f" / {trap}"
+        confirmed_lines.append(f"  · {name} ({hid} {use_type}{valuation_note})")
 
     new_conf_count = 0
     if not new_confirmed.empty:
@@ -299,6 +308,17 @@ def build_telegram_message(target_date: str) -> str:
     obs_today_count = 0
     if not observations.empty and "signal_date" in observations.columns:
         obs_today_count = int((observations["signal_date"].astype(str) == signal_date).sum())
+
+    report_needed = pd.DataFrame()
+    if not universe.empty and "report_status" in universe.columns:
+        report_needed = universe[
+            universe["report_status"].astype(str).str.contains("필요|needed", case=False, regex=True, na=False)
+        ].copy()
+    new_universe_count = 0
+    if not universe.empty and "universe_status" in universe.columns:
+        new_universe_count = int(
+            universe["universe_status"].astype(str).str.contains("신규|new", case=False, regex=True, na=False).sum()
+        )
 
     perf_lines: list[str] = []
     if not performance.empty:
@@ -320,6 +340,21 @@ def build_telegram_message(target_date: str) -> str:
         "■ 관찰 로그",
         f"누적: {len(observations)}건 | 오늘 신규: {obs_today_count}건",
     ]
+
+    if new_universe_count or not report_needed.empty:
+        names = []
+        if "name" in report_needed.columns:
+            names = [str(name) for name in report_needed["name"].dropna().head(5)]
+        suffix = "" if len(report_needed) <= 5 else f" 외 {len(report_needed) - 5}개"
+        lines += [
+            "",
+            "■ 신규 기업/보고서",
+            f"신규 폴더: {new_universe_count}개 | 보고서 필요: {len(report_needed)}개",
+            f"대상: {', '.join(names) + suffix if names else '(목록 없음)'}",
+            "보고서 생성 명령:",
+            "rtk python -u scripts/run_new_company_reports.py --include-existing-missing",
+        ]
+
     if perf_lines:
         lines += ["", "■ 조건별 성과"]
         lines.extend(perf_lines)

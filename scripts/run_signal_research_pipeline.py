@@ -91,6 +91,11 @@ def run_daily(args: argparse.Namespace) -> None:
             dry_run=args.dry_run,
         )
 
+    run_step(
+        Step("PER/EPS 현재 스냅샷 및 이익 체력 요약", "analyze_per_eps_valuation.py"),
+        dry_run=args.dry_run,
+    )
+
     watch_args: list[str] = []
     if args.date:
         watch_args.extend(["--date", args.date])

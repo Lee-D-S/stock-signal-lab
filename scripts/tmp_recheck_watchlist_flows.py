@@ -17,6 +17,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from tmp_quarterly_stock_analysis import fetch_investor_range  # noqa: E402
+from valuation_context import attach_valuation  # noqa: E402
 
 
 BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
@@ -111,6 +112,9 @@ def build_markdown(df: pd.DataFrame, title: str = "일별 전략 감시 후보 �
                     "amount_tag",
                     "required_flow_category",
                     "flow_category_recheck",
+                    "valuation_class",
+                    "valuation_profit_trend",
+                    "valuation_trap_check",
                     "foreign_5d_recheck",
                     "institution_5d_recheck",
                     "suggested_response",
@@ -200,6 +204,7 @@ async def main() -> None:
         await asyncio.sleep(args.delay)
 
     out = pd.DataFrame(rows)
+    out = attach_valuation(out)
     out = out.sort_values(["flow_recheck_status", "priority", "ticker"]).reset_index(drop=True)
     out.to_csv(args.confirmed_csv, index=False, encoding="utf-8-sig")
     args.confirmed_md.write_text(build_markdown(out, args.title), encoding="utf-8")
