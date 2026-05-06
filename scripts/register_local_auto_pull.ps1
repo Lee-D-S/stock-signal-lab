@@ -8,8 +8,8 @@ $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
     -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$pullScript`""
 
-$morningTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At 09:05
-$afternoonTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At 16:35
+$morningTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At 11:05
+$afternoonTrigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek Monday,Tuesday,Wednesday,Thursday,Friday -At 18:35
 
 $settings = New-ScheduledTaskSettingsSet `
     -StartWhenAvailable `
@@ -25,10 +25,10 @@ Register-ScheduledTask `
     -Trigger @($morningTrigger, $afternoonTrigger) `
     -Settings $settings `
     -Principal $principal `
-    -Description "Pull latest GitHub Actions outputs for auto-invest at 09:05 and 16:35 on weekdays." `
+    -Description "Pull latest GitHub Actions outputs for auto-invest at 11:05 and 18:35 on weekdays." `
     -Force | Out-Null
 
 Write-Output "registered task: $taskName"
 Write-Output "repo: $repoRoot"
 Write-Output "script: $pullScript"
-Write-Output "schedule: weekdays 09:05, 16:35"
+Write-Output "schedule: weekdays 11:05, 18:35"
