@@ -67,18 +67,42 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: 한국 거래일 확인
+        id: market-day
+        run: |
+          python -m pip install holidays==0.53
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import os
+          import holidays
+
+          today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+          is_market_day = today.weekday() < 5 and today not in holidays.Korea()
+          should_run = os.environ.get("GITHUB_EVENT_NAME") != "schedule" or is_market_day
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"date={today.isoformat()}", file=output)
+              print(f"is_market_day={str(is_market_day).lower()}", file=output)
+              print(f"should_run={str(should_run).lower()}", file=output)
+
+          print(f"kst_date={today.isoformat()} is_market_day={is_market_day} should_run={should_run}")
+          PY
+
       - name: 의존성 설치
+        if: steps.market-day.outputs.should_run == 'true'
         run: pip install -r requirements.txt
 
       - name: DART 공시 확인 실행
+        if: steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/auto_morning_dart_check.py
 
       - name: 성공 텔레그램 알림
-        if: success()
+        if: success() && steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
 
       - name: 실패 텔레그램 알림
-        if: failure()
+        if: failure() && steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
 
   daily-research-pipeline:
@@ -97,15 +121,40 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
+      - name: 한국 거래일 확인
+        id: market-day
+        run: |
+          python -m pip install holidays==0.53
+          python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          import os
+          import holidays
+
+          today = datetime.now(ZoneInfo("Asia/Seoul")).date()
+          is_market_day = today.weekday() < 5 and today not in holidays.Korea()
+          should_run = os.environ.get("GITHUB_EVENT_NAME") != "schedule" or is_market_day
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"date={today.isoformat()}", file=output)
+              print(f"is_market_day={str(is_market_day).lower()}", file=output)
+              print(f"should_run={str(should_run).lower()}", file=output)
+
+          print(f"kst_date={today.isoformat()} is_market_day={is_market_day} should_run={should_run}")
+          PY
+
       - name: 의존성 설치
+        if: steps.market-day.outputs.should_run == 'true'
         run: pip install -r requirements.txt
 
       - name: 실행 커밋 및 DART 캐시 확인
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           git rev-parse --short HEAD
           ls -l data/dart_corp_codes.json data/dart_corp_info.json || true
 
       - name: 일별 후보 탐지 및 관찰 로그 추가
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python -u scripts/run_signal_research_pipeline.py --mode daily --date "${{ github.event.inputs.date }}" --refresh-universe --recheck
@@ -114,6 +163,7 @@ jobs:
           fi
 
       - name: 신규 조건 별도 관찰
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python -u scripts/run_new_condition_observation.py --date "${{ github.event.inputs.date }}" --delay 0.35
@@ -122,6 +172,7 @@ jobs:
           fi
 
       - name: 관찰 로그 D+ 추적 업데이트
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python -u scripts/run_observation_tracking_update.py --as-of "${{ github.event.inputs.date }}"
@@ -130,9 +181,11 @@ jobs:
           fi
 
       - name: 관찰 성과 요약 생성
+        if: steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/run_observation_performance_summary.py
 
       - name: 일일 운영 요약 생성
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
             python -u scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}" --telegram
@@ -141,6 +194,7 @@ jobs:
           fi
 
       - name: 결과 커밋 및 푸시
+        if: steps.market-day.outputs.should_run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -154,9 +208,9 @@ jobs:
           git push
 
       - name: 성공 텔레그램 알림
-        if: success()
+        if: success() && steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
 
       - name: 실패 텔레그램 알림
-        if: failure()
+        if: failure() && steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
