@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import logging
 import sys
 from pathlib import Path
@@ -20,10 +21,21 @@ from .data_loader import _API_DELAY  # noqa: E402
 CACHE_DIR = ROOT / "data" / "investor_flow_cache"
 _MAX_CHUNKS = 80
 logger = logging.getLogger(__name__)
+_PARQUET_ENGINE_AVAILABLE: bool | None = None
 
 
 def _cache_paths(ticker: str) -> tuple[Path, Path]:
     return CACHE_DIR / f"{ticker}.parquet", CACHE_DIR / f"{ticker}.pkl"
+
+
+def _has_parquet_engine() -> bool:
+    global _PARQUET_ENGINE_AVAILABLE
+    if _PARQUET_ENGINE_AVAILABLE is None:
+        _PARQUET_ENGINE_AVAILABLE = (
+            importlib.util.find_spec("pyarrow") is not None
+            or importlib.util.find_spec("fastparquet") is not None
+        )
+    return _PARQUET_ENGINE_AVAILABLE
 
 
 def _to_number(value: Any) -> float | None:
@@ -36,19 +48,27 @@ def _to_number(value: Any) -> float | None:
 
 
 def _read_cached_frame(parquet_path: Path, pickle_path: Path) -> pd.DataFrame | None:
-    if parquet_path.exists():
+    if _has_parquet_engine() and parquet_path.exists():
         try:
             return pd.read_parquet(parquet_path)
         except (OSError, ValueError, ImportError) as exc:
             logger.warning("failed to read investor flow parquet cache %s: %s", parquet_path, exc)
+    if pickle_path.exists():
+        try:
+            return pd.read_pickle(pickle_path)
+        except (OSError, ValueError, ImportError) as exc:
+            logger.warning("failed to read investor flow pickle cache %s: %s", pickle_path, exc)
     return None
 
 
 def _write_cached_frame(df: pd.DataFrame, parquet_path: Path, pickle_path: Path) -> None:
-    try:
-        df.to_parquet(parquet_path, index=False)
-    except (OSError, ValueError, ImportError) as exc:
-        logger.warning("failed to write investor flow parquet cache %s: %s", parquet_path, exc)
+    if _has_parquet_engine():
+        try:
+            df.to_parquet(parquet_path, index=False)
+            return
+        except (OSError, ValueError, ImportError) as exc:
+            logger.warning("failed to write investor flow parquet cache %s: %s", parquet_path, exc)
+    df.to_pickle(pickle_path)
 
 
 def _parse_investor_rows(rows: list[dict[str, Any]]) -> pd.DataFrame:

@@ -132,17 +132,30 @@ def format_ratio_pct(value: Any) -> str:
     return f"{number:.2f}"
 
 
-def read_rows(path: Path, encoding: str = "utf-8") -> tuple[list[str], list[dict[str, str]]]:
+def read_rows(path: Path, encoding: str = "utf-8-sig") -> tuple[list[str], list[dict[str, str]]]:
     if not path.exists():
         return OBS_COLUMNS.copy(), []
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
-        return list(reader.fieldnames or OBS_COLUMNS), list(reader)
+        fieldnames = [name.lstrip("\ufeff") for name in (reader.fieldnames or OBS_COLUMNS)]
+        rows = []
+        for row in reader:
+            cleaned = {}
+            for key, value in row.items():
+                cleaned[(key or "").lstrip("\ufeff")] = value
+            rows.append(cleaned)
+        return fieldnames, rows
 
 
-def write_rows(path: Path, fieldnames: list[str], rows: list[dict[str, str]], encoding: str) -> None:
+def write_rows(
+    path: Path,
+    fieldnames: list[str],
+    rows: list[dict[str, str]],
+    encoding: str,
+    errors: str = "strict",
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding=encoding, newline="") as handle:
+    with path.open("w", encoding=encoding, errors=errors, newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
@@ -447,7 +460,7 @@ async def run(args: argparse.Namespace) -> tuple[int, int, int]:
 
     if not args.dry_run:
         write_rows(OBS_UTF8_CSV, fieldnames, rows, "utf-8")
-        write_rows(OBS_CP949_CSV, fieldnames, rows, "cp949")
+        write_rows(OBS_CP949_CSV, fieldnames, rows, "cp949", errors="replace")
         OBS_MD.write_text(build_observation_markdown(rows), encoding="utf-8")
 
     return len(candidates), added, updated
