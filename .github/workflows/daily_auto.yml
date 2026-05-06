@@ -97,6 +97,20 @@ jobs:
         if: steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/auto_morning_dart_check.py
 
+      - name: 결과 커밋 및 푸시
+        if: steps.market-day.outputs.should_run == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "ai 주가 변동 원인 분석/"
+          if git diff --cached --quiet; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git commit -m "auto: 오전 공시 확인 업데이트 $(date '+%Y-%m-%d')"
+          git pull --rebase origin main
+          git push
+
       - name: 성공 텔레그램 알림
         if: success() && steps.market-day.outputs.should_run == 'true'
         run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
