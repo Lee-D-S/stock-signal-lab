@@ -9,8 +9,7 @@ from tmp_realistic_backtest_hypotheses import build_trades, summarize
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-BACKTEST_DIR = BASE_DIR / "06_백테스트"
+from analysis_paths import BACKTEST_DIR  # noqa: E402
 
 COMBINED_SUMMARY_CSV = BACKTEST_DIR / "가설_실전_백테스트_전체_설정.csv"
 COMBINED_TRADES_CSV = BACKTEST_DIR / "가설_실전_백테스트_전체_거래.csv"

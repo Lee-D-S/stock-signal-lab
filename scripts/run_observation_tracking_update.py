@@ -19,13 +19,15 @@ if sys.platform == "win32":
 
 from tmp_quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
 
+from analysis_paths import (  # noqa: E402
+    OBS_COMMON_CSV,
+    OBS_COMMON_ERROR_CSV,
+    OBS_COMMON_MD,
+)
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-OBS_DIR = BASE_DIR / "08_관찰기록"
-
-OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
-OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
-OBS_MD = OBS_DIR / "관찰_로그.md"
+OBS_UTF8_CSV = OBS_COMMON_ERROR_CSV
+OBS_CP949_CSV = OBS_COMMON_CSV
+OBS_MD = OBS_COMMON_MD
 
 D_PLUS_CLOSE_COLUMNS = {
     5: "d_plus_5_close",

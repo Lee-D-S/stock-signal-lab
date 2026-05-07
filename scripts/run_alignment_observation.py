@@ -27,9 +27,17 @@ load_dotenv()
 
 import pandas as pd
 
-OBS_DIR = ROOT / "ai 주가 변동 원인 분석" / "08_관찰기록"
-SHORT_CSV = OBS_DIR / "단기정배열_관찰_로그.csv"
-LONG_CSV  = OBS_DIR / "장기정배열_관찰_로그.csv"
+from analysis_paths import (  # noqa: E402
+    OBS_ALIGN_DAILY_SUMMARY_CSV,
+    OBS_ALIGN_DIR,
+    OBS_ALIGN_LONG_CSV,
+    OBS_ALIGN_LONG_MD,
+    OBS_ALIGN_SHORT_CSV,
+    OBS_ALIGN_SHORT_MD,
+)
+
+SHORT_CSV = OBS_ALIGN_SHORT_CSV
+LONG_CSV  = OBS_ALIGN_LONG_CSV
 
 SHORT_COLS = [
     "signal_date", "ticker", "name", "price", "change_rate_pct",
@@ -54,12 +62,12 @@ LONG_COLS = [
     "result_label", "review_note",
 ]
 
-SUMMARY_CSV  = OBS_DIR / "정배열_관찰_일별요약.csv"
+SUMMARY_CSV  = OBS_ALIGN_DAILY_SUMMARY_CSV
 SUMMARY_COLS = ["run_date", "pool_size", "short_new", "long_new"]
 
 
 def _append_summary(run_date: str, pool_size: int, short_new: int, long_new: int) -> None:
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    OBS_ALIGN_DIR.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(SUMMARY_CSV, encoding="utf-8-sig") if SUMMARY_CSV.exists() else pd.DataFrame(columns=SUMMARY_COLS)
     df = df[df["run_date"].astype(str) != run_date]
     row = pd.DataFrame(
@@ -312,7 +320,7 @@ async def _update_returns(df: pd.DataFrame, today: date) -> pd.DataFrame:
 
 
 def _save(df: pd.DataFrame, path: Path, cols: list[str]) -> None:
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    OBS_ALIGN_DIR.mkdir(parents=True, exist_ok=True)
     save_cols = [c for c in cols if c in df.columns]
     out = df[save_cols]
     out.to_csv(path, index=False, encoding="utf-8-sig")

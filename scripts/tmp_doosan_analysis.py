@@ -28,7 +28,9 @@ NAME = "두산에너빌리티"
 END = "2026-04-28"
 MAIN_START = "2025-10-28"
 BASE_START = "2025-04-28"
-OUT = ROOT / "ai 주가 변동 원인 분석" / "두산에너빌리티_최근6개월_원인후보_실제분석.md"
+from analysis_paths import BASE_DIR  # noqa: E402
+
+OUT = BASE_DIR / "두산에너빌리티_최근6개월_원인후보_실제분석.md"
 
 
 def fmt_won(n: float | int | None) -> str:

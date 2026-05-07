@@ -16,11 +16,11 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from discovery.data_loader import CACHE_DIR, _cache_paths, _read_cached_frame, get_ohlcv_range  # noqa: E402
+from analysis_paths import BACKTEST_DIR  # noqa: E402
 
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-REVIEW_CSV = BASE_DIR / "가설_이벤트_검토.csv"
-REFRESH_SUMMARY_CSV = BASE_DIR / "가설_OHLCV_캐시_갱신_요약.csv"
+REVIEW_CSV = BACKTEST_DIR / "가설_이벤트_검토.csv"
+REFRESH_SUMMARY_CSV = BACKTEST_DIR / "가설_OHLCV_캐시_갱신_요약.csv"
 
 
 def required_ranges(buffer_days: int) -> pd.DataFrame:

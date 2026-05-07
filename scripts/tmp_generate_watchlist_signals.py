@@ -22,16 +22,19 @@ from tmp_quarterly_stock_analysis import (  # noqa: E402
     fetch_investor_range,
     fetch_ohlcv,
 )
+from analysis_paths import (  # noqa: E402
+    FOREIGN_FLOW_DIR,
+    STRATEGY_PLAN_DIR,
+    UNIVERSE_MASTER_CSV,
+    WATCHLIST_DIR,
+)
 
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-
-STRATEGY_CSV = STRATEGY_DIR / "전략_조건_초안.csv"
-WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
-WATCHLIST_MD = STRATEGY_DIR / "관심종목_시그널_후보.md"
-SCAN_CSV = STRATEGY_DIR / "관심종목_시그널_스캔.csv"
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
+STRATEGY_CSV = STRATEGY_PLAN_DIR / "전략_조건_초안.csv"
+WATCHLIST_CSV = WATCHLIST_DIR / "관심종목_시그널_후보.csv"
+WATCHLIST_MD = WATCHLIST_DIR / "관심종목_시그널_후보.md"
+SCAN_CSV = WATCHLIST_DIR / "관심종목_시그널_스캔.csv"
+UNIVERSE_CSV = UNIVERSE_MASTER_CSV
 
 COMPANIES = [
     ("005930", "삼성전자", None),
@@ -412,7 +415,7 @@ async def main() -> None:
     args.watchlist_md.write_text(build_markdown(df, out_date, args.title), encoding="utf-8")
 
     if errors:
-        error_path = STRATEGY_DIR / "관심종목_시그널_오류.csv"
+        error_path = WATCHLIST_DIR / "관심종목_시그널_오류.csv"
         pd.DataFrame(errors).to_csv(error_path, index=False, encoding="utf-8-sig")
         print(f"errors={len(errors)} error_csv={error_path}")
     print(f"universe_source={args.universe_csv if args.universe_csv.exists() else 'COMPANIES'}")

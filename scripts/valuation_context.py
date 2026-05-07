@@ -7,8 +7,9 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-VALUATION_CSV = BASE_DIR / "03_원천데이터" / "기업별_PER_EPS_현재스냅샷.csv"
+from analysis_paths import DATA_DIR  # noqa: E402
+
+VALUATION_CSV = DATA_DIR / "기업별_PER_EPS_현재스냅샷.csv"
 
 VALUATION_COLUMNS = [
     "valuation_per",

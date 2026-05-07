@@ -6,11 +6,9 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-DATA_DIR = BASE_DIR / "03_원천데이터"
-PATTERN_DIR = BASE_DIR / "04_패턴분석"
+
+from analysis_paths import DATA_DIR, PATTERN_DIR  # noqa: E402
 
 EVENTS_CSV = DATA_DIR / "이벤트.csv"
 DISTRIBUTION_MD = DATA_DIR / "이벤트_분포_요약.md"

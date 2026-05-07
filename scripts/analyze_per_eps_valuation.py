@@ -7,12 +7,14 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-COMPANY_DIR = BASE_DIR / "00_기업별분석"
-DATA_DIR = BASE_DIR / "03_원천데이터"
-PATTERN_DIR = BASE_DIR / "04_패턴분석"
+
+from analysis_paths import (  # noqa: E402
+    COMPANY_DIR,
+    DATA_DIR,
+    PATTERN_DIR,
+)
+
 OUT_CSV = DATA_DIR / "기업별_PER_EPS_현재스냅샷.csv"
 OUT_MD = PATTERN_DIR / "PER_EPS_밸류에이션_요약.md"
 

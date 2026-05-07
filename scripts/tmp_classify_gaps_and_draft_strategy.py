@@ -7,11 +7,14 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-BACKTEST_DIR = BASE_DIR / "06_백테스트"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
+
+from analysis_paths import (  # noqa: E402
+    BACKTEST_DIR,
+    SNAPSHOT_DIR,
+    STRATEGY_PLAN_DIR,
+)
+
 CACHE_DIR = ROOT / "data" / "ohlcv_cache"
 
 TRADES_CSV = BACKTEST_DIR / "가설_실전_백테스트_거래.csv"
@@ -20,9 +23,8 @@ BACKTEST_INPUTS_CSV = BACKTEST_DIR / "가설_백테스트_입력값.csv"
 
 GAP_CSV = BACKTEST_DIR / "가설_백테스트_갭_분류.csv"
 GAP_MD = BACKTEST_DIR / "가설_백테스트_갭_분류.md"
-STRATEGY_CSV = STRATEGY_DIR / "전략_조건_초안.csv"
-STRATEGY_MD = STRATEGY_DIR / "전략_조건_초안.md"
-SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
+STRATEGY_CSV = STRATEGY_PLAN_DIR / "전략_조건_초안.csv"
+STRATEGY_MD = STRATEGY_PLAN_DIR / "전략_조건_초안.md"
 
 KEEP_HYPOTHESES = ["H02", "H01", "H03", "H06", "H04"]
 

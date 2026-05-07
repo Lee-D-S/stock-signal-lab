@@ -15,16 +15,15 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from screener_lib.universe import get_stock_universe  # noqa: E402
-
-
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-COMPANY_DIR = BASE_DIR / "00_기업별분석"
-PLAN_DIR = BASE_DIR / "01_기획"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
-UNIVERSE_MD = STRATEGY_DIR / "거래대금_상위_유니버스.md"
-MASTER_UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
-MASTER_UNIVERSE_MD = STRATEGY_DIR / "거래대금_상위_누적_유니버스.md"
+from analysis_paths import (  # noqa: E402
+    COMPANY_DIR,
+    PLAN_DIR,
+    ROOT as PROJECT_ROOT,
+    UNIVERSE_MASTER_CSV,
+    UNIVERSE_MASTER_MD,
+    UNIVERSE_CSV,
+    UNIVERSE_MD,
+)
 NEW_COMPANY_MD = PLAN_DIR / "신규_기업_추가_대상.md"
 
 
@@ -86,7 +85,7 @@ def parse_seen_count(value: Any) -> int:
 
 
 def build_cumulative_universe(latest_df: pd.DataFrame, refresh_date: str) -> pd.DataFrame:
-    existing_df = read_csv(MASTER_UNIVERSE_CSV)
+    existing_df = read_csv(UNIVERSE_MASTER_CSV)
     existing_rows = {}
     if not existing_df.empty and "ticker" in existing_df.columns:
         for _, row in existing_df.iterrows():
@@ -206,11 +205,11 @@ def write_new_company_report(df: pd.DataFrame, created_count: int) -> None:
 
 def write_cumulative_universe(df: pd.DataFrame, refresh_date: str) -> None:
     if df.empty:
-        MASTER_UNIVERSE_CSV.write_text("", encoding="utf-8-sig")
-        MASTER_UNIVERSE_MD.write_text("# 거래대금 상위 누적 유니버스\n\n_종목 없음_", encoding="utf-8")
+        UNIVERSE_MASTER_CSV.write_text("", encoding="utf-8-sig")
+        UNIVERSE_MASTER_MD.write_text("# 거래대금 상위 누적 유니버스\n\n_종목 없음_", encoding="utf-8")
         return
 
-    df.to_csv(MASTER_UNIVERSE_CSV, index=False, encoding="utf-8-sig")
+    df.to_csv(UNIVERSE_MASTER_CSV, index=False, encoding="utf-8-sig")
     new_count = int((df["universe_status"].astype(str) == "new").sum()) if "universe_status" in df.columns else 0
     lines = [
         "# 거래대금 상위 누적 유니버스",
@@ -241,7 +240,7 @@ def write_cumulative_universe(df: pd.DataFrame, refresh_date: str) -> None:
         ),
         "",
     ]
-    MASTER_UNIVERSE_MD.write_text("\n".join(lines), encoding="utf-8")
+    UNIVERSE_MASTER_MD.write_text("\n".join(lines), encoding="utf-8")
 
 
 async def main() -> None:
@@ -252,7 +251,7 @@ async def main() -> None:
     parser.add_argument("--no-create-folders", action="store_true", help="신규 기업 폴더를 만들지 않음")
     args = parser.parse_args()
 
-    STRATEGY_DIR.mkdir(parents=True, exist_ok=True)
+    UNIVERSE_CSV.parent.mkdir(parents=True, exist_ok=True)
     PLAN_DIR.mkdir(parents=True, exist_ok=True)
     COMPANY_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -296,7 +295,7 @@ async def main() -> None:
                 "trade_amount": stock.get("trade_amount", 0),
                 "universe_status": status,
                 "company_folder_exists": bool(folder_exists_before or folder_path.exists()),
-                "company_folder": str(folder_path.relative_to(ROOT)),
+                "company_folder": str(folder_path.relative_to(PROJECT_ROOT)),
                 "report_status": report_status,
             }
         )
@@ -343,8 +342,8 @@ async def main() -> None:
     print(f"excluded={len(excluded)}")
     print(f"universe_csv={UNIVERSE_CSV}")
     print(f"universe_md={UNIVERSE_MD}")
-    print(f"master_universe_csv={MASTER_UNIVERSE_CSV}")
-    print(f"master_universe_md={MASTER_UNIVERSE_MD}")
+    print(f"master_universe_csv={UNIVERSE_MASTER_CSV}")
+    print(f"master_universe_md={UNIVERSE_MASTER_MD}")
     print(f"new_company_md={NEW_COMPANY_MD}")
 
 

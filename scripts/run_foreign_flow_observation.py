@@ -24,17 +24,23 @@ from discovery.investor_flow_loader import (  # noqa: E402
 )
 from screener_lib.universe import get_stock_universe  # noqa: E402
 
+from analysis_paths import (  # noqa: E402
+    FOREIGN_FLOW_DIR,
+    FOREIGN_FLOW_SCAN_CSV,
+    FOREIGN_FLOW_WATCHLIST_CSV,
+    FOREIGN_FLOW_WATCHLIST_MD,
+    OBS_FOREIGN_FLOW_CSV,
+    OBS_FOREIGN_FLOW_ERROR_CSV,
+    OBS_FOREIGN_FLOW_ERROR_MD,
+    OBS_FOREIGN_FLOW_MD,
+)
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-OBS_DIR = BASE_DIR / "08_관찰기록"
-
-SCAN_CSV = STRATEGY_DIR / "외국인순매수_연속_스캔.csv"
-WATCHLIST_CSV = STRATEGY_DIR / "외국인순매수_연속_후보.csv"
-WATCHLIST_MD = STRATEGY_DIR / "외국인순매수_연속_후보.md"
-OBS_UTF8_CSV = OBS_DIR / "외국인순매수_관찰_로그(이상).csv"
-OBS_CP949_CSV = OBS_DIR / "외국인순매수_관찰_로그.csv"
-OBS_MD = OBS_DIR / "외국인순매수_관찰_로그.md"
+SCAN_CSV = FOREIGN_FLOW_SCAN_CSV
+WATCHLIST_CSV = FOREIGN_FLOW_WATCHLIST_CSV
+WATCHLIST_MD = FOREIGN_FLOW_WATCHLIST_MD
+OBS_UTF8_CSV = OBS_FOREIGN_FLOW_ERROR_CSV
+OBS_CP949_CSV = OBS_FOREIGN_FLOW_CSV
+OBS_MD = OBS_FOREIGN_FLOW_MD
 
 D_PLUS_CLOSE_COLUMNS = {
     5: "d_plus_5_close",
@@ -437,8 +443,8 @@ def build_observation_markdown(rows: list[dict[str, str]]) -> str:
 
 async def run(args: argparse.Namespace) -> tuple[int, int, int]:
     as_of = pd.Timestamp(args.date).normalize() if args.date else pd.Timestamp.today().normalize()
-    STRATEGY_DIR.mkdir(parents=True, exist_ok=True)
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    FOREIGN_FLOW_DIR.mkdir(parents=True, exist_ok=True)
+    OBS_UTF8_CSV.parent.mkdir(parents=True, exist_ok=True)
 
     candidates = await scan_candidates(as_of, args.top, args.pool_size, args.min_streak)
     candidates.to_csv(SCAN_CSV, index=False, encoding="utf-8-sig")

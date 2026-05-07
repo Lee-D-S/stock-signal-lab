@@ -8,16 +8,19 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-OBS_DIR = BASE_DIR / "08_관찰기록"
 
-CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
-OBS_UTF8_CSV = OBS_DIR / "관찰_로그(이상).csv"
-OBS_CP949_CSV = OBS_DIR / "관찰_로그.csv"
-OBS_MD = OBS_DIR / "관찰_로그.md"
+from analysis_paths import (  # noqa: E402
+    OBS_COMMON_CSV,
+    OBS_COMMON_ERROR_CSV,
+    OBS_COMMON_MD,
+    WATCHLIST_CONFIRMED_CSV,
+)
+
+CONFIRMED_CSV = WATCHLIST_CONFIRMED_CSV
+OBS_UTF8_CSV = OBS_COMMON_ERROR_CSV
+OBS_CP949_CSV = OBS_COMMON_CSV
+OBS_MD = OBS_COMMON_MD
 
 OBS_FIELDNAMES = [
     "signal_date",

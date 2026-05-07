@@ -29,8 +29,13 @@ load_dotenv()
 
 import pandas as pd
 
-OBS_DIR  = ROOT / "ai 주가 변동 원인 분석" / "08_관찰기록"
-LOG_CSV  = OBS_DIR / "스코어_관찰_로그.csv"
+from analysis_paths import (  # noqa: E402
+    OBS_SCORE_CSV,
+    OBS_SCORE_DAILY_SUMMARY_CSV,
+    OBS_SCORE_DIR,
+)
+
+LOG_CSV  = OBS_SCORE_CSV
 SCREEN_DIR = ROOT / "scripts" / "scoring" / "results"
 
 LOG_COLS = [
@@ -44,12 +49,12 @@ LOG_COLS = [
     "result_label", "review_note",
 ]
 
-SUMMARY_CSV  = OBS_DIR / "스코어_관찰_일별요약.csv"
+SUMMARY_CSV  = OBS_SCORE_DAILY_SUMMARY_CSV
 SUMMARY_COLS = ["run_date", "threshold", "pool_screened", "new_signals"]
 
 
 def _append_summary(run_date: str, threshold: float, pool_screened: int, new_signals: int) -> None:
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    OBS_SCORE_DIR.mkdir(parents=True, exist_ok=True)
     df = pd.read_csv(SUMMARY_CSV, encoding="utf-8-sig") if SUMMARY_CSV.exists() else pd.DataFrame(columns=SUMMARY_COLS)
     df = df[df["run_date"].astype(str) != run_date]
     row = pd.DataFrame(
@@ -140,7 +145,7 @@ async def _update_returns(df: pd.DataFrame, today: date) -> pd.DataFrame:
 
 
 def _save(df: pd.DataFrame) -> None:
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    OBS_SCORE_DIR.mkdir(parents=True, exist_ok=True)
     save_cols = [c for c in LOG_COLS if c in df.columns]
     out = df[save_cols]
     out.to_csv(LOG_CSV, index=False, encoding="utf-8-sig")

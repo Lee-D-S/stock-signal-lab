@@ -28,12 +28,9 @@ from tmp_quarterly_stock_analysis import (  # noqa: E402
     get_corp_code_map,
     listing_date_from_stock_info,
 )
+from analysis_paths import PLAN_DIR, UNIVERSE_MASTER_CSV  # noqa: E402
 
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-PLAN_DIR = BASE_DIR / "01_기획"
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 SUMMARY_CSV = PLAN_DIR / "신규_기업_보고서_생성_상태.csv"
 
 
@@ -59,7 +56,7 @@ def missing_periods(name: str, listing_date: pd.Timestamp | None = None) -> list
 
 
 def load_targets(include_existing_missing: bool) -> pd.DataFrame:
-    universe = pd.read_csv(UNIVERSE_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+    universe = pd.read_csv(UNIVERSE_MASTER_CSV, encoding="utf-8-sig", dtype={"ticker": str})
     if include_existing_missing:
         return universe[universe["report_status"] == "report_needed"].copy()
     return universe[universe["universe_status"] == "new"].copy()

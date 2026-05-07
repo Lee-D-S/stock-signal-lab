@@ -19,12 +19,15 @@ if sys.platform == "win32":
 from tmp_quarterly_stock_analysis import fetch_investor_range  # noqa: E402
 from valuation_context import attach_valuation  # noqa: E402
 
+from analysis_paths import (  # noqa: E402
+    WATCHLIST_CONFIRMED_CSV,
+    WATCHLIST_CONFIRMED_MD,
+    WATCHLIST_CSV,
+)
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-CANDIDATES_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
-CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
-CONFIRMED_MD = STRATEGY_DIR / "관심종목_시그널_후보_확정.md"
+CANDIDATES_CSV = WATCHLIST_CSV
+CONFIRMED_CSV = WATCHLIST_CONFIRMED_CSV
+CONFIRMED_MD = WATCHLIST_CONFIRMED_MD
 
 
 def classify_flow(investor: pd.DataFrame, event_date: pd.Timestamp) -> tuple[str, float | None, float | None, float | None]:

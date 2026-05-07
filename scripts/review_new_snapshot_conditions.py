@@ -5,10 +5,9 @@ from pathlib import Path
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-SNAPSHOT_ROOT = BASE_DIR / "09_조건스냅샷"
+
+from analysis_paths import SNAPSHOT_DIR as SNAPSHOT_ROOT  # noqa: E402
 
 
 def pct(value: float) -> str:

@@ -8,18 +8,33 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "scripts"
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-COMPANY_DIR = BASE_DIR / "00_기업별분석"
-DATA_DIR = BASE_DIR / "03_원천데이터"
-PATTERN_DIR = BASE_DIR / "04_패턴분석"
-REVIEW_DIR = BASE_DIR / "05_가설검토"
-BACKTEST_DIR = BASE_DIR / "06_백테스트"
-STRATEGY_DIR = BASE_DIR / "07_전략신호"
-OBS_DIR = BASE_DIR / "08_관찰기록"
-SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
+
+from analysis_paths import (  # noqa: E402
+    BACKTEST_DIR,
+    COMPANY_DIR,
+    DATA_DIR,
+    OBS_ALIGN_DIR,
+    OBS_COMMON_MD,
+    OBS_CANDLE_DIR,
+    OBS_DIR,
+    OBS_FOREIGN_FLOW_DIR,
+    OBS_FOREIGN_FLOW_MD,
+    OBS_SCORE_DIR,
+    PATTERN_DIR,
+    REVIEW_DIR,
+    SNAPSHOT_DIR,
+    STRATEGY_DIR,
+    STRATEGY_PLAN_DIR,
+    OBS_NEW_CONDITION_MD,
+    WATCHLIST_CONFIRMED_MD,
+    WATCHLIST_CSV,
+    WATCHLIST_MD,
+    NEW_CONDITION_CONFIRMED_MD,
+    NEW_CONDITION_WATCHLIST_MD,
+    FOREIGN_FLOW_WATCHLIST_MD,
+)
 
 
 @dataclass(frozen=True)
@@ -202,15 +217,15 @@ def print_outputs() -> None:
         REVIEW_DIR / "가설_이벤트_검토.md",
         BACKTEST_DIR / "가설_대리_백테스트.md",
         BACKTEST_DIR / "가설_실전_백테스트_전체_설정.md",
-        STRATEGY_DIR / "전략_조건_초안.md",
-        STRATEGY_DIR / "관심종목_시그널_후보.md",
-        STRATEGY_DIR / "관심종목_시그널_후보_확정.md",
-        STRATEGY_DIR / "신규조건_관심종목_시그널_후보.md",
-        STRATEGY_DIR / "신규조건_관심종목_시그널_후보_확정.md",
-        STRATEGY_DIR / "외국인순매수_연속_후보.md",
-        OBS_DIR / "관찰_로그.md",
-        OBS_DIR / "신규조건_관찰_로그.md",
-        OBS_DIR / "외국인순매수_관찰_로그.md",
+        STRATEGY_PLAN_DIR / "전략_조건_초안.md",
+        WATCHLIST_MD,
+        WATCHLIST_CONFIRMED_MD,
+        NEW_CONDITION_WATCHLIST_MD,
+        NEW_CONDITION_CONFIRMED_MD,
+        FOREIGN_FLOW_WATCHLIST_MD,
+        OBS_COMMON_MD,
+        OBS_NEW_CONDITION_MD,
+        OBS_FOREIGN_FLOW_MD,
     ]
     print("\n주요 산출물:")
     for path in outputs:

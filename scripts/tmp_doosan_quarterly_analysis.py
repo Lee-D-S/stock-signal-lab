@@ -34,7 +34,9 @@ from scripts.screener_lib.dart import get_corp_code_map  # noqa: E402
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-OUT_DIR = ROOT / "ai 주가 변동 원인 분석"
+from analysis_paths import BASE_DIR  # noqa: E402
+
+OUT_DIR = BASE_DIR
 
 PERIODS = [
     ("2026_Q1", "2026년 1분기", "2026-01-01", "2026-03-31"),

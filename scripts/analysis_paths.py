@@ -1,0 +1,109 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
+
+COMPANY_DIR = BASE_DIR / "00_기업별분석"
+PLAN_DIR = BASE_DIR / "01_기획"
+REFERENCE_DIR = BASE_DIR / "02_기준"
+RAW_DIR = BASE_DIR / "03_원천데이터"
+PATTERN_DIR = BASE_DIR / "04_패턴분석"
+HYPOTHESIS_DIR = BASE_DIR / "05_가설검토"
+BACKTEST_DIR = BASE_DIR / "06_백테스트"
+
+STRATEGY_DIR = BASE_DIR / "07_전략신호"
+UNIVERSE_DIR = STRATEGY_DIR / "00_유니버스"
+WATCHLIST_DIR = STRATEGY_DIR / "01_관심종목"
+NEW_CONDITION_DIR = STRATEGY_DIR / "02_신규조건"
+FOREIGN_FLOW_DIR = STRATEGY_DIR / "03_외국인수급"
+CANDLE_DIR = STRATEGY_DIR / "04_캔들"
+STRATEGY_PLAN_DIR = STRATEGY_DIR / "05_전략"
+
+OBS_DIR = BASE_DIR / "08_관찰기록"
+OBS_COMMON_DIR = OBS_DIR / "00_공통"
+OBS_FOREIGN_FLOW_DIR = OBS_DIR / "01_외국인수급"
+OBS_ALIGN_DIR = OBS_DIR / "02_정배열"
+OBS_SCORE_DIR = OBS_DIR / "03_스코어"
+OBS_CANDLE_DIR = OBS_DIR / "04_캔들"
+OBS_NEW_CONDITION_DIR = OBS_DIR / "05_신규조건"
+
+SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
+SUMMARY_DIR = BASE_DIR / "10_일일요약"
+
+UNIVERSE_CSV = UNIVERSE_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_MD = UNIVERSE_DIR / "거래대금_상위_유니버스.md"
+UNIVERSE_MASTER_CSV = UNIVERSE_DIR / "거래대금_상위_누적_유니버스.csv"
+UNIVERSE_MASTER_MD = UNIVERSE_DIR / "거래대금_상위_누적_유니버스.md"
+
+WATCHLIST_SCAN_CSV = WATCHLIST_DIR / "관심종목_시그널_스캔.csv"
+WATCHLIST_SCAN_ERROR_CSV = WATCHLIST_DIR / "관심종목_시그널_오류.csv"
+WATCHLIST_CSV = WATCHLIST_DIR / "관심종목_시그널_후보.csv"
+WATCHLIST_MD = WATCHLIST_DIR / "관심종목_시그널_후보.md"
+WATCHLIST_CONFIRMED_CSV = WATCHLIST_DIR / "관심종목_시그널_후보_확정.csv"
+WATCHLIST_CONFIRMED_MD = WATCHLIST_DIR / "관심종목_시그널_후보_확정.md"
+
+NEW_CONDITION_STRATEGY_CSV = NEW_CONDITION_DIR / "신규조건_전략_조건.csv"
+NEW_CONDITION_STRATEGY_MD = NEW_CONDITION_DIR / "신규조건_전략_조건.md"
+NEW_CONDITION_SCAN_CSV = NEW_CONDITION_DIR / "신규조건_관심종목_시그널_스캔.csv"
+NEW_CONDITION_WATCHLIST_CSV = NEW_CONDITION_DIR / "신규조건_관심종목_시그널_후보.csv"
+NEW_CONDITION_WATCHLIST_MD = NEW_CONDITION_DIR / "신규조건_관심종목_시그널_후보.md"
+NEW_CONDITION_CONFIRMED_CSV = NEW_CONDITION_DIR / "신규조건_관심종목_시그널_후보_확정.csv"
+NEW_CONDITION_CONFIRMED_MD = NEW_CONDITION_DIR / "신규조건_관심종목_시그널_후보_확정.md"
+
+FOREIGN_FLOW_SCAN_CSV = FOREIGN_FLOW_DIR / "외국인순매수_연속_스캔.csv"
+FOREIGN_FLOW_WATCHLIST_CSV = FOREIGN_FLOW_DIR / "외국인순매수_연속_후보.csv"
+FOREIGN_FLOW_WATCHLIST_MD = FOREIGN_FLOW_DIR / "외국인순매수_연속_후보.md"
+
+CANDLE_SCAN_CSV = CANDLE_DIR / "캔들_패턴_스캔.csv"
+CANDLE_SCAN_MD = CANDLE_DIR / "캔들_패턴_스캔.md"
+CANDLE_HISTORY_SCAN_CSV = CANDLE_DIR / "캔들_히스토리_스캔.csv"
+CANDLE_HISTORY_SCAN_MD = CANDLE_DIR / "캔들_히스토리_스캔.md"
+CANDLE_FINAL_SCAN_CSV = CANDLE_DIR / "캔들_최종분석_스캔.csv"
+CANDLE_FINAL_SCAN_MD = CANDLE_DIR / "캔들_최종분석_스캔.md"
+CANDLE_HISTORY_FINAL_SCAN_CSV = CANDLE_DIR / "캔들_히스토리_최종분석_스캔.csv"
+CANDLE_HISTORY_FINAL_SCAN_MD = CANDLE_DIR / "캔들_히스토리_최종분석_스캔.md"
+
+OBS_CSV = OBS_CANDLE_DIR / "캔들_관찰_로그.csv"
+OBS_MD = OBS_CANDLE_DIR / "캔들_관찰_로그.md"
+OBS_SUMMARY_CSV = OBS_CANDLE_DIR / "캔들_패턴_성과_요약.csv"
+OBS_SUMMARY_MD = OBS_CANDLE_DIR / "캔들_패턴_성과_요약.md"
+CANDLE_FINAL_OBS_CSV = OBS_CANDLE_DIR / "캔들_최종분석_로그.csv"
+CANDLE_FINAL_OBS_MD = OBS_CANDLE_DIR / "캔들_최종분석_로그.md"
+CANDLE_FINAL_SUMMARY_CSV = OBS_CANDLE_DIR / "캔들_최종분석_성과_요약.csv"
+CANDLE_FINAL_SUMMARY_MD = OBS_CANDLE_DIR / "캔들_최종분석_성과_요약.md"
+CANDLE_HISTORY_OBS_CSV = OBS_CANDLE_DIR / "캔들_히스토리_관찰_로그.csv"
+CANDLE_HISTORY_OBS_MD = OBS_CANDLE_DIR / "캔들_히스토리_관찰_로그.md"
+CANDLE_HISTORY_SUMMARY_CSV = OBS_CANDLE_DIR / "캔들_히스토리_성과_요약.csv"
+CANDLE_HISTORY_SUMMARY_MD = OBS_CANDLE_DIR / "캔들_히스토리_성과_요약.md"
+CANDLE_HISTORY_FINAL_OBS_CSV = OBS_CANDLE_DIR / "캔들_히스토리_최종분석_로그.csv"
+CANDLE_HISTORY_FINAL_OBS_MD = OBS_CANDLE_DIR / "캔들_히스토리_최종분석_로그.md"
+CANDLE_HISTORY_FINAL_SUMMARY_CSV = OBS_CANDLE_DIR / "캔들_히스토리_최종분석_성과_요약.csv"
+CANDLE_HISTORY_FINAL_SUMMARY_MD = OBS_CANDLE_DIR / "캔들_히스토리_최종분석_성과_요약.md"
+
+OBS_COMMON_CSV = OBS_COMMON_DIR / "관찰_로그.csv"
+OBS_COMMON_MD = OBS_COMMON_DIR / "관찰_로그.md"
+OBS_COMMON_SUMMARY_CSV = OBS_COMMON_DIR / "관찰_성과_요약.csv"
+OBS_COMMON_SUMMARY_MD = OBS_COMMON_DIR / "관찰_성과_요약.md"
+OBS_COMMON_ERROR_CSV = OBS_COMMON_DIR / "관찰_로그(이상).csv"
+
+OBS_FOREIGN_FLOW_CSV = OBS_FOREIGN_FLOW_DIR / "외국인순매수_관찰_로그.csv"
+OBS_FOREIGN_FLOW_MD = OBS_FOREIGN_FLOW_DIR / "외국인순매수_관찰_로그.md"
+OBS_FOREIGN_FLOW_ERROR_CSV = OBS_FOREIGN_FLOW_DIR / "외국인순매수_관찰_로그(이상).csv"
+OBS_FOREIGN_FLOW_ERROR_MD = OBS_FOREIGN_FLOW_DIR / "외국인순매수_관찰_로그(이상).md"
+
+OBS_ALIGN_SHORT_CSV = OBS_ALIGN_DIR / "단기정배열_관찰_로그.csv"
+OBS_ALIGN_SHORT_MD = OBS_ALIGN_DIR / "단기정배열_관찰_로그.md"
+OBS_ALIGN_LONG_CSV = OBS_ALIGN_DIR / "장기정배열_관찰_로그.csv"
+OBS_ALIGN_LONG_MD = OBS_ALIGN_DIR / "장기정배열_관찰_로그.md"
+OBS_ALIGN_DAILY_SUMMARY_CSV = OBS_ALIGN_DIR / "정배열_관찰_일별요약.csv"
+
+OBS_SCORE_CSV = OBS_SCORE_DIR / "스코어_관찰_로그.csv"
+OBS_SCORE_MD = OBS_SCORE_DIR / "스코어_관찰_로그.md"
+OBS_SCORE_DAILY_SUMMARY_CSV = OBS_SCORE_DIR / "스코어_관찰_일별요약.csv"
+
+OBS_NEW_CONDITION_UTF8_CSV = OBS_NEW_CONDITION_DIR / "신규조건_관찰_로그(이상).csv"
+OBS_NEW_CONDITION_CP949_CSV = OBS_NEW_CONDITION_DIR / "신규조건_관찰_로그.csv"
+OBS_NEW_CONDITION_MD = OBS_NEW_CONDITION_DIR / "신규조건_관찰_로그.md"

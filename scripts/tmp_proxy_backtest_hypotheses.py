@@ -7,9 +7,7 @@ import pandas as pd
 
 
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-REVIEW_DIR = BASE_DIR / "05_가설검토"
-BACKTEST_DIR = BASE_DIR / "06_백테스트"
+from analysis_paths import BACKTEST_DIR, REVIEW_DIR  # noqa: E402
 
 REVIEW_CSV = REVIEW_DIR / "가설_이벤트_검토.csv"
 SUMMARY_CSV = REVIEW_DIR / "가설_이벤트_요약.csv"

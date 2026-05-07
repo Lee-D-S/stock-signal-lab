@@ -22,10 +22,10 @@ from discovery.data_loader import (  # noqa: E402
     _cache_paths,
 )
 
+from analysis_paths import BACKTEST_DIR  # noqa: E402
 
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-GAP_CSV = BASE_DIR / "가설_백테스트_갭_분류.csv"
-FILL_SUMMARY_CSV = BASE_DIR / "가설_OHLCV_내부_갭_보정_요약.csv"
+GAP_CSV = BACKTEST_DIR / "가설_백테스트_갭_분류.csv"
+FILL_SUMMARY_CSV = BACKTEST_DIR / "가설_OHLCV_내부_갭_보정_요약.csv"
 
 
 async def fetch_range(ticker: str, start: pd.Timestamp, end: pd.Timestamp, chunk_days: int, delay: float) -> pd.DataFrame:

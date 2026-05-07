@@ -5,14 +5,17 @@ from typing import Any
 
 import pandas as pd
 
-
 ROOT = Path(__file__).resolve().parent.parent
-BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
-OBS_DIR = BASE_DIR / "08_관찰기록"
 
-OBS_CSV = OBS_DIR / "관찰_로그(이상).csv"
-SUMMARY_CSV = OBS_DIR / "관찰_성과_요약.csv"
-SUMMARY_MD = OBS_DIR / "관찰_성과_요약.md"
+from analysis_paths import (  # noqa: E402
+    OBS_COMMON_CSV,
+    OBS_COMMON_SUMMARY_CSV,
+    OBS_COMMON_SUMMARY_MD,
+)
+
+OBS_CSV = OBS_COMMON_CSV
+SUMMARY_CSV = OBS_COMMON_SUMMARY_CSV
+SUMMARY_MD = OBS_COMMON_SUMMARY_MD
 
 RETURN_COLUMNS = [
     "next_close_return_pct",
