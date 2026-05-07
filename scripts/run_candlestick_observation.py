@@ -32,6 +32,12 @@ OBS_CSV = OBS_DIR / "캔들_관찰_로그.csv"
 OBS_MD = OBS_DIR / "캔들_관찰_로그.md"
 SUMMARY_CSV = OBS_DIR / "캔들_패턴_성과_요약.csv"
 SUMMARY_MD = OBS_DIR / "캔들_패턴_성과_요약.md"
+HISTORY_SCAN_CSV = STRATEGY_DIR / "캔들_히스토리_스캔.csv"
+HISTORY_SCAN_MD = STRATEGY_DIR / "캔들_히스토리_스캔.md"
+HISTORY_OBS_CSV = OBS_DIR / "캔들_히스토리_관찰_로그.csv"
+HISTORY_OBS_MD = OBS_DIR / "캔들_히스토리_관찰_로그.md"
+HISTORY_SUMMARY_CSV = OBS_DIR / "캔들_히스토리_성과_요약.csv"
+HISTORY_SUMMARY_MD = OBS_DIR / "캔들_히스토리_성과_요약.md"
 
 DEFAULT_COMPANIES = [
     ("005930", "삼성전자"),
@@ -294,6 +300,24 @@ async def scan(args: argparse.Namespace) -> pd.DataFrame:
     return df
 
 
+def resolve_output_paths(args: argparse.Namespace) -> None:
+    if args.mode != "history":
+        return
+    args.backfill = True
+    if args.scan_csv == SCAN_CSV:
+        args.scan_csv = HISTORY_SCAN_CSV
+    if args.scan_md == SCAN_MD:
+        args.scan_md = HISTORY_SCAN_MD
+    if args.obs_csv == OBS_CSV:
+        args.obs_csv = HISTORY_OBS_CSV
+    if args.obs_md == OBS_MD:
+        args.obs_md = HISTORY_OBS_MD
+    if args.summary_csv == SUMMARY_CSV:
+        args.summary_csv = HISTORY_SUMMARY_CSV
+    if args.summary_md == SUMMARY_MD:
+        args.summary_md = HISTORY_SUMMARY_MD
+
+
 def append_observations(signals: pd.DataFrame, obs_csv: Path, dry_run: bool) -> int:
     fieldnames, rows = read_rows(obs_csv)
     existing = {observation_key(row) for row in rows}
@@ -517,7 +541,12 @@ def refresh_markdown_and_summary(args: argparse.Namespace) -> None:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description="캔들 패턴 스캔과 예측 일치도 관찰")
-    parser.add_argument("--mode", choices=["scan", "update", "summary", "daily"], default="daily")
+    parser.add_argument(
+        "--mode",
+        choices=["scan", "update", "summary", "daily", "history"],
+        default="daily",
+        help="daily는 최신 1일 분석, history는 과거 220일 전체 누적 분석",
+    )
     parser.add_argument("--date", help="스캔 기준일 YYYY-MM-DD. 생략하면 오늘")
     parser.add_argument("--as-of", help="관찰 업데이트 기준일 YYYY-MM-DD. 생략하면 오늘")
     parser.add_argument("--lookback-days", type=int, default=220)
@@ -533,15 +562,16 @@ async def main() -> None:
     parser.add_argument("--summary-csv", type=Path, default=SUMMARY_CSV)
     parser.add_argument("--summary-md", type=Path, default=SUMMARY_MD)
     args = parser.parse_args()
+    resolve_output_paths(args)
 
-    if args.mode in {"scan", "daily"}:
+    if args.mode in {"scan", "daily", "history"}:
         signals = await scan(args)
         added = append_observations(signals, args.obs_csv, args.dry_run)
         label = "observations_would_add" if args.dry_run else "observations_added"
         print(f"{label}={added}")
-    if args.mode in {"update", "daily"}:
+    if args.mode in {"update", "daily", "history"}:
         await update_observations(args)
-    if args.mode in {"summary", "update", "daily"}:
+    if args.mode in {"summary", "update", "daily", "history"}:
         refresh_markdown_and_summary(args)
 
 

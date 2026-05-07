@@ -1,0 +1,27 @@
+﻿pattern_id,pattern_name,category,prediction_direction,sample_count,completed_count,match_count,mismatch_count,match_rate_pct,next_close_avg_return_pct,d_plus_5_avg_return_pct,d_plus_10_avg_return_pct,d_plus_20_avg_return_pct,result_status
+bearish_belt_hold,하락 벨트홀드,추세 반전형,down,4,0,0,0,,,,,,표본 부족
+bearish_counterattack,하락 반격형,추세 반전형,down,5,0,0,0,,,,,,표본 부족
+bearish_dark_cloud,흑운형,추세 반전형,down,4,0,0,0,,,,,,표본 부족
+bearish_engulfing,하락 장악형,추세 반전형,down,5,0,0,0,,,,,,표본 부족
+bearish_kicker,하락 키커,추세 반전형,down,1,0,0,0,,,,,,표본 부족
+bearish_separating_line,하락 갈림길형,추세 지속형,down,2,0,0,0,,,,,,표본 부족
+bearish_three_line_strike,약세 삼선 반격형,추세 지속형,down,1,0,0,0,,,,,,표본 부족
+bullish_counterattack,상승 반격형,추세 반전형,up,2,0,0,0,,,,,,표본 부족
+bullish_harami,상승 잉태형,추세 반전형,up,1,0,0,0,,,,,,표본 부족
+bullish_harami_cross,상승 십자 잉태형,추세 반전형,up,2,0,0,0,,,,,,표본 부족
+bullish_piercing,상승 관통형,추세 반전형,up,2,0,0,0,,,,,,표본 부족
+railroad_tracks,기찻길형,추세 반전형,neutral,15,0,0,0,,,,,,표본 부족
+reversal_shooting_star,유성형,추세 반전형,down,2,0,0,0,,,,,,표본 부족
+rising_window,라이징 윈도우,추세 지속형,up,4,0,0,0,,,,,,표본 부족
+single_cross_doji,십자형,단일 캔들 패턴,neutral,4,0,0,0,,,,,,표본 부족
+single_doji,도지,단일 캔들 패턴,neutral,4,0,0,0,,,,,,표본 부족
+single_high_wave,하이웨이브 캔들,단일 캔들 패턴,neutral,3,0,0,0,,,,,,표본 부족
+single_long_bear,장대 음봉,단일 캔들 패턴,down,12,0,0,0,,,,,,표본 부족
+single_long_bull,장대 양봉,단일 캔들 패턴,up,4,0,0,0,,,,,,표본 부족
+single_long_legged_doji,롱레그드 도지,단일 캔들 패턴,neutral,2,0,0,0,,,,,,표본 부족
+single_spinning_top,팽이형,단일 캔들 패턴,neutral,5,0,0,0,,,,,,표본 부족
+single_white_marubozu,마루보즈 양봉,단일 캔들 패턴,up,1,0,0,0,,,,,,표본 부족
+three_inside_down,쓰리 인사이드 다운,추세 반전형,down,1,0,0,0,,,,,,표본 부족
+three_outside_up,쓰리 아웃사이드 업,추세 반전형,up,1,0,0,0,,,,,,표본 부족
+tweezer_bottom,트위저 바텀,추세 반전형,up,4,0,0,0,,,,,,표본 부족
+tweezer_top,트위저 탑,추세 반전형,down,16,0,0,0,,,,,,표본 부족

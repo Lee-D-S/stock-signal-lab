@@ -1,0 +1,4 @@
+﻿signal_date,pattern_id,pattern_name,category,prediction_direction,confidence,basis,open,high,low,close,volume,trade_amount,ticker,name
+2026-05-07,bearish_separating_line,하락 갈림길형,추세 지속형,down,65,같은 시가 부근에서 음봉 전환,272000.0,277000.0,260500.0,263500.0,19089602.0,5118961250250.0,005930,삼성전자
+2026-05-07,tweezer_top,트위저 탑,추세 반전형,down,65,비슷한 고점이 이틀 연속 형성,272000.0,277000.0,260500.0,263500.0,19089602.0,5118961250250.0,005930,삼성전자
+2026-05-07,railroad_tracks,기찻길형,추세 반전형,neutral,60,비슷한 크기의 반대 방향 장대봉 2개,272000.0,277000.0,260500.0,263500.0,19089602.0,5118961250250.0,005930,삼성전자
