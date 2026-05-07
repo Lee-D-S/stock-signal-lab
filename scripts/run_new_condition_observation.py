@@ -16,7 +16,7 @@ STRATEGY_DIR = BASE_DIR / "07_전략신호"
 OBS_DIR = BASE_DIR / "08_관찰기록"
 SNAPSHOT_DIR = BASE_DIR / "09_조건스냅샷"
 
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 NEW_STRATEGY_CSV = STRATEGY_DIR / "신규조건_전략_조건.csv"
 NEW_STRATEGY_MD = STRATEGY_DIR / "신규조건_전략_조건.md"
 NEW_SCAN_CSV = STRATEGY_DIR / "신규조건_관심종목_시그널_스캔.csv"

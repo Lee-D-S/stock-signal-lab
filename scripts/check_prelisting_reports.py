@@ -24,7 +24,7 @@ from tmp_quarterly_stock_analysis import fetch_stock_info, listing_date_from_sto
 BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
 COMPANY_DIR = BASE_DIR / "00_기업별분석"
 PLAN_DIR = BASE_DIR / "01_기획"
-UNIVERSE_CSV = BASE_DIR / "07_전략신호" / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = BASE_DIR / "07_전략신호" / "거래대금_상위_누적_유니버스.csv"
 OUT_CSV = PLAN_DIR / "상장전_보고서_점검.csv"
 
 PERIOD_RE = re.compile(r"_(\d{4})_Q([1-4])_원인후보_실제분석\.md$")

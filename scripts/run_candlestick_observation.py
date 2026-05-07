@@ -25,7 +25,7 @@ BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 OBS_DIR = BASE_DIR / "08_관찰기록"
 
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 SCAN_CSV = STRATEGY_DIR / "캔들_패턴_스캔.csv"
 SCAN_MD = STRATEGY_DIR / "캔들_패턴_스캔.md"
 OBS_CSV = OBS_DIR / "캔들_관찰_로그.csv"

@@ -17,7 +17,7 @@ PLAN_DIR = BASE_DIR / "01_기획"
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 OBS_DIR = BASE_DIR / "08_관찰기록"
 
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 SCAN_CSV = STRATEGY_DIR / "관심종목_시그널_스캔.csv"
 WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
 CONFIRMED_CSV = STRATEGY_DIR / "관심종목_시그널_후보_확정.csv"
@@ -130,13 +130,13 @@ def build_summary(target_date: str) -> str:
     lines = [
         f"# 일일 운영 요약 - {signal_date}",
         "",
-        "## 1. 거래대금 상위 유니버스",
+        "## 1. 거래대금 상위 누적 유니버스",
         "",
         f"- 스캔 종목 수: {fmt_int(len(universe))}",
         f"- 신규/미보유 기업 추정: {fmt_int(new_universe_count)}",
         f"- 보고서 생성 필요 추정: {fmt_int(report_needed_count)}",
         "",
-        "### 상위 유니버스",
+        "### 누적 유니버스",
         "",
         markdown_table(
             universe,

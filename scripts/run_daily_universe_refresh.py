@@ -23,6 +23,8 @@ PLAN_DIR = BASE_DIR / "01_기획"
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
 UNIVERSE_MD = STRATEGY_DIR / "거래대금_상위_유니버스.md"
+MASTER_UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
+MASTER_UNIVERSE_MD = STRATEGY_DIR / "거래대금_상위_누적_유니버스.md"
 NEW_COMPANY_MD = PLAN_DIR / "신규_기업_추가_대상.md"
 
 
@@ -48,6 +50,104 @@ def format_amount(value: Any) -> str:
         return f"{int(float(value)):,}"
     except (TypeError, ValueError):
         return ""
+
+
+def read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path, encoding="utf-8-sig", dtype={"ticker": str})
+
+
+def refresh_company_state(row: dict[str, Any]) -> dict[str, Any]:
+    folder_value = str(row.get("company_folder", "")).strip()
+    if folder_value:
+        folder_path = ROOT / folder_value
+    else:
+        folder_path = COMPANY_DIR / safe_company_dir_name(str(row.get("name", "")).strip())
+    folder_path = folder_path.resolve()
+    folder_exists = folder_path.exists()
+    has_report = folder_exists and any(folder_path.glob("*.md"))
+    try:
+        folder_rel = folder_path.relative_to(ROOT)
+    except ValueError:
+        folder_rel = folder_path
+
+    row["company_folder"] = str(folder_rel)
+    row["company_folder_exists"] = bool(folder_exists)
+    row["report_status"] = "exists" if has_report else "report_needed"
+    return row
+
+
+def parse_seen_count(value: Any) -> int:
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def build_cumulative_universe(latest_df: pd.DataFrame, refresh_date: str) -> pd.DataFrame:
+    existing_df = read_csv(MASTER_UNIVERSE_CSV)
+    existing_rows = {}
+    if not existing_df.empty and "ticker" in existing_df.columns:
+        for _, row in existing_df.iterrows():
+            ticker = str(row.get("ticker", "")).zfill(6)
+            if ticker:
+                existing_rows[ticker] = row.to_dict()
+
+    latest_rows = {}
+    for _, row in latest_df.iterrows():
+        ticker = str(row.get("ticker", "")).zfill(6)
+        if ticker:
+            latest_rows[ticker] = row.to_dict()
+
+    merged_rows: list[dict[str, Any]] = []
+    handled: set[str] = set()
+
+    for ticker, existing_row in existing_rows.items():
+        current = dict(existing_row)
+        if ticker in latest_rows:
+            current.update(latest_rows[ticker])
+            first_seen_date = str(existing_row.get("first_seen_date", "")).strip() or refresh_date
+            last_seen_date = str(existing_row.get("last_seen_date", "")).strip() or refresh_date
+            prior_seen_count = parse_seen_count(existing_row.get("seen_count"))
+            current["first_seen_date"] = first_seen_date
+            current["last_seen_date"] = refresh_date
+            current["seen_count"] = prior_seen_count if last_seen_date == refresh_date and prior_seen_count > 0 else prior_seen_count + 1
+            if current["seen_count"] <= 0:
+                current["seen_count"] = 1
+            current["basis_date"] = refresh_date
+            current["universe_status"] = "new" if first_seen_date == refresh_date else "existing"
+            handled.add(ticker)
+        else:
+            current["first_seen_date"] = str(existing_row.get("first_seen_date", "")).strip() or refresh_date
+            current["last_seen_date"] = str(existing_row.get("last_seen_date", "")).strip() or refresh_date
+            current["seen_count"] = parse_seen_count(existing_row.get("seen_count")) or 1
+            current["basis_date"] = str(existing_row.get("basis_date", "")).strip() or current["last_seen_date"]
+            current["universe_status"] = "existing"
+        current = refresh_company_state(current)
+        merged_rows.append(current)
+
+    for ticker, latest_row in latest_rows.items():
+        if ticker in handled or ticker in existing_rows:
+            continue
+        current = dict(latest_row)
+        current["first_seen_date"] = refresh_date
+        current["last_seen_date"] = refresh_date
+        current["seen_count"] = 1
+        current["basis_date"] = refresh_date
+        current["universe_status"] = "new"
+        current = refresh_company_state(current)
+        merged_rows.append(current)
+
+    if not merged_rows:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(merged_rows)
+    sort_columns = [col for col in ["last_seen_date", "rank", "ticker"] if col in df.columns]
+    if sort_columns:
+        ascending = [False, True, True][: len(sort_columns)]
+        df = df.sort_values(sort_columns, ascending=ascending).reset_index(drop=True)
+    return df
 
 
 def markdown_table(df: pd.DataFrame) -> str:
@@ -104,6 +204,46 @@ def write_new_company_report(df: pd.DataFrame, created_count: int) -> None:
     NEW_COMPANY_MD.write_text("\n".join(lines), encoding="utf-8")
 
 
+def write_cumulative_universe(df: pd.DataFrame, refresh_date: str) -> None:
+    if df.empty:
+        MASTER_UNIVERSE_CSV.write_text("", encoding="utf-8-sig")
+        MASTER_UNIVERSE_MD.write_text("# 거래대금 상위 누적 유니버스\n\n_종목 없음_", encoding="utf-8")
+        return
+
+    df.to_csv(MASTER_UNIVERSE_CSV, index=False, encoding="utf-8-sig")
+    new_count = int((df["universe_status"].astype(str) == "new").sum()) if "universe_status" in df.columns else 0
+    lines = [
+        "# 거래대금 상위 누적 유니버스",
+        "",
+        f"- 최신 갱신일: {refresh_date}",
+        f"- 누적 종목 수: {len(df):,}",
+        f"- 이번 갱신 신규 종목 수: {new_count:,}",
+        "",
+        "## 누적 목록",
+        "",
+        markdown_table(
+            df[
+                [
+                    "first_seen_date",
+                    "last_seen_date",
+                    "rank",
+                    "ticker",
+                    "name",
+                    "price",
+                    "change_rate",
+                    "trade_amount",
+                    "universe_status",
+                    "report_status",
+                ]
+            ]
+            if {"first_seen_date", "last_seen_date"}.issubset(df.columns)
+            else df
+        ),
+        "",
+    ]
+    MASTER_UNIVERSE_MD.write_text("\n".join(lines), encoding="utf-8")
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description="거래대금 상위 유니버스 갱신")
     parser.add_argument("--top", type=int, default=30, help="최종 유니버스 종목 수")
@@ -117,6 +257,7 @@ async def main() -> None:
     COMPANY_DIR.mkdir(parents=True, exist_ok=True)
 
     stocks = await get_stock_universe("amount")
+    refresh_date = args.date or pd.Timestamp.today().strftime("%Y-%m-%d")
     rows: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     created_count = 0
@@ -164,6 +305,8 @@ async def main() -> None:
 
     df = pd.DataFrame(rows)
     df.to_csv(UNIVERSE_CSV, index=False, encoding="utf-8-sig")
+    cumulative_df = build_cumulative_universe(df, refresh_date)
+    write_cumulative_universe(cumulative_df, refresh_date)
 
     lines = [
         "# 거래대금 상위 유니버스",
@@ -200,6 +343,8 @@ async def main() -> None:
     print(f"excluded={len(excluded)}")
     print(f"universe_csv={UNIVERSE_CSV}")
     print(f"universe_md={UNIVERSE_MD}")
+    print(f"master_universe_csv={MASTER_UNIVERSE_CSV}")
+    print(f"master_universe_md={MASTER_UNIVERSE_MD}")
     print(f"new_company_md={NEW_COMPANY_MD}")
 
 

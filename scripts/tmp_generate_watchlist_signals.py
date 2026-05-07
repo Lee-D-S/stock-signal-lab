@@ -31,7 +31,7 @@ STRATEGY_CSV = STRATEGY_DIR / "전략_조건_초안.csv"
 WATCHLIST_CSV = STRATEGY_DIR / "관심종목_시그널_후보.csv"
 WATCHLIST_MD = STRATEGY_DIR / "관심종목_시그널_후보.md"
 SCAN_CSV = STRATEGY_DIR / "관심종목_시그널_스캔.csv"
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 
 COMPANIES = [
     ("005930", "삼성전자", None),
@@ -375,7 +375,7 @@ async def main() -> None:
     parser.add_argument("--date", help="YYYY-MM-DD. 생략하면 KIS가 반환하는 최신 거래일 기준")
     parser.add_argument("--lookback-days", type=int, default=220)
     parser.add_argument("--delay", type=float, default=0.35)
-    parser.add_argument("--universe-csv", type=Path, default=UNIVERSE_CSV, help="거래대금 상위 유니버스 CSV")
+    parser.add_argument("--universe-csv", type=Path, default=UNIVERSE_CSV, help="거래대금 상위 누적 유니버스 CSV")
     parser.add_argument("--strategy-csv", type=Path, default=STRATEGY_CSV, help="감시 조건 CSV. 기본값은 active 전략 조건")
     parser.add_argument("--scan-csv", type=Path, default=SCAN_CSV, help="전체 스캔 결과 CSV")
     parser.add_argument("--watchlist-csv", type=Path, default=WATCHLIST_CSV, help="후보 결과 CSV")

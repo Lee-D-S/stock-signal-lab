@@ -33,7 +33,7 @@ from tmp_quarterly_stock_analysis import (  # noqa: E402
 BASE_DIR = ROOT / "ai 주가 변동 원인 분석"
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 PLAN_DIR = BASE_DIR / "01_기획"
-UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_유니버스.csv"
+UNIVERSE_CSV = STRATEGY_DIR / "거래대금_상위_누적_유니버스.csv"
 SUMMARY_CSV = PLAN_DIR / "신규_기업_보고서_생성_상태.csv"
 
 
@@ -121,7 +121,7 @@ async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: 
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="거래대금 상위 유니버스의 신규/보고서 필요 기업 보고서 생성")
+    parser = argparse.ArgumentParser(description="거래대금 상위 누적 유니버스의 신규/보고서 필요 기업 보고서 생성")
     parser.add_argument("--limit", type=int, help="처리할 최대 기업 수")
     parser.add_argument("--delay", type=float, default=0.8)
     parser.add_argument(
