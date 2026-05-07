@@ -306,6 +306,36 @@ async def fetch_company_patterns(
     return patterns
 
 
+async def load_ohlcv_cache(
+    rows: list[dict[str, str]],
+    as_of: pd.Timestamp,
+    delay: float,
+) -> dict[str, pd.DataFrame]:
+    grouped_dates: dict[str, list[pd.Timestamp]] = {}
+    for row in rows:
+        ticker = as_text(row.get("ticker")).zfill(6)
+        signal_date_text = row.get("signal_date", "")
+        if not ticker.strip("0") or not signal_date_text:
+            continue
+        grouped_dates.setdefault(ticker, []).append(pd.Timestamp(signal_date_text).normalize())
+
+    cache: dict[str, pd.DataFrame] = {}
+    for ticker in sorted(grouped_dates):
+        dates = grouped_dates[ticker]
+        start = min(dates)
+        end = max(as_of, max(dates) + pd.Timedelta(days=45))
+        try:
+            ohlcv = await fetch_ohlcv(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+        except Exception as exc:
+            print(f"update_skip ticker={ticker} error={type(exc).__name__}: {exc}")
+            await asyncio.sleep(delay)
+            continue
+        if not ohlcv.empty:
+            cache[ticker] = ohlcv
+        await asyncio.sleep(delay)
+    return cache
+
+
 async def scan(args: argparse.Namespace) -> pd.DataFrame:
     end = pd.Timestamp(args.date).normalize() if args.date else pd.Timestamp.today().normalize()
     start = end - pd.Timedelta(days=args.lookback_days)
@@ -407,19 +437,17 @@ def canonicalize_observations(df: pd.DataFrame) -> pd.DataFrame:
 async def update_observations(args: argparse.Namespace) -> tuple[int, int]:
     as_of = pd.Timestamp(args.as_of).normalize() if args.as_of else pd.Timestamp.today().normalize()
     fieldnames, rows = read_rows(args.obs_csv)
+    ohlcv_cache = await load_ohlcv_cache(rows, as_of, args.delay)
     changed = 0
+    updated_rows = 0
     for row in rows:
         if not row.get("signal_date") or not row.get("ticker"):
             continue
+        ticker = as_text(row.get("ticker")).zfill(6)
         signal_date = pd.Timestamp(row["signal_date"])
-        end = max(as_of, signal_date + pd.Timedelta(days=45))
-        try:
-            ohlcv = await fetch_ohlcv(row["ticker"].zfill(6), signal_date.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
-        except Exception as exc:
-            print(f"update_skip ticker={row['ticker']} signal_date={row['signal_date']} error={type(exc).__name__}: {exc}")
-            continue
-        await asyncio.sleep(args.delay)
-        if ohlcv.empty:
+        ohlcv = ohlcv_cache.get(ticker)
+        updated_rows += 1
+        if ohlcv is None or ohlcv.empty:
             continue
         ohlcv = ohlcv[ohlcv["date"] <= as_of].sort_values("date").reset_index(drop=True)
         base_close = row.get("signal_close")
@@ -451,7 +479,7 @@ async def update_observations(args: argparse.Namespace) -> tuple[int, int]:
             changed += 1
     if changed and not args.dry_run:
         write_rows(args.obs_csv, fieldnames, rows)
-    print(f"observations={len(rows)}")
+    print(f"observations={updated_rows}")
     print(f"updated_fields={changed}")
     print(f"obs_csv={args.obs_csv}")
     return len(rows), changed
