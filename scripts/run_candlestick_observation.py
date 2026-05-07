@@ -32,12 +32,24 @@ OBS_CSV = OBS_DIR / "캔들_관찰_로그.csv"
 OBS_MD = OBS_DIR / "캔들_관찰_로그.md"
 SUMMARY_CSV = OBS_DIR / "캔들_패턴_성과_요약.csv"
 SUMMARY_MD = OBS_DIR / "캔들_패턴_성과_요약.md"
+FINAL_SCAN_CSV = STRATEGY_DIR / "캔들_최종분석_스캔.csv"
+FINAL_SCAN_MD = STRATEGY_DIR / "캔들_최종분석_스캔.md"
+FINAL_OBS_CSV = OBS_DIR / "캔들_최종분석_로그.csv"
+FINAL_OBS_MD = OBS_DIR / "캔들_최종분석_로그.md"
+FINAL_SUMMARY_CSV = OBS_DIR / "캔들_최종분석_성과_요약.csv"
+FINAL_SUMMARY_MD = OBS_DIR / "캔들_최종분석_성과_요약.md"
 HISTORY_SCAN_CSV = STRATEGY_DIR / "캔들_히스토리_스캔.csv"
 HISTORY_SCAN_MD = STRATEGY_DIR / "캔들_히스토리_스캔.md"
 HISTORY_OBS_CSV = OBS_DIR / "캔들_히스토리_관찰_로그.csv"
 HISTORY_OBS_MD = OBS_DIR / "캔들_히스토리_관찰_로그.md"
 HISTORY_SUMMARY_CSV = OBS_DIR / "캔들_히스토리_성과_요약.csv"
 HISTORY_SUMMARY_MD = OBS_DIR / "캔들_히스토리_성과_요약.md"
+HISTORY_FINAL_SCAN_CSV = STRATEGY_DIR / "캔들_히스토리_최종분석_스캔.csv"
+HISTORY_FINAL_SCAN_MD = STRATEGY_DIR / "캔들_히스토리_최종분석_스캔.md"
+HISTORY_FINAL_OBS_CSV = OBS_DIR / "캔들_히스토리_최종분석_로그.csv"
+HISTORY_FINAL_OBS_MD = OBS_DIR / "캔들_히스토리_최종분석_로그.md"
+HISTORY_FINAL_SUMMARY_CSV = OBS_DIR / "캔들_히스토리_최종분석_성과_요약.csv"
+HISTORY_FINAL_SUMMARY_MD = OBS_DIR / "캔들_히스토리_최종분석_성과_요약.md"
 
 DEFAULT_COMPANIES = [
     ("005930", "삼성전자"),
@@ -318,6 +330,26 @@ def resolve_output_paths(args: argparse.Namespace) -> None:
         args.summary_md = HISTORY_SUMMARY_MD
 
 
+def resolve_final_output_paths(args: argparse.Namespace) -> tuple[Path, Path, Path, Path, Path, Path]:
+    if args.mode == "history":
+        return (
+            HISTORY_FINAL_SCAN_CSV,
+            HISTORY_FINAL_SCAN_MD,
+            HISTORY_FINAL_OBS_CSV,
+            HISTORY_FINAL_OBS_MD,
+            HISTORY_FINAL_SUMMARY_CSV,
+            HISTORY_FINAL_SUMMARY_MD,
+        )
+    return (
+        FINAL_SCAN_CSV,
+        FINAL_SCAN_MD,
+        FINAL_OBS_CSV,
+        FINAL_OBS_MD,
+        FINAL_SUMMARY_CSV,
+        FINAL_SUMMARY_MD,
+    )
+
+
 def append_observations(signals: pd.DataFrame, obs_csv: Path, dry_run: bool) -> int:
     fieldnames, rows = read_rows(obs_csv)
     existing = {observation_key(row) for row in rows}
@@ -333,6 +365,20 @@ def append_observations(signals: pd.DataFrame, obs_csv: Path, dry_run: bool) -> 
     if added and not dry_run:
         write_rows(obs_csv, fieldnames, rows)
     return added
+
+
+def canonicalize_observations(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+    view = df.copy()
+    sort_columns = [col for col in ["signal_date", "ticker", "confidence", "pattern_id"] if col in view.columns]
+    if sort_columns:
+        ascending = [True, True, False, True][: len(sort_columns)]
+        view = view.sort_values(sort_columns, ascending=ascending).reset_index(drop=True)
+    key_columns = [col for col in ["signal_date", "ticker"] if col in view.columns]
+    if not key_columns:
+        return view
+    return view.drop_duplicates(subset=key_columns, keep="first").reset_index(drop=True)
 
 
 async def update_observations(args: argparse.Namespace) -> tuple[int, int]:
@@ -526,17 +572,38 @@ def build_summary_markdown(source: pd.DataFrame, summary: pd.DataFrame) -> str:
 def refresh_markdown_and_summary(args: argparse.Namespace) -> None:
     _, rows = read_rows(args.obs_csv)
     df = pd.DataFrame(rows)
+    canonical_df = canonicalize_observations(df)
     summary = build_summary(df)
+    canonical_summary = build_summary(canonical_df)
+    final_scan_csv, final_scan_md, final_obs_csv, final_obs_md, final_summary_csv, final_summary_md = resolve_final_output_paths(args)
     if not args.dry_run:
         args.obs_md.parent.mkdir(parents=True, exist_ok=True)
         args.summary_csv.parent.mkdir(parents=True, exist_ok=True)
+        final_scan_csv.parent.mkdir(parents=True, exist_ok=True)
+        final_obs_csv.parent.mkdir(parents=True, exist_ok=True)
+        final_summary_csv.parent.mkdir(parents=True, exist_ok=True)
         args.obs_md.write_text(build_observation_markdown(df), encoding="utf-8")
         summary.to_csv(args.summary_csv, index=False, encoding="utf-8-sig")
         args.summary_md.write_text(build_summary_markdown(df, summary), encoding="utf-8")
+        canonical_df.to_csv(final_obs_csv, index=False, encoding="utf-8-sig")
+        final_obs_md.write_text(build_observation_markdown(canonical_df), encoding="utf-8")
+        canonical_summary.to_csv(final_summary_csv, index=False, encoding="utf-8-sig")
+        final_summary_md.write_text(build_summary_markdown(canonical_df, canonical_summary), encoding="utf-8")
+        if args.scan_csv.exists():
+            final_scan_csv.write_bytes(args.scan_csv.read_bytes())
+        if args.scan_md.exists():
+            final_scan_md.write_text(args.scan_md.read_text(encoding="utf-8"), encoding="utf-8")
     print(f"summary_rows={len(summary)}")
+    print(f"final_summary_rows={len(canonical_summary)}")
     print(f"obs_md={args.obs_md}")
     print(f"summary_csv={args.summary_csv}")
     print(f"summary_md={args.summary_md}")
+    print(f"final_scan_csv={final_scan_csv}")
+    print(f"final_scan_md={final_scan_md}")
+    print(f"final_obs_csv={final_obs_csv}")
+    print(f"final_obs_md={final_obs_md}")
+    print(f"final_summary_csv={final_summary_csv}")
+    print(f"final_summary_md={final_summary_md}")
 
 
 async def main() -> None:
