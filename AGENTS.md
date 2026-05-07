@@ -14,6 +14,8 @@ Always prefix commands with `rtk`.
 ## Coding Style & Naming Conventions
 Use standard Python style: 4-space indentation, `snake_case` for functions/modules, `PascalCase` for classes, and type hints where practical. Keep changes aligned with nearby code and reuse `config.py`’s `settings` instead of reading environment variables directly. For analysis assets, keep folder names numeric and stable, e.g. `03_원천데이터`, `07_전략신호`, `08_관찰기록`.
 
+When adding or removing stable analysis documents under `ai 주가 변동 원인 분석/`, sync `scripts/analysis_paths.py` with `rtk python scripts/sync_analysis_paths.py`. Use `rtk python scripts/sync_analysis_paths.py --check` to verify it is current.
+
 ## Testing Guidelines
 This repo does not have a dedicated `tests/` package yet. Validate changes by running the affected script or endpoint, for example `rtk python scripts/test_gemini.py` or `GET /health` against the dashboard. For research changes, rerun the narrowest relevant pipeline step first, then the full pipeline if outputs changed.
 
