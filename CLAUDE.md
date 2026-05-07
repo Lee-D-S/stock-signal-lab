@@ -327,37 +327,37 @@ python scripts/run_condition_search.py \
     --train-end 2022-12-31 --val-end 2024-12-31 --horizon long
 ```
 
-### 초기 분석 파이프라인 (`scripts/tmp_*.py`)
+### 초기 분석 파이프라인 (`scripts/*.py`)
 
-전략 조건을 처음 발굴할 때 순서대로 실행한다. `tmp_quarterly_stock_analysis.py`는 KIS API 공통 라이브러리로 직접 실행하지 않는다.
+전략 조건을 처음 발굴할 때 순서대로 실행한다. `quarterly_stock_analysis.py`는 KIS API 공통 라이브러리로 직접 실행하지 않는다.
 
 ```bash
 # 1. 기업별 분기 보고서 생성 (00_기업별분석/ → events.jsonl 생성)
-python scripts/tmp_regenerate_all_quarterly_reports.py
+python scripts/regenerate_all_quarterly_reports.py
 
 # 2. 이벤트 집계 + 패턴 분석 (03, 04 생성)
-python scripts/tmp_collect_event_patterns.py
+python scripts/collect_event_patterns.py
 
 # 3. 가설별 이벤트 리뷰 (05 생성)
-python scripts/tmp_review_hypothesis_events.py
+python scripts/review_hypothesis_events.py
 
 # 4. OHLCV 캐시 보강 (백테스트 전처리)
-python scripts/tmp_refresh_hypothesis_ohlcv_cache.py
-python scripts/tmp_fill_hypothesis_ohlcv_internal_gaps.py
+python scripts/refresh_hypothesis_ohlcv_cache.py
+python scripts/fill_hypothesis_ohlcv_internal_gaps.py
 
 # 5. 백테스트 (06 생성)
-python scripts/tmp_proxy_backtest_hypotheses.py
-python scripts/tmp_realistic_backtest_hypotheses.py
-python scripts/tmp_batch_realistic_backtest_hypotheses.py
+python scripts/proxy_backtest_hypotheses.py
+python scripts/realistic_backtest_hypotheses.py
+python scripts/batch_realistic_backtest_hypotheses.py
 
 # 6. 갭 분류 + 전략 조건 초안 (06, 07 생성)
-python scripts/tmp_classify_gaps_and_draft_strategy.py
+python scripts/classify_gaps_and_draft_strategy.py
 
 # 7. 관심종목 시그널 생성 (07 생성)
-python scripts/tmp_generate_watchlist_signals.py
+python scripts/generate_watchlist_signals.py
 
 # 8. 수급 재조회 — 15:40 이후에만 실행 가능 (07→08 생성)
-python scripts/tmp_recheck_watchlist_flows.py
+python scripts/recheck_watchlist_flows.py
 ```
 
 ### 자동화 스크립트
@@ -369,6 +369,6 @@ python scripts/auto_morning_dart_check.py
 
 ### Windows 주의사항
 
-`aiohttp`를 사용하는 스크립트(`tmp_recheck_watchlist_flows.py`, `run_foreign_flow_observation.py` 등)는 Windows에서 `asyncio.WindowsProactorEventLoopPolicy()`를 사용해야 한다. `WindowsSelectorEventLoopPolicy`는 `socket.socketpair()` 오류를 유발한다.
+`aiohttp`를 사용하는 스크립트(`recheck_watchlist_flows.py`, `run_foreign_flow_observation.py` 등)는 Windows에서 `asyncio.WindowsProactorEventLoopPolicy()`를 사용해야 한다. `WindowsSelectorEventLoopPolicy`는 `socket.socketpair()` 오류를 유발한다.
 
 KIS 수급 API(`FHPTJ04160001`)는 `TIME LIMIT 00:00~15:40` 제한이 있어 **15:40 이후에만** 호출 가능하다. 장 중에는 `pending_api_error`가 반환된다.

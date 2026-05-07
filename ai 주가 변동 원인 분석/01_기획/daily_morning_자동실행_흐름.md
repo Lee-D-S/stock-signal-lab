@@ -123,14 +123,14 @@ python -u scripts/run_signal_research_pipeline.py --mode daily --refresh-univers
      - `07_전략신호/거래대금_상위_유니버스.csv`
      - 관련 Markdown 요약
 2. 일별 전략 감시 후보 산출
-   - `scripts/tmp_generate_watchlist_signals.py`
+   - `scripts/generate_watchlist_signals.py`
    - 주요 산출물:
      - `07_전략신호/관심종목_시그널_스캔.csv`
      - `07_전략신호/관심종목_시그널_후보.csv`
      - `07_전략신호/관심종목_시그널_후보.md`
      - `07_전략신호/관심종목_시그널_오류.csv`
 3. 일별 후보 수급 재조회
-   - `scripts/tmp_recheck_watchlist_flows.py`
+   - `scripts/recheck_watchlist_flows.py`
    - 주요 산출물:
      - `07_전략신호/관심종목_시그널_후보_확정.csv`
      - `07_전략신호/관심종목_시그널_후보_확정.md`
