@@ -18,7 +18,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from tmp_quarterly_stock_analysis import (  # noqa: E402
+from quarterly_stock_analysis import (  # noqa: E402
     OUT_DIR,
     PERIODS,
     build_period,

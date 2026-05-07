@@ -5,7 +5,7 @@ from typing import Any
 
 import pandas as pd
 
-from tmp_realistic_backtest_hypotheses import build_trades, summarize
+from realistic_backtest_hypotheses import build_trades, summarize
 
 
 ROOT = Path(__file__).resolve().parent.parent

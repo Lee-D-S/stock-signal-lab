@@ -17,8 +17,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from tmp_generate_watchlist_signals import COMPANIES  # noqa: E402
-from tmp_quarterly_stock_analysis import fetch_stock_info, listing_date_from_stock_info  # noqa: E402
+from generate_watchlist_signals import COMPANIES  # noqa: E402
+from quarterly_stock_analysis import fetch_stock_info, listing_date_from_stock_info  # noqa: E402
 
 from analysis_paths import (  # noqa: E402
     COMPANY_DIR,

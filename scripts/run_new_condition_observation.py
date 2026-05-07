@@ -207,7 +207,7 @@ def main() -> None:
     print("\n==> 신규 조건 후보 탐지")
     run_command(
         [
-            str(SCRIPTS / "tmp_generate_watchlist_signals.py"),
+            str(SCRIPTS / "generate_watchlist_signals.py"),
             *date_args,
             "--lookback-days",
             str(args.lookback_days),
@@ -232,7 +232,7 @@ def main() -> None:
     print("\n==> 신규 조건 후보 수급 재조회")
     run_command(
         [
-            str(SCRIPTS / "tmp_recheck_watchlist_flows.py"),
+            str(SCRIPTS / "recheck_watchlist_flows.py"),
             "--delay",
             str(args.delay),
             "--candidates-csv",

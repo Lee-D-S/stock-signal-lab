@@ -18,7 +18,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from candlestick_patterns import detect_all  # noqa: E402
-from tmp_quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
+from quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
 
 from analysis_paths import (  # noqa: E402
     CANDLE_FINAL_OBS_CSV as CANDLE_FINAL_OBS_CSV_PATH,

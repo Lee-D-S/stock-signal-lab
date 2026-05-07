@@ -46,12 +46,12 @@ class Step:
 
 
 BACKTEST_STEPS = [
-    Step("이벤트 집계/패턴 분석", "tmp_collect_event_patterns.py"),
-    Step("가설 이벤트 리뷰", "tmp_review_hypothesis_events.py"),
-    Step("1차 프록시 백테스트", "tmp_proxy_backtest_hypotheses.py"),
-    Step("기본 실전 백테스트", "tmp_realistic_backtest_hypotheses.py", ("--entry-mode", "next_open", "--hold-days", "20")),
-    Step("실전 백테스트 전체 조건 비교", "tmp_batch_realistic_backtest_hypotheses.py"),
-    Step("잔여 갭 분류/전략 조건 초안", "tmp_classify_gaps_and_draft_strategy.py"),
+    Step("이벤트 집계/패턴 분석", "collect_event_patterns.py"),
+    Step("가설 이벤트 리뷰", "review_hypothesis_events.py"),
+    Step("1차 프록시 백테스트", "proxy_backtest_hypotheses.py"),
+    Step("기본 실전 백테스트", "realistic_backtest_hypotheses.py", ("--entry-mode", "next_open", "--hold-days", "20")),
+    Step("실전 백테스트 전체 조건 비교", "batch_realistic_backtest_hypotheses.py"),
+    Step("잔여 갭 분류/전략 조건 초안", "classify_gaps_and_draft_strategy.py"),
 ]
 
 SNAPSHOT_OUTPUTS = [
@@ -79,7 +79,7 @@ SNAPSHOT_OUTPUTS = [
 
 
 REPORT_STEPS = [
-    Step("분기 보고서 배치 생성", "tmp_regenerate_all_quarterly_reports.py", network=True),
+    Step("분기 보고서 배치 생성", "regenerate_all_quarterly_reports.py", network=True),
 ]
 
 
@@ -119,12 +119,12 @@ def run_daily(args: argparse.Namespace) -> None:
     watch_args.extend(["--delay", str(args.delay)])
 
     run_step(
-        Step("일별 전략 감시 후보 산출", "tmp_generate_watchlist_signals.py", tuple(watch_args), network=True),
+        Step("일별 전략 감시 후보 산출", "generate_watchlist_signals.py", tuple(watch_args), network=True),
         dry_run=args.dry_run,
     )
     if args.recheck:
         run_step(
-            Step("일별 후보 수급 재조회", "tmp_recheck_watchlist_flows.py", ("--delay", str(args.delay)), network=True),
+            Step("일별 후보 수급 재조회", "recheck_watchlist_flows.py", ("--delay", str(args.delay)), network=True),
             dry_run=args.dry_run,
         )
         if not args.skip_observation_update:
@@ -170,7 +170,7 @@ def run_daily(args: argparse.Namespace) -> None:
 
 def run_backtest(args: argparse.Namespace) -> None:
     for step in BACKTEST_STEPS:
-        if step.script == "tmp_classify_gaps_and_draft_strategy.py":
+        if step.script == "classify_gaps_and_draft_strategy.py":
             step_args = [*step.args, "--snapshot-date", args.snapshot_date]
             if args.promote_strategy:
                 step_args.append("--promote-strategy")

@@ -17,7 +17,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from scripts.screener_lib.dart import get_corp_code_map  # noqa: E402
-from tmp_quarterly_stock_analysis import (  # noqa: E402
+from quarterly_stock_analysis import (  # noqa: E402
     fetch_dart_disclosures,
     fetch_investor_range,
     fetch_ohlcv,

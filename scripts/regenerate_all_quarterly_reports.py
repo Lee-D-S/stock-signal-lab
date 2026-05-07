@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from tmp_quarterly_stock_analysis import (
+from quarterly_stock_analysis import (
     OUT_DIR,
     PERIODS,
     build_period,

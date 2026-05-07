@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-from tmp_quarterly_stock_analysis import fetch_investor_range  # noqa: E402
+from quarterly_stock_analysis import fetch_investor_range  # noqa: E402
 from valuation_context import attach_valuation  # noqa: E402
 
 from analysis_paths import (  # noqa: E402

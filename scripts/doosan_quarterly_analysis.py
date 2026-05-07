@@ -13,7 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from scripts.tmp_doosan_analysis import (  # noqa: E402
+from scripts.doosan_analysis import (  # noqa: E402
     END,
     NAME,
     TICKER,

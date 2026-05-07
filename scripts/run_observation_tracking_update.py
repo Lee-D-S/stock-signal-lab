@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from tmp_quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
+from quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
 
 from analysis_paths import (  # noqa: E402
     OBS_COMMON_CSV,
