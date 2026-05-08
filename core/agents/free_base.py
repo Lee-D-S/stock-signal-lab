@@ -93,6 +93,13 @@ class OrderProposal:
     risk_status: AgentStatus
     compliance_status: AgentStatus
     human_checklist: list[str]
+    portfolio_side: OrderSide = "hold"
+    final_side_reason: str = ""
+    price_used: float | None = None
+    price_source: str = ""
+    risk_warnings: list[str] = field(default_factory=list)
+    compliance_warnings: list[str] = field(default_factory=list)
+    execution_allowed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

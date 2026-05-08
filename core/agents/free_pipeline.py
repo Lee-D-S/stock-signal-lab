@@ -611,25 +611,35 @@ class TraderAgent:
         portfolio_by_ticker = {
             signal["ticker"]: signal for signal in portfolio_result.signals
         }
-        risk_by_ticker = {signal["ticker"]: signal["status"] for signal in risk_result.signals}
-        compliance_by_ticker = {
-            signal["ticker"]: signal["status"] for signal in compliance_result.signals
-        }
+        risk_by_ticker = {signal["ticker"]: signal for signal in risk_result.signals}
+        compliance_by_ticker = {signal["ticker"]: signal for signal in compliance_result.signals}
 
         proposals: list[OrderProposal] = []
         warnings: list[str] = []
         statuses: list[str] = []
+        if not context.candidates:
+            statuses.append("info")
         for candidate in context.candidates:
-            risk_status = risk_by_ticker.get(candidate.ticker, "needs_review")
-            compliance_status = compliance_by_ticker.get(candidate.ticker, "needs_review")
+            risk_signal = risk_by_ticker.get(candidate.ticker, {})
+            compliance_signal = compliance_by_ticker.get(candidate.ticker, {})
+            risk_status = risk_signal.get("status", "needs_review")
+            compliance_status = compliance_signal.get("status", "needs_review")
             portfolio_signal = portfolio_by_ticker.get(candidate.ticker, {})
             portfolio_side = portfolio_signal.get("side", "hold")
             side = portfolio_side if portfolio_side in {"buy", "sell", "hold"} else "hold"
+            final_side_reason = "portfolio side retained after Risk and Compliance approval."
             if risk_status != "approve" or compliance_status != "approve":
                 side = "hold"
+                final_side_reason = build_final_side_reason(risk_status, compliance_status, portfolio_side)
+            elif portfolio_side not in {"buy", "sell", "hold"}:
+                final_side_reason = f"invalid portfolio side {portfolio_side}; defaulted to hold."
             amount = int(candidate.suggested_amount or default_amount)
             price = candidate.current_price or portfolio_signal.get("current_price")
             quantity = int(amount // price) if price and price > 0 and side != "hold" else 0
+            if side != "hold" and quantity <= 0:
+                final_side_reason = "price is missing or invalid; quantity could not be calculated."
+            risk_warnings = list(risk_signal.get("warnings", []))
+            compliance_warnings = list(compliance_signal.get("warnings", []))
             proposal = OrderProposal(
                 ticker=candidate.ticker,
                 name=candidate.name or candidate.ticker,
@@ -648,11 +658,25 @@ class TraderAgent:
                     "Confirm ticker, side, amount, and order type before entering any order.",
                     "Skip if Risk or Compliance status is block or needs_review.",
                 ],
+                portfolio_side=portfolio_side if portfolio_side in {"buy", "sell", "hold"} else "hold",
+                final_side_reason=final_side_reason,
+                price_used=float(price) if price else None,
+                price_source="candidate.current_price" if candidate.current_price else (
+                    "portfolio_signal.current_price" if portfolio_signal.get("current_price") else ""
+                ),
+                risk_warnings=risk_warnings,
+                compliance_warnings=compliance_warnings,
+                execution_allowed=False,
             )
             status, proposal_warnings = check_order_proposal_rules(proposal)
             if risk_status != "approve" or compliance_status != "approve":
                 status = "needs_review" if status != "block" else status
                 proposal_warnings.append("risk or compliance is not approved; order proposal is hold.")
+            if portfolio_side == "hold":
+                status = "needs_review" if status != "block" else status
+            if side != "hold" and quantity <= 0:
+                status = "needs_review" if status != "block" else status
+                proposal_warnings.append("current price is missing or invalid; quantity could not be calculated.")
             statuses.append(status)
             warnings.extend(f"{candidate.ticker}: {warning}" for warning in proposal_warnings)
             proposals.append(proposal)
@@ -666,7 +690,15 @@ class TraderAgent:
             required_human_checks=[
                 "This pipeline never executes orders. Entering an order is a separate manual action."
             ],
-            artifacts={"broker_api_called": False},
+            artifacts={
+                "broker_api_called": False,
+                "execution_allowed": False,
+                "side_counts": count_by_key([proposal.to_dict() for proposal in proposals], "side"),
+                "blocked_by_risk": sum(1 for proposal in proposals if proposal.risk_status != "approve"),
+                "blocked_by_compliance": sum(
+                    1 for proposal in proposals if proposal.compliance_status != "approve"
+                ),
+            },
         )
 
 
@@ -866,6 +898,17 @@ def manual_source_status_for(candidate: Candidate) -> str:
 def contains_blocking_information(keywords: list[str]) -> bool:
     blocking = {"루머", "찌라시", "미공개"}
     return any(keyword in blocking for keyword in keywords)
+
+
+def build_final_side_reason(risk_status: str, compliance_status: str, portfolio_side: str) -> str:
+    reasons: list[str] = []
+    if portfolio_side == "hold":
+        reasons.append("PortfolioManager proposed hold")
+    if risk_status != "approve":
+        reasons.append(f"RiskManager status is {risk_status}")
+    if compliance_status != "approve":
+        reasons.append(f"ComplianceOfficer status is {compliance_status}")
+    return "; ".join(reasons) or "held by rule-based gate"
 
 
 def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dict[str, Any]:

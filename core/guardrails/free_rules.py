@@ -131,7 +131,15 @@ def check_order_proposal_rules(proposal: OrderProposal) -> tuple[AgentStatus, li
     statuses: list[AgentStatus] = ["approve"]
 
     required: dict[str, Any] = proposal.to_dict()
+    optional_fields = {
+        "price_used",
+        "price_source",
+        "risk_warnings",
+        "compliance_warnings",
+    }
     for key, value in required.items():
+        if key in optional_fields:
+            continue
         if value in ("", None, []):
             statuses.append("needs_review")
             warnings.append(f"order proposal field is empty: {key}")
@@ -143,5 +151,13 @@ def check_order_proposal_rules(proposal: OrderProposal) -> tuple[AgentStatus, li
     if proposal.side != "hold" and proposal.suggested_quantity <= 0:
         statuses.append("needs_review")
         warnings.append("suggested_quantity is not positive.")
+
+    if proposal.side == "hold" and (proposal.suggested_amount != 0 or proposal.suggested_quantity != 0):
+        statuses.append("block")
+        warnings.append("hold proposal must have zero amount and zero quantity.")
+
+    if proposal.execution_allowed:
+        statuses.append("block")
+        warnings.append("execution_allowed must remain false in the free pipeline.")
 
     return worst_status(statuses), warnings
