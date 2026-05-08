@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -59,6 +59,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     run_date = date.fromisoformat(args.date)
+    run_id = datetime.now().strftime("%H%M%S_%f")
     candidates = [parse_candidate(raw, args.default_amount) for raw in args.candidate]
     if not candidates and args.discover:
         candidates = discover_candidates_from_csv(args.discovery_root, args.discover_limit)
@@ -67,6 +68,7 @@ def main() -> None:
     context = AgentContext(
         run_date=run_date,
         candidates=candidates,
+        run_id=run_id,
         portfolio=portfolio,
         cash=cash,
         output_dir=args.output_dir,

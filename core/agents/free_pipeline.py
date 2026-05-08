@@ -1050,6 +1050,7 @@ def write_pipeline_manifest(context: AgentContext, results: list[AgentResult]) -
     )
     manifest = {
         "run_date": context.run_date.isoformat(),
+        "run_id": context.run_id,
         "run_dir": str(context.run_dir),
         "agent_order": [result.agent for result in results],
         "final_status": combine_statuses([result.status for result in results]),

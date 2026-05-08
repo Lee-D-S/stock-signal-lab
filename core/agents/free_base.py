@@ -45,6 +45,7 @@ class PortfolioPosition:
 class AgentContext:
     run_date: date
     candidates: list[Candidate]
+    run_id: str = ""
     portfolio: list[PortfolioPosition] = field(default_factory=list)
     cash: float = 0.0
     output_dir: Path = Path("data/agent_runs")
@@ -53,6 +54,8 @@ class AgentContext:
 
     @property
     def run_dir(self) -> Path:
+        if self.run_id:
+            return self.output_dir / self.run_date.isoformat() / self.run_id
         return self.output_dir / self.run_date.isoformat()
 
     @property
