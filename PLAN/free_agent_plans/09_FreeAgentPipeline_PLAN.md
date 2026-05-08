@@ -63,12 +63,12 @@ QuantSignalAgent
 | 7 | `TraderAgent` | 실제 주문 없는 주문 제안 JSON 생성 |
 | 8 | `OperationsReportAgent` | 최종 보고서와 짧은 요약 생성 |
 
-현재 구현과의 차이:
+현재 구현 상태:
 
-- 현재 코드에는 `EquityResearchAnalystAgent`가 아직 연결되어 있지 않다.
-- 현재 실행 순서는 Quant → ResearchFile → Portfolio → Risk → Compliance → Trader → Operations다.
-- 다음 구현 단계에서는 Quant와 ResearchFile 사이에 Analyst를 추가해야 한다.
-- Analyst가 추가되면 ResearchFile, Portfolio, Compliance, Operations가 Analyst 결과를 입력으로 사용할 수 있어야 한다.
+- 현재 코드에는 `EquityResearchAnalystAgent`가 연결되어 있다.
+- 현재 실행 순서는 Quant → Analyst → ResearchFile → Portfolio → Risk → Compliance → Trader → Operations다.
+- `equity_research_analyst.json`을 날짜별 실행 폴더에 저장한다.
+- ResearchFile, Portfolio, Compliance, Operations는 Analyst 결과를 입력으로 사용할 수 있다.
 
 ## 3. 입력 계약
 
@@ -121,13 +121,7 @@ data/agent_runs/YYYY-MM-DD/
 | `telegram_summary.txt` | OperationsReportAgent | 짧은 요약 |
 | `operations_report.json` | OperationsReportAgent | 운영 보고 결과 |
 
-현재 구현에서 아직 없는 산출물:
-
-```text
-equity_research_analyst.json
-```
-
-이 파일은 Analyst 구현 시 추가한다.
+현재 구현은 `equity_research_analyst.json`을 생성한다.
 
 ## 5. Agent 간 데이터 흐름
 
@@ -259,18 +253,14 @@ Pipeline 수준에서 항상 보장해야 하는 값:
 
 현재 구현 기준에서 Pipeline 보강 작업은 다음 순서로 진행한다.
 
-1. `EquityResearchAnalystAgent` 클래스를 구현한다.
-2. Pipeline 실행 순서에 Analyst를 Quant 다음으로 추가한다.
-3. `equity_research_analyst.json` 저장을 추가한다.
-4. ResearchFile이 Analyst 결과를 선택적으로 입력받도록 계약을 확장한다.
-5. PortfolioManager가 Analyst의 `analysis_status`, `confidence`, `key_risks`를 반영하도록 확장한다.
-6. ComplianceOfficer가 Analyst의 `source_files`, `forbidden_keyword_hits`를 검사하도록 확장한다.
-7. OperationsReportAgent가 Analyst 결과와 missing agent를 보고서에 표시하도록 확장한다.
-8. Agent 실행 wrapper를 추가해 예외가 나도 실패 결과를 JSON으로 남긴다.
-9. `combine_statuses()` 기준을 모든 Agent와 guardrail에서 일관되게 사용한다.
-10. 후보 없음, 리서치 없음, 포트폴리오 없음 케이스를 회귀 테스트로 고정한다.
-11. `broker_api_called=false`가 항상 유지되는지 테스트한다.
-12. README 또는 상위 PLAN 인덱스에 현재 구현 상태와 목표 상태 차이를 표시한다.
+1. Agent 실행 wrapper를 추가해 예외가 나도 실패 결과를 JSON으로 남긴다.
+2. `combine_statuses()` 기준을 모든 Agent와 guardrail에서 일관되게 사용한다.
+3. 후보 없음, 리서치 없음, 포트폴리오 없음 케이스를 회귀 테스트로 고정한다.
+4. `broker_api_called=false`가 항상 유지되는지 테스트한다.
+5. Analyst 체크리스트 키워드를 실제 리서치 문서 템플릿과 맞춰 보강한다.
+6. ResearchFile/Compliance의 중복 파일 검색을 공통 결과 재사용 구조로 줄인다.
+7. Operations 보고서에 Analyst 핵심 리스크와 반증 조건을 더 자세히 표시한다.
+8. README 또는 상위 PLAN 인덱스에 현재 구현 상태를 표시한다.
 
 v1에서 하지 않는 구현:
 
@@ -329,7 +319,7 @@ rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:10
 
 - 날짜별 run_dir 생성
 - Quant, Research, Portfolio, Risk, Compliance, Trader, Operations JSON 생성
-- Analyst 구현 후에는 `equity_research_analyst.json`도 생성
+- `equity_research_analyst.json` 생성
 - 실제 주문 API 호출 없음
 
 ### 11.2 후보 없음
@@ -442,7 +432,7 @@ rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 5
 `FreeAgentPipeline`은 다음 조건을 만족해야 성공이다.
 
 - 8개 Agent 목표 구조가 명확하다.
-- 현재 구현과 목표 구현의 차이가 명확하다.
+- Analyst가 포함된 현재 구현 상태가 명확하다.
 - 모든 Agent 결과가 날짜별 JSON으로 저장된다.
 - 중간 차단이 있어도 최종 보고서가 생성된다.
 - Risk 또는 Compliance가 `approve`가 아니면 Trader가 `hold`를 만든다.
@@ -450,7 +440,7 @@ rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 5
 - 실제 주문 API를 호출하지 않는다.
 - 최종 보고서에 주문 미실행 문구가 포함된다.
 - OpenAI API 키 없이 실행된다.
-- 다음 구현 작업이 Analyst 추가부터 시작된다는 점이 명확하다.
+- 다음 구현 작업이 실패 결과 표준화와 회귀 테스트 보강부터 시작된다는 점이 명확하다.
 
 ## 13. 향후 고도화
 

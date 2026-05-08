@@ -32,6 +32,15 @@ REQUIRED_RESEARCH_SECTIONS = {
     "disconfirmation": ("반증 조건", "반증", "disconfirm", "무효화"),
 }
 FORBIDDEN_RESEARCH_KEYWORDS = ("루머", "찌라시", "미확인", "확인필요", "미공개")
+ANALYST_SECTION_KEYWORDS = {
+    "business_model": ("사업모델", "business model", "BM", "매출 구조", "수익 구조"),
+    "earnings_quality": ("실적", "매출", "영업이익", "순이익", "earnings"),
+    "balance_sheet": ("재무", "부채", "현금", "차입", "balance sheet"),
+    "valuation": ("밸류에이션", "valuation", "PER", "PBR", "EV/EBITDA"),
+    "catalyst": ("촉매", "catalyst", "수주", "공시", "정책", "업황"),
+    "risk": ("리스크", "risk", "위험"),
+    "disconfirmation": ("반증", "반증 조건", "disconfirm", "무효화"),
+}
 
 
 class QuantSignalAgent:
@@ -70,15 +79,61 @@ class QuantSignalAgent:
         )
 
 
-class ResearchFileAgent:
-    name = "ResearchFileAgent"
+class EquityResearchAnalystAgent:
+    name = "EquityResearchAnalystAgent"
 
     def run(self, context: AgentContext) -> AgentResult:
         signals: list[dict[str, Any]] = []
         warnings: list[str] = []
+        statuses: list[str] = []
+
+        for candidate in context.candidates:
+            matches = find_research_files(context.research_root, candidate)
+            analysis = analyze_candidate_research(candidate, matches)
+            status = analysis.pop("agent_status")
+            statuses.append(status)
+            if status != "approve":
+                warnings.append(
+                    f"{candidate.ticker}: analyst review is {analysis['analysis_status']} "
+                    f"({', '.join(analysis['missing_items']) or 'no missing item detail'})."
+                )
+            if analysis["forbidden_keyword_hits"]:
+                warnings.append(
+                    f"{candidate.ticker}: analyst source contains caution keywords - "
+                    + ", ".join(analysis["forbidden_keyword_hits"])
+                )
+            signals.append(analysis)
+
+        if not context.candidates:
+            warnings.append("no candidates available for analyst review.")
+
+        return AgentResult(
+            agent=self.name,
+            status=combine_statuses(statuses),
+            summary=f"{len(signals)} candidate research review(s) prepared.",
+            signals=signals,
+            warnings=warnings,
+            required_human_checks=[
+                "Fill missing business, earnings, valuation, risk, and disconfirmation items before treating a candidate as investable."
+            ],
+            artifacts={"research_root": str(context.research_root)},
+        )
+
+
+class ResearchFileAgent:
+    name = "ResearchFileAgent"
+
+    def run(self, context: AgentContext, analyst_result: AgentResult | None = None) -> AgentResult:
+        signals: list[dict[str, Any]] = []
+        warnings: list[str] = []
+        analyst_by_ticker = result_by_ticker(analyst_result)
         for candidate in context.candidates:
             matches = find_research_files(context.research_root, candidate)
             quality = analyze_research_files(matches, context.run_date)
+            analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
+            analyst_files = set(analyst_signal.get("source_files", []))
+            matched_files = {str(path) for path in matches}
+            analyst_source_file_mismatch = bool(analyst_files and not analyst_files.issubset(matched_files))
             if not matches:
                 warnings.append(f"{candidate.ticker}: no research file found.")
             if quality["missing_required_sections"]:
@@ -88,6 +143,8 @@ class ResearchFileAgent:
                 )
             if quality["is_stale"]:
                 warnings.append(f"{candidate.ticker}: research file is stale.")
+            if analyst_source_file_mismatch:
+                warnings.append(f"{candidate.ticker}: analyst source files do not match research files.")
             signals.append({
                 "ticker": candidate.ticker,
                 "name": candidate.name,
@@ -96,6 +153,9 @@ class ResearchFileAgent:
                 "missing_required_sections": quality["missing_required_sections"],
                 "forbidden_keyword_hits": quality["forbidden_keyword_hits"],
                 "is_stale": quality["is_stale"],
+                "quality_status": research_quality_status(matches, quality),
+                "analyst_source_file_mismatch": analyst_source_file_mismatch,
+                "analyst_analysis_status": analyst_signal.get("analysis_status", ""),
             })
 
         status = "approve"
@@ -121,19 +181,27 @@ class ResearchFileAgent:
 class PortfolioManagerAgent:
     name = "PortfolioManagerAgent"
 
-    def run(self, context: AgentContext) -> AgentResult:
+    def run(self, context: AgentContext, analyst_result: AgentResult | None = None) -> AgentResult:
         default_amount = int(context.config["default_suggested_amount"])
         signals: list[dict[str, Any]] = []
         warnings: list[str] = []
         portfolio_by_ticker = {position.ticker: position for position in context.portfolio}
+        analyst_by_ticker = result_by_ticker(analyst_result)
         for candidate in context.candidates:
             amount = candidate.suggested_amount or default_amount
             current_position = portfolio_by_ticker.get(candidate.ticker)
+            analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
+            analysis_status = str(analyst_signal.get("analysis_status", "missing"))
+            analyst_confidence = str(analyst_signal.get("confidence", "none"))
             side = "hold"
             priority = candidate.score if candidate.score is not None else float(candidate.signal_count)
             if current_position:
                 reason = "Existing position; review hold, add, or trim based on thesis and weight."
                 action_detail = "review_existing_position"
+            elif analysis_status != "complete":
+                reason = "Equity research is incomplete; allocation decision requires analyst review."
+                action_detail = "needs_equity_research"
+                warnings.append(f"{candidate.ticker}: equity research is {analysis_status}.")
             elif context.portfolio_value <= 0:
                 reason = "Portfolio snapshot is missing; allocation decision requires review."
                 action_detail = "needs_portfolio_snapshot"
@@ -157,6 +225,9 @@ class PortfolioManagerAgent:
                 "priority": priority,
                 "current_weight": current_weight,
                 "reason": reason,
+                "analysis_status": analysis_status,
+                "analyst_confidence": analyst_confidence,
+                "analyst_key_risks": analyst_signal.get("key_risks", []),
             })
 
         return AgentResult(
@@ -234,20 +305,32 @@ class RiskManagerAgent:
 class ComplianceOfficerAgent:
     name = "ComplianceOfficerAgent"
 
-    def run(self, context: AgentContext) -> AgentResult:
+    def run(self, context: AgentContext, analyst_result: AgentResult | None = None) -> AgentResult:
         signals: list[dict[str, Any]] = []
         all_warnings: list[str] = []
         statuses: list[str] = []
         require_research = bool(context.config["require_research_file"])
+        analyst_by_ticker = result_by_ticker(analyst_result)
         for candidate in context.candidates:
             matches = find_research_files(context.research_root, candidate)
             quality = analyze_research_files(matches, context.run_date)
+            analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
             status, warnings = check_compliance_rules(
                 candidate=candidate,
                 research_matches=matches,
                 require_research_file=require_research,
                 research_quality=quality,
             )
+            if analyst_signal:
+                if analyst_signal.get("analysis_status") != "complete":
+                    warnings.append("equity analyst review is incomplete.")
+                    status = combine_statuses([status, "needs_review"])
+                if analyst_signal.get("forbidden_keyword_hits"):
+                    warnings.append("equity analyst found caution keywords.")
+                    status = combine_statuses([status, "needs_review"])
+            else:
+                warnings.append("equity analyst result is missing.")
+                status = combine_statuses([status, "needs_review"])
             statuses.append(status)
             all_warnings.extend(f"{candidate.ticker}: {warning}" for warning in warnings)
             signals.append({
@@ -256,6 +339,8 @@ class ComplianceOfficerAgent:
                 "research_file_count": len(matches),
                 "missing_required_sections": quality["missing_required_sections"],
                 "forbidden_keyword_hits": quality["forbidden_keyword_hits"],
+                "analyst_status": analyst_signal.get("analysis_status", ""),
+                "analyst_source_files": analyst_signal.get("source_files", []),
                 "warnings": warnings,
             })
 
@@ -364,6 +449,7 @@ class OperationsReportAgent:
 class FreeAgentPipeline:
     def __init__(self) -> None:
         self.quant = QuantSignalAgent()
+        self.analyst = EquityResearchAnalystAgent()
         self.research = ResearchFileAgent()
         self.portfolio = PortfolioManagerAgent()
         self.risk = RiskManagerAgent()
@@ -377,12 +463,19 @@ class FreeAgentPipeline:
         results: list[AgentResult] = []
         for filename, result in [
             ("quant_signal.json", self.quant.run(context)),
-            ("research_file.json", self.research.run(context)),
         ]:
             result.write_json(context.run_dir / filename)
             results.append(result)
 
-        portfolio_result = self.portfolio.run(context)
+        analyst_result = self.analyst.run(context)
+        analyst_result.write_json(context.run_dir / "equity_research_analyst.json")
+        results.append(analyst_result)
+
+        research_result = self.research.run(context, analyst_result)
+        research_result.write_json(context.run_dir / "research_file.json")
+        results.append(research_result)
+
+        portfolio_result = self.portfolio.run(context, analyst_result)
         portfolio_result.write_json(context.run_dir / "portfolio_manager.json")
         results.append(portfolio_result)
 
@@ -390,7 +483,7 @@ class FreeAgentPipeline:
         risk_result.write_json(context.run_dir / "risk_manager.json")
         results.append(risk_result)
 
-        compliance_result = self.compliance.run(context)
+        compliance_result = self.compliance.run(context, analyst_result)
         compliance_result.write_json(context.run_dir / "compliance_officer.json")
         results.append(compliance_result)
 
@@ -409,6 +502,115 @@ def combine_statuses(statuses: list[str]) -> str:
     if not statuses:
         return "info"
     return max(statuses, key=lambda status: priority.get(status, 0))
+
+
+def result_by_ticker(result: AgentResult | None) -> dict[str, dict[str, Any]]:
+    if result is None:
+        return {}
+    return {
+        str(signal.get("ticker", "")): signal
+        for signal in result.signals
+        if signal.get("ticker")
+    }
+
+
+def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dict[str, Any]:
+    if not matches:
+        missing_items = list(ANALYST_SECTION_KEYWORDS)
+        return {
+            "ticker": candidate.ticker,
+            "name": candidate.name,
+            "analysis_status": "missing",
+            "confidence": "none",
+            "business_model_summary": "",
+            "earnings_check": "missing",
+            "balance_sheet_check": "missing",
+            "valuation_check": "missing",
+            "catalysts": [],
+            "key_risks": ["No research file found."],
+            "disconfirmation_conditions": [],
+            "missing_items": missing_items,
+            "forbidden_keyword_hits": [],
+            "source_files": [],
+            "analyst_notes": "No matching research file was found for this candidate.",
+            "agent_status": "needs_review",
+        }
+
+    latest = max(matches, key=lambda path: path.stat().st_mtime)
+    text = read_text_best_effort(latest)
+    lowered = text.lower()
+    section_status = {
+        section: "present" if any(keyword.lower() in lowered for keyword in keywords) else "missing"
+        for section, keywords in ANALYST_SECTION_KEYWORDS.items()
+    }
+    missing_items = [
+        section for section, status in section_status.items() if status == "missing"
+    ]
+    forbidden_hits = [
+        keyword for keyword in FORBIDDEN_RESEARCH_KEYWORDS if keyword.lower() in lowered
+    ]
+    analysis_status = "complete" if not missing_items else "partial"
+    if len(missing_items) >= 5:
+        confidence = "low"
+    elif missing_items:
+        confidence = "medium"
+    else:
+        confidence = "high"
+
+    catalysts = extract_matching_keywords(
+        lowered,
+        ANALYST_SECTION_KEYWORDS["catalyst"],
+    )
+    key_risks = (
+        ["Risk section requires manual review."]
+        if section_status["risk"] == "present"
+        else ["Risk section is missing."]
+    )
+    disconfirmation = (
+        ["Disconfirmation condition section exists; verify details manually."]
+        if section_status["disconfirmation"] == "present"
+        else []
+    )
+    status = "approve" if analysis_status == "complete" and not forbidden_hits else "needs_review"
+    if any(keyword in forbidden_hits for keyword in ("루머", "찌라시", "미공개")):
+        status = "block"
+
+    return {
+        "ticker": candidate.ticker,
+        "name": candidate.name,
+        "analysis_status": analysis_status,
+        "confidence": confidence,
+        "business_model_summary": (
+            "Business model section appears in source file; verify manually."
+            if section_status["business_model"] == "present"
+            else ""
+        ),
+        "earnings_check": section_status["earnings_quality"],
+        "balance_sheet_check": section_status["balance_sheet"],
+        "valuation_check": section_status["valuation"],
+        "catalysts": catalysts,
+        "key_risks": key_risks,
+        "disconfirmation_conditions": disconfirmation,
+        "missing_items": missing_items,
+        "forbidden_keyword_hits": forbidden_hits,
+        "source_files": [str(path) for path in matches[:5]],
+        "analyst_notes": f"Latest source reviewed: {latest}",
+        "agent_status": status,
+    }
+
+
+def extract_matching_keywords(text: str, keywords: tuple[str, ...]) -> list[str]:
+    return [keyword for keyword in keywords if keyword.lower() in text]
+
+
+def research_quality_status(matches: list[Path], quality: dict[str, Any]) -> str:
+    if not matches:
+        return "missing"
+    if quality.get("is_stale"):
+        return "stale"
+    if quality.get("missing_required_sections"):
+        return "incomplete"
+    return "usable"
 
 
 def find_research_files(research_root: Path, candidate: Candidate) -> list[Path]:
@@ -623,6 +825,26 @@ def render_markdown_report(context: AgentContext, results: list[AgentResult]) ->
     ]
     for result in results:
         lines.append(f"- {result.agent}: {result.status} - {result.summary}")
+
+    analyst = next((result for result in results if result.agent == "EquityResearchAnalystAgent"), None)
+    if analyst:
+        lines.extend([
+            "",
+            "## Equity Research Review",
+            "",
+            "| Ticker | Name | Analysis | Confidence | Missing Items |",
+            "|---|---|---|---|---|",
+        ])
+        for signal in analyst.signals:
+            lines.append(
+                "| {ticker} | {name} | {analysis} | {confidence} | {missing} |".format(
+                    ticker=signal.get("ticker", ""),
+                    name=signal.get("name", ""),
+                    analysis=signal.get("analysis_status", ""),
+                    confidence=signal.get("confidence", ""),
+                    missing=", ".join(signal.get("missing_items", [])),
+                )
+            )
 
     trader = next((result for result in results if result.agent == "TraderAgent"), None)
     if trader:

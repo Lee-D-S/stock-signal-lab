@@ -80,7 +80,7 @@ TraderAgent
 OperationsReportAgent
 ```
 
-현재 v1 구현에는 `EquityResearchAnalystAgent`가 아직 연결되지 않았을 수 있다. 이 경우 보고서에는 “Analyst result missing”을 숨기지 않고 보완 항목으로 표시한다.
+현재 v1 구현에는 `EquityResearchAnalystAgent`가 연결되어 있다. 향후 실행 중 Analyst 결과가 누락되면 보고서에는 “Analyst result missing”을 숨기지 않고 보완 항목으로 표시한다.
 
 ## 3. 처리 프로세스
 
@@ -379,11 +379,11 @@ v1에서 하지 않는 구현:
 - 후보 수 0 표시
 - Trader JSON 경로는 있거나 없음이 명확히 표시된다.
 
-### 10.5 Analyst 결과 누락
+### 10.5 Analyst 결과 누락 회귀 방지
 
 조건:
 
-- 현재 v1처럼 Analyst Agent가 아직 pipeline에 연결되지 않음
+- Analyst Agent가 오류 또는 회귀로 pipeline 결과에서 빠짐
 
 기대 결과:
 
