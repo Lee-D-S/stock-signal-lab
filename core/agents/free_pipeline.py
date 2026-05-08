@@ -250,35 +250,75 @@ class ResearchFileAgent:
 class PortfolioManagerAgent:
     name = "PortfolioManagerAgent"
 
-    def run(self, context: AgentContext, analyst_result: AgentResult | None = None) -> AgentResult:
+    def run(
+        self,
+        context: AgentContext,
+        analyst_result: AgentResult | None = None,
+        research_result: AgentResult | None = None,
+    ) -> AgentResult:
         default_amount = int(context.config["default_suggested_amount"])
         signals: list[dict[str, Any]] = []
         warnings: list[str] = []
         portfolio_by_ticker = {position.ticker: position for position in context.portfolio}
         analyst_by_ticker = result_by_ticker(analyst_result)
+        research_by_ticker = result_by_ticker(research_result)
+        if context.portfolio_value <= 0:
+            warnings.append("portfolio snapshot is missing or has zero value.")
+        if not context.candidates:
+            warnings.append("no candidates available for portfolio review.")
+        for position in context.portfolio:
+            if position.quantity < 0:
+                warnings.append(f"{position.ticker}: portfolio position quantity is negative.")
+            if position.quantity > 0 and position.market_value <= 0:
+                warnings.append(f"{position.ticker}: portfolio position market value is zero.")
         for candidate in context.candidates:
             amount = candidate.suggested_amount or default_amount
             current_position = portfolio_by_ticker.get(candidate.ticker)
             analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
+            research_signal = research_by_ticker.get(candidate.ticker, {})
             analysis_status = str(analyst_signal.get("analysis_status", "missing"))
             analyst_confidence = str(analyst_signal.get("confidence", "none"))
+            research_quality_status = str(research_signal.get("quality_status", "missing"))
+            research_is_stale = bool(research_signal.get("is_stale", False))
+            research_source_mismatch = bool(research_signal.get("analyst_source_file_mismatch", False))
             side = "hold"
-            priority = candidate.score if candidate.score is not None else float(candidate.signal_count)
+            base_priority = candidate.score if candidate.score is not None else float(candidate.signal_count)
+            priority = adjusted_portfolio_priority(
+                base_priority,
+                analysis_status,
+                analyst_confidence,
+                research_quality_status,
+            )
+            portfolio_constraints: list[str] = []
             if current_position:
                 reason = "Existing position; review hold, add, or trim based on thesis and weight."
                 action_detail = "review_existing_position"
-            elif analysis_status != "complete":
-                reason = "Equity research is incomplete; allocation decision requires analyst review."
-                action_detail = "needs_equity_research"
-                warnings.append(f"{candidate.ticker}: equity research is {analysis_status}.")
+                if analyst_signal.get("key_risks"):
+                    portfolio_constraints.append("analyst_key_risks_present")
             elif context.portfolio_value <= 0:
                 reason = "Portfolio snapshot is missing; allocation decision requires review."
                 action_detail = "needs_portfolio_snapshot"
+                portfolio_constraints.append("missing_portfolio_snapshot")
                 warnings.append(f"{candidate.ticker}: portfolio snapshot is missing.")
             elif amount > context.cash:
                 reason = "Cash is insufficient for a new buy draft."
                 action_detail = "cash_limited"
+                portfolio_constraints.append("cash_limited")
                 warnings.append(f"{candidate.ticker}: cash is insufficient.")
+            elif analysis_status != "complete":
+                reason = "Equity research is incomplete; allocation decision requires analyst review."
+                action_detail = "needs_equity_research"
+                portfolio_constraints.append("incomplete_equity_research")
+                warnings.append(f"{candidate.ticker}: equity research is {analysis_status}.")
+            elif research_quality_status != "usable" or research_is_stale or research_source_mismatch:
+                reason = "Research file quality is insufficient for a new buy draft."
+                action_detail = "needs_research_file_quality"
+                portfolio_constraints.append(f"research_quality_{research_quality_status}")
+                if research_is_stale:
+                    portfolio_constraints.append("stale_research")
+                if research_source_mismatch:
+                    portfolio_constraints.append("analyst_research_source_mismatch")
+                warnings.append(f"{candidate.ticker}: research file quality is {research_quality_status}.")
             else:
                 side = "buy"
                 reason = "New candidate with available cash; draft only, subject to risk and compliance."
@@ -292,11 +332,18 @@ class PortfolioManagerAgent:
                 "action_detail": action_detail,
                 "suggested_amount": amount,
                 "priority": priority,
+                "base_priority": base_priority,
                 "current_weight": current_weight,
                 "reason": reason,
                 "analysis_status": analysis_status,
                 "analyst_confidence": analyst_confidence,
                 "analyst_key_risks": analyst_signal.get("key_risks", []),
+                "analyst_missing_items": analyst_signal.get("missing_items", []),
+                "research_quality_status": research_quality_status,
+                "research_is_stale": research_is_stale,
+                "research_missing_required_sections": research_signal.get("missing_required_sections", []),
+                "research_source_mismatch": research_source_mismatch,
+                "portfolio_constraints": portfolio_constraints,
             })
 
         return AgentResult(
@@ -311,6 +358,11 @@ class PortfolioManagerAgent:
             artifacts={
                 "portfolio_value": context.portfolio_value,
                 "cash": context.cash,
+                "position_count": len(context.portfolio),
+                "candidate_count": len(context.candidates),
+                "sector_exposure": portfolio_sector_exposure(context.portfolio, context.portfolio_value),
+                "side_counts": count_by_key(signals, "side"),
+                "action_detail_counts": count_by_key(signals, "action_detail"),
             },
         )
 
@@ -544,7 +596,7 @@ class FreeAgentPipeline:
         research_result.write_json(context.run_dir / "research_file.json")
         results.append(research_result)
 
-        portfolio_result = self.portfolio.run(context, analyst_result)
+        portfolio_result = self.portfolio.run(context, analyst_result, research_result)
         portfolio_result.write_json(context.run_dir / "portfolio_manager.json")
         results.append(portfolio_result)
 
@@ -588,6 +640,40 @@ def result_by_ticker(result: AgentResult | None) -> dict[str, dict[str, Any]]:
         str(signal.get("ticker", "")): signal
         for signal in result.signals
         if signal.get("ticker")
+    }
+
+
+def adjusted_portfolio_priority(
+    base_priority: float,
+    analysis_status: str,
+    analyst_confidence: str,
+    research_quality_status: str,
+) -> float:
+    priority = float(base_priority)
+    if analysis_status == "complete" and analyst_confidence == "high":
+        priority = float(base_priority)
+    elif analysis_status == "partial" or analyst_confidence in {"medium", "low"}:
+        priority = float(base_priority) * 0.7
+    elif analysis_status == "missing" or analyst_confidence == "none":
+        priority = float(base_priority) * 0.3
+    if research_quality_status in {"missing", "incomplete", "stale", "unreadable"}:
+        priority = min(priority, float(base_priority) * 0.5)
+    return round(priority, 4)
+
+
+def portfolio_sector_exposure(
+    portfolio: list[PortfolioPosition],
+    portfolio_value: float,
+) -> dict[str, float]:
+    if portfolio_value <= 0:
+        return {}
+    exposure: dict[str, float] = {}
+    for position in portfolio:
+        sector = position.sector or "unknown"
+        exposure[sector] = exposure.get(sector, 0.0) + position.market_value
+    return {
+        sector: round(value / portfolio_value, 4)
+        for sector, value in sorted(exposure.items())
     }
 
 
