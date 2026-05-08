@@ -1,16 +1,24 @@
-﻿ticker,name,reports_done,reports_total,status,missing_periods,event_files
-006340,대원전선,20,20,done,,20
-062040,산일전기,20,20,done,,20
-009830,한화솔루션,20,20,done,,20
-005380,현대차,20,20,done,,20
-025860,남해화학,20,20,done,,20
-064350,현대로템,20,20,done,,20
-032830,삼성생명,20,20,done,,20
-050890,쏠리드,20,20,done,,20
-199820,제일일렉트릭,20,20,done,,20
-010120,LS ELECTRIC,20,20,done,,20
-058470,리노공업,20,20,done,,20
-035420,NAVER,20,20,done,,20
-105560,KB금융,20,20,done,,20
-024060,흥구석유,20,20,done,,20
-432720,퀄리타스반도체,20,20,done,,20
+﻿ticker,name,status,created_reports,missing_reports_after,listing_date,skipped_pre_listing,events_path,error
+018880,한온시스템,skip_existing,0,0,1996-07-31,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\한온시스템\한온시스템_018880_events.jsonl,
+079550,LIG디펜스앤에어로스페이스,skip_existing,0,0,2015-10-02,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\LIG디펜스앤에어로스페이스\LIG디펜스앤에어로스페이스_079550_events.jsonl,
+016360,삼성증권,skip_existing,0,0,1988-03-28,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\삼성증권\삼성증권_016360_events.jsonl,
+001510,SK증권,skip_existing,0,0,1986-09-20,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\SK증권\SK증권_001510_events.jsonl,
+203650,드림시큐리티,skip_existing,0,0,2014-10-13,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\드림시큐리티\드림시큐리티_203650_events.jsonl,
+454910,두산로보틱스,skip_existing,0,0,2023-10-05,10,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\두산로보틱스\두산로보틱스_454910_events.jsonl,
+006800,미래에셋증권,skip_existing,0,0,1975-09-30,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\미래에셋증권\미래에셋증권_006800_events.jsonl,
+006910,보성파워텍,skip_existing,0,0,1994-09-07,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\보성파워텍\보성파워텍_006910_events.jsonl,
+028260,삼성물산,skip_existing,0,0,2014-12-18,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\삼성물산\삼성물산_028260_events.jsonl,
+011790,SKC,skip_existing,0,0,1997-07-18,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\SKC\SKC_011790_events.jsonl,
+086520,에코프로,skip_existing,0,0,2007-07-20,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\에코프로\에코프로_086520_events.jsonl,
+066570,LG전자,skip_existing,0,0,2002-04-22,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\LG전자\LG전자_066570_events.jsonl,
+024840,KBI메탈,skip_existing,0,0,1994-12-29,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\KBI메탈\KBI메탈_024840_events.jsonl,
+032820,우리기술,skip_existing,0,0,2000-06-22,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\우리기술\우리기술_032820_events.jsonl,
+267260,HD현대일렉트릭,skip_existing,0,0,2017-05-10,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\HD현대일렉트릭\HD현대일렉트릭_267260_events.jsonl,
+178320,서진시스템,skip_existing,0,0,2017-03-27,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\서진시스템\서진시스템_178320_events.jsonl,
+336260,두산퓨얼셀,skip_existing,0,0,2019-10-18,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\두산퓨얼셀\두산퓨얼셀_336260_events.jsonl,
+003530,한화투자증권,skip_existing,0,0,1986-11-25,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\한화투자증권\한화투자증권_003530_events.jsonl,
+138080,오이솔루션,skip_existing,0,0,2014-02-27,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\오이솔루션\오이솔루션_138080_events.jsonl,
+010140,삼성중공업,skip_existing,0,0,1994-01-28,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\삼성중공업\삼성중공업_010140_events.jsonl,
+247540,에코프로비엠,skip_existing,0,0,2019-03-05,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\에코프로비엠\에코프로비엠_247540_events.jsonl,
+000720,현대건설,skip_existing,0,0,1984-12-22,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\현대건설\현대건설_000720_events.jsonl,
+078150,HB테크놀러지,skip_existing,0,0,2004-12-08,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\HB테크놀러지\HB테크놀러지_078150_events.jsonl,
