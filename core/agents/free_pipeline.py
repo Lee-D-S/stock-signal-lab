@@ -51,6 +51,15 @@ ANALYST_STRONG_SECTIONS = {
     "disconfirmation",
 }
 ANALYST_STALE_DAYS = 120
+REQUIRED_PIPELINE_AGENTS = [
+    "QuantSignalAgent",
+    "EquityResearchAnalystAgent",
+    "ResearchFileAgent",
+    "PortfolioManagerAgent",
+    "RiskManagerAgent",
+    "ComplianceOfficerAgent",
+    "TraderAgent",
+]
 
 
 class QuantSignalAgent:
@@ -708,13 +717,27 @@ class OperationsReportAgent:
     def run(self, context: AgentContext, results: list[AgentResult]) -> AgentResult:
         report_path = context.run_dir / "final_committee_report.md"
         summary_path = context.run_dir / "telegram_summary.txt"
-        report_path.write_text(render_markdown_report(context, results), encoding="utf-8")
-        summary_path.write_text(render_short_summary(context, results), encoding="utf-8")
+        metadata = build_operations_metadata(context, results)
+        report_path.write_text(render_markdown_report(context, results, metadata), encoding="utf-8")
+        summary_path.write_text(render_short_summary(context, results, metadata), encoding="utf-8")
+        warnings = []
+        if metadata["missing_agents"]:
+            warnings.append("missing required agents: " + ", ".join(metadata["missing_agents"]))
+        if metadata["report_integrity_status"] != "ok":
+            warnings.append("report integrity check is " + metadata["report_integrity_status"])
         return AgentResult(
             agent=self.name,
-            status=combine_statuses([result.status for result in results]),
+            status=combine_statuses([result.status for result in results] + (["needs_review"] if warnings else [])),
             summary=f"Final report written to {report_path}.",
-            artifacts={"report_path": str(report_path), "telegram_summary_path": str(summary_path)},
+            warnings=warnings,
+            required_human_checks=[
+                "Confirm the Markdown report and trader JSON show the same candidates, sides, and hold reasons."
+            ],
+            artifacts={
+                "report_path": str(report_path),
+                "telegram_summary_path": str(summary_path),
+                **metadata,
+            },
         )
 
 
@@ -909,6 +932,44 @@ def build_final_side_reason(risk_status: str, compliance_status: str, portfolio_
     if compliance_status != "approve":
         reasons.append(f"ComplianceOfficer status is {compliance_status}")
     return "; ".join(reasons) or "held by rule-based gate"
+
+
+def build_operations_metadata(context: AgentContext, results: list[AgentResult]) -> dict[str, Any]:
+    result_by_agent = {result.agent: result for result in results}
+    missing_agents = [
+        agent for agent in REQUIRED_PIPELINE_AGENTS if agent not in result_by_agent
+    ]
+    status_counts = count_by_key(
+        [{"status": result.status} for result in results],
+        "status",
+    )
+    trader = result_by_agent.get("TraderAgent")
+    trader_signals = trader.signals if trader else []
+    buy_count = sum(1 for signal in trader_signals if signal.get("side") == "buy")
+    hold_count = sum(1 for signal in trader_signals if signal.get("side") == "hold")
+    candidate_counts = {
+        "context_candidates": len(context.candidates),
+        "trader_proposals": len(trader_signals),
+        "draft_buys": buy_count,
+        "holds": hold_count,
+    }
+    blocked_by_risk = sum(
+        1 for signal in trader_signals if signal.get("risk_status") != "approve"
+    )
+    blocked_by_compliance = sum(
+        1 for signal in trader_signals if signal.get("compliance_status") != "approve"
+    )
+    report_integrity_status = "ok"
+    if missing_agents or len(trader_signals) != len(context.candidates):
+        report_integrity_status = "mismatch"
+    return {
+        "missing_agents": missing_agents,
+        "status_counts": status_counts,
+        "candidate_counts": candidate_counts,
+        "blocked_by_risk": blocked_by_risk,
+        "blocked_by_compliance": blocked_by_compliance,
+        "report_integrity_status": report_integrity_status,
+    }
 
 
 def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dict[str, Any]:
@@ -1291,17 +1352,27 @@ def load_portfolio(path: Path | None) -> tuple[list[PortfolioPosition], float]:
     return positions, cash
 
 
-def render_markdown_report(context: AgentContext, results: list[AgentResult]) -> str:
-    status_counts: dict[str, int] = {}
-    for result in results:
-        status_counts[result.status] = status_counts.get(result.status, 0) + 1
+def render_markdown_report(
+    context: AgentContext,
+    results: list[AgentResult],
+    metadata: dict[str, Any],
+) -> str:
+    status_counts = metadata["status_counts"]
+    candidate_counts = metadata["candidate_counts"]
     lines = [
         "# Daily Investment Committee Report",
+        "",
+        "- No broker API call was made.",
+        "- Actual order execution is prohibited by this pipeline.",
+        "- This report is a review aid, not an investment instruction.",
         "",
         f"- Run date: {context.run_date.isoformat()}",
         f"- Candidate count: {len(context.candidates)}",
         f"- Portfolio value: {context.portfolio_value:,.0f}",
         f"- Status counts: block={status_counts.get('block', 0)}, needs_review={status_counts.get('needs_review', 0)}, approve={status_counts.get('approve', 0)}, info={status_counts.get('info', 0)}",
+        f"- Draft buys: {candidate_counts['draft_buys']}, holds: {candidate_counts['holds']}",
+        f"- Blocked by Risk: {metadata['blocked_by_risk']}, blocked by Compliance: {metadata['blocked_by_compliance']}",
+        f"- Report integrity: {metadata['report_integrity_status']}",
         f"- Trader JSON: {context.run_dir / 'trader_order_proposal.json'}",
         "",
         "## Agent Status",
@@ -1309,6 +1380,8 @@ def render_markdown_report(context: AgentContext, results: list[AgentResult]) ->
     ]
     for result in results:
         lines.append(f"- {result.agent}: {result.status} - {result.summary}")
+    if metadata["missing_agents"]:
+        lines.extend(["", "Missing required agents: " + ", ".join(metadata["missing_agents"])])
 
     analyst = next((result for result in results if result.agent == "EquityResearchAnalystAgent"), None)
     if analyst:
@@ -1336,18 +1409,20 @@ def render_markdown_report(context: AgentContext, results: list[AgentResult]) ->
             "",
             "## Candidate Table",
             "",
-            "| Ticker | Name | Side | Amount | Risk | Compliance |",
-            "|---|---|---:|---:|---|---|",
+            "| Ticker | Name | Side | Amount | Quantity | Risk | Compliance | Main Reason |",
+            "|---|---|---:|---:|---:|---|---|---|",
         ])
         for proposal in trader.signals:
             lines.append(
-                "| {ticker} | {name} | {side} | {amount:,} | {risk} | {compliance} |".format(
+                "| {ticker} | {name} | {side} | {amount:,} | {quantity:,} | {risk} | {compliance} | {reason} |".format(
                     ticker=proposal["ticker"],
                     name=proposal["name"],
                     side=proposal["side"],
                     amount=int(proposal["suggested_amount"]),
+                    quantity=int(proposal["suggested_quantity"]),
                     risk=proposal["risk_status"],
                     compliance=proposal["compliance_status"],
+                    reason=proposal.get("final_side_reason") or proposal.get("reason", ""),
                 )
             )
         lines.extend(["", "## Draft Order Proposals", ""])
@@ -1363,21 +1438,26 @@ def render_markdown_report(context: AgentContext, results: list[AgentResult]) ->
                     compliance=proposal["compliance_status"],
                 )
             )
+    else:
+        lines.extend(["", "## Candidate Table", "", "Trader result missing; no candidate table was produced."])
 
-    warnings = [
-        f"{result.agent}: {warning}"
+    warning_groups = {
+        result.agent: result.warnings
         for result in results
-        for warning in result.warnings
-    ]
-    if warnings:
+        if result.warnings
+    }
+    if warning_groups:
         lines.extend(["", "## Warnings", ""])
-        lines.extend(f"- {warning}" for warning in warnings)
+        for agent, warnings in warning_groups.items():
+            lines.append(f"### {agent}")
+            lines.extend(f"- {warning}" for warning in warnings)
+            lines.append("")
 
-    checks = [
+    checks = sorted({
         f"{result.agent}: {check}"
         for result in results
         for check in result.required_human_checks
-    ]
+    })
     if checks:
         lines.extend(["", "## Required Human Checks", ""])
         lines.extend(f"- {check}" for check in checks)
@@ -1394,17 +1474,22 @@ def render_markdown_report(context: AgentContext, results: list[AgentResult]) ->
     return "\n".join(lines)
 
 
-def render_short_summary(context: AgentContext, results: list[AgentResult]) -> str:
+def render_short_summary(
+    context: AgentContext,
+    results: list[AgentResult],
+    metadata: dict[str, Any],
+) -> str:
     final_status = combine_statuses([result.status for result in results])
-    trader = next((result for result in results if result.agent == "TraderAgent"), None)
-    buy_count = 0
-    hold_count = 0
-    if trader:
-        buy_count = sum(1 for proposal in trader.signals if proposal.get("side") == "buy")
-        hold_count = sum(1 for proposal in trader.signals if proposal.get("side") == "hold")
+    candidate_counts = metadata["candidate_counts"]
     return "\n".join([
         f"{context.run_date.isoformat()} investment committee: {final_status}",
-        f"candidates={len(context.candidates)}, draft_buys={buy_count}, holds={hold_count}",
+        (
+            f"candidates={len(context.candidates)}, "
+            f"draft_buys={candidate_counts['draft_buys']}, "
+            f"holds={candidate_counts['holds']}, "
+            f"blocked_by_risk={metadata['blocked_by_risk']}, "
+            f"blocked_by_compliance={metadata['blocked_by_compliance']}"
+        ),
         "No broker API call was made. Manual review is required.",
         str(context.run_dir / "final_committee_report.md"),
         "",
