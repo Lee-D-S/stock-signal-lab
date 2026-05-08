@@ -469,32 +469,95 @@ class RiskManagerAgent:
 class ComplianceOfficerAgent:
     name = "ComplianceOfficerAgent"
 
-    def run(self, context: AgentContext, analyst_result: AgentResult | None = None) -> AgentResult:
+    def run(
+        self,
+        context: AgentContext,
+        analyst_result: AgentResult | None = None,
+        research_result: AgentResult | None = None,
+    ) -> AgentResult:
         signals: list[dict[str, Any]] = []
         all_warnings: list[str] = []
         statuses: list[str] = []
         require_research = bool(context.config["require_research_file"])
         analyst_by_ticker = result_by_ticker(analyst_result)
+        research_by_ticker = result_by_ticker(research_result)
+        if not context.candidates:
+            all_warnings.append("no candidates available for compliance review.")
         for candidate in context.candidates:
-            matches = find_research_files(context.research_root, candidate)
-            quality = analyze_research_files(matches, context.run_date)
             analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
+            research_signal = research_by_ticker.get(candidate.ticker, {})
+            if research_signal:
+                matches = [Path(path) for path in research_signal.get("research_files", [])]
+                quality = {
+                    "missing_required_sections": research_signal.get("missing_required_sections", []),
+                    "forbidden_keyword_hits": research_signal.get("forbidden_keyword_hits", []),
+                    "is_stale": research_signal.get("is_stale", False),
+                    "readability": research_signal.get("readability", "missing"),
+                }
+            else:
+                matches = find_research_files(context.research_root, candidate)
+                quality = analyze_research_files(matches, context.run_date)
             status, warnings = check_compliance_rules(
                 candidate=candidate,
                 research_matches=matches,
                 require_research_file=require_research,
                 research_quality=quality,
             )
+            record_status = compliance_record_status(candidate, analyst_signal, research_signal, matches)
+            manual_source_status = manual_source_status_for(candidate)
+            compliance_checks = {
+                "ticker_format": "pass" if TICKER_RE.fullmatch(candidate.ticker or "") else "fail",
+                "source_traceable": "pass" if candidate.source else "fail",
+                "manual_source": manual_source_status,
+                "research_file_present": "pass" if matches else "fail",
+                "research_quality": str(research_signal.get("quality_status", research_quality_status(matches, quality))),
+                "forbidden_keywords": "fail" if quality.get("forbidden_keyword_hits") else "pass",
+                "analyst_result_present": "pass" if analyst_signal else "fail",
+                "analyst_research_match": "fail"
+                if research_signal.get("analyst_source_file_mismatch")
+                or research_signal.get("analyst_research_missing_item_mismatch")
+                else "pass",
+                "record_status": record_status,
+            }
             if analyst_signal:
                 if analyst_signal.get("analysis_status") != "complete":
                     warnings.append("equity analyst review is incomplete.")
                     status = combine_statuses([status, "needs_review"])
-                if analyst_signal.get("forbidden_keyword_hits"):
+                if analyst_signal.get("confidence") in {"low", "none"}:
+                    warnings.append("equity analyst confidence is low.")
+                    status = combine_statuses([status, "needs_review"])
+                analyst_forbidden_hits = analyst_signal.get("forbidden_keyword_hits", [])
+                if analyst_forbidden_hits:
                     warnings.append("equity analyst found caution keywords.")
+                    status = combine_statuses([
+                        status,
+                        "block" if contains_blocking_information(analyst_forbidden_hits) else "needs_review",
+                    ])
+                if analyst_signal.get("analysis_status") == "complete" and research_signal.get("quality_status") in {
+                    "missing",
+                    "incomplete",
+                    "stale",
+                    "unreadable",
+                }:
+                    warnings.append("analyst marked complete but research file review is not usable.")
                     status = combine_statuses([status, "needs_review"])
             else:
                 warnings.append("equity analyst result is missing.")
                 status = combine_statuses([status, "needs_review"])
+            if record_status != "complete":
+                warnings.append(f"record status is {record_status}.")
+                status = combine_statuses([status, "needs_review"])
+            if manual_source_status == "missing":
+                warnings.append("manual candidate source is missing.")
+                status = combine_statuses([status, "needs_review"])
+            if research_signal.get("analyst_source_file_mismatch"):
+                warnings.append("analyst source files do not match ResearchFile review.")
+                status = combine_statuses([status, "needs_review"])
+            if research_signal.get("analyst_research_missing_item_mismatch"):
+                warnings.append("analyst missing items conflict with ResearchFile missing sections.")
+                status = combine_statuses([status, "needs_review"])
+            if quality.get("forbidden_keyword_hits") and contains_blocking_information(quality["forbidden_keyword_hits"]):
+                status = combine_statuses([status, "block"])
             statuses.append(status)
             all_warnings.extend(f"{candidate.ticker}: {warning}" for warning in warnings)
             signals.append({
@@ -503,8 +566,15 @@ class ComplianceOfficerAgent:
                 "research_file_count": len(matches),
                 "missing_required_sections": quality["missing_required_sections"],
                 "forbidden_keyword_hits": quality["forbidden_keyword_hits"],
+                "record_status": record_status,
+                "manual_source_status": manual_source_status,
                 "analyst_status": analyst_signal.get("analysis_status", ""),
+                "analyst_confidence": analyst_signal.get("confidence", ""),
                 "analyst_source_files": analyst_signal.get("source_files", []),
+                "research_quality_status": research_signal.get("quality_status", research_quality_status(matches, quality)),
+                "source_file_mismatch": bool(research_signal.get("analyst_source_file_mismatch", False)),
+                "missing_item_mismatch": bool(research_signal.get("analyst_research_missing_item_mismatch", False)),
+                "compliance_checks": compliance_checks,
                 "warnings": warnings,
             })
 
@@ -515,9 +585,15 @@ class ComplianceOfficerAgent:
             signals=signals,
             warnings=all_warnings,
             required_human_checks=[
-                "Confirm there is no non-public information, rumor-only thesis, or missing record."
+                "Confirm there is no non-public information, rumor-only thesis, or missing record.",
+                "Resolve Analyst and ResearchFile evidence mismatches before treating the candidate as compliant.",
             ],
-            artifacts={"require_research_file": require_research},
+            artifacts={
+                "require_research_file": require_research,
+                "status_counts": count_by_key(signals, "status"),
+                "record_status_counts": count_by_key(signals, "record_status"),
+                "research_quality_counts": count_by_key(signals, "research_quality_status"),
+            },
         )
 
 
@@ -647,7 +723,7 @@ class FreeAgentPipeline:
         risk_result.write_json(context.run_dir / "risk_manager.json")
         results.append(risk_result)
 
-        compliance_result = self.compliance.run(context, analyst_result)
+        compliance_result = self.compliance.run(context, analyst_result, research_result)
         compliance_result.write_json(context.run_dir / "compliance_officer.json")
         results.append(compliance_result)
 
@@ -755,6 +831,41 @@ def build_risk_projection(
         "existing_position_value": existing_position_value,
         "existing_sector_value": existing_sector_value,
     }
+
+
+def compliance_record_status(
+    candidate: Candidate,
+    analyst_signal: dict[str, Any],
+    research_signal: dict[str, Any],
+    matches: list[Path],
+) -> str:
+    if not candidate.source:
+        return "missing_source"
+    if not analyst_signal:
+        return "missing_analyst"
+    if not matches:
+        return "missing_research"
+    if research_signal.get("analyst_source_file_mismatch") or research_signal.get(
+        "analyst_research_missing_item_mismatch"
+    ):
+        return "mismatch"
+    if analyst_signal.get("analysis_status") != "complete":
+        return "incomplete_analysis"
+    quality_status = str(research_signal.get("quality_status", ""))
+    if quality_status and quality_status != "usable":
+        return "incomplete_research"
+    return "complete"
+
+
+def manual_source_status_for(candidate: Candidate) -> str:
+    if candidate.source_type != "manual":
+        return "not_manual"
+    return "present" if candidate.source else "missing"
+
+
+def contains_blocking_information(keywords: list[str]) -> bool:
+    blocking = {"루머", "찌라시", "미공개"}
+    return any(keyword in blocking for keyword in keywords)
 
 
 def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dict[str, Any]:
