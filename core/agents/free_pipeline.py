@@ -33,6 +33,7 @@ REQUIRED_RESEARCH_SECTIONS = {
 }
 FORBIDDEN_RESEARCH_KEYWORDS = ("루머", "찌라시", "미확인", "확인필요", "미공개")
 RESEARCH_STALE_DAYS = 120
+LIQUIDITY_RATIO_LIMIT = 0.01
 ANALYST_SECTION_KEYWORDS = {
     "business_model": ("사업모델", "business model", "BM", "매출 구조", "수익 구조"),
     "earnings_quality": ("실적", "매출", "영업이익", "순이익", "earnings"),
@@ -370,18 +371,30 @@ class PortfolioManagerAgent:
 class RiskManagerAgent:
     name = "RiskManagerAgent"
 
-    def run(self, context: AgentContext) -> AgentResult:
+    def run(
+        self,
+        context: AgentContext,
+        analyst_result: AgentResult | None = None,
+        research_result: AgentResult | None = None,
+    ) -> AgentResult:
         signals: list[dict[str, Any]] = []
         all_warnings: list[str] = []
         statuses: list[str] = []
         default_amount = int(context.config["default_suggested_amount"])
+        analyst_by_ticker = result_by_ticker(analyst_result)
+        research_by_ticker = result_by_ticker(research_result)
         daily_new_buy_amount = sum(
             int(candidate.suggested_amount or default_amount)
             for candidate in context.candidates
             if not any(position.ticker == candidate.ticker for position in context.portfolio)
         )
+        if not context.candidates:
+            all_warnings.append("no candidates available for risk review.")
+        if context.portfolio_value <= 0:
+            all_warnings.append("portfolio snapshot is missing or has zero value.")
         for candidate in context.candidates:
             amount = candidate.suggested_amount or default_amount
+            projection = build_risk_projection(candidate, context.portfolio, context.portfolio_value, amount)
             status, warnings = check_risk_rules(
                 candidate=candidate,
                 portfolio=context.portfolio,
@@ -395,11 +408,39 @@ class RiskManagerAgent:
                 daily_new_buy_amount=daily_new_buy_amount,
                 min_liquidity_value=int(candidate.trade_amount) if candidate.trade_amount else None,
             )
+            analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
+            research_signal = research_by_ticker.get(candidate.ticker, {})
+            if analyst_signal.get("key_risks"):
+                warnings.append("analyst key risks require manual risk review.")
+                status = combine_statuses([status, "needs_review"])
+            if research_signal.get("quality_status") in {"missing", "incomplete", "stale", "unreadable"}:
+                warnings.append("research quality is weak; risk inputs may be incomplete.")
+                status = combine_statuses([status, "needs_review"])
             statuses.append(status)
             all_warnings.extend(f"{candidate.ticker}: {warning}" for warning in warnings)
             signals.append({
                 "ticker": candidate.ticker,
                 "status": status,
+                "suggested_amount": amount,
+                "projected_position_pct": projection["projected_position_pct"],
+                "projected_sector_pct": projection["projected_sector_pct"],
+                "liquidity_ratio": projection["liquidity_ratio"],
+                "sector": projection["sector"],
+                "existing_position_value": projection["existing_position_value"],
+                "existing_sector_value": projection["existing_sector_value"],
+                "risk_constraints": {
+                    "max_position_pct": context.config["max_position_pct"],
+                    "max_sector_pct": context.config["max_sector_pct"],
+                    "max_order_amount": context.config["max_order_amount"],
+                    "max_daily_new_buy_amount": context.config["max_daily_new_buy_amount"],
+                    "liquidity_ratio_limit": LIQUIDITY_RATIO_LIMIT,
+                    "cash": context.cash,
+                    "portfolio_value": context.portfolio_value,
+                    "daily_new_buy_amount": daily_new_buy_amount,
+                },
+                "analyst_key_risks": analyst_signal.get("key_risks", []),
+                "analyst_disconfirmation_conditions": analyst_signal.get("disconfirmation_conditions", []),
+                "research_quality_status": research_signal.get("quality_status", ""),
                 "warnings": warnings,
             })
 
@@ -419,6 +460,8 @@ class RiskManagerAgent:
                 "max_order_amount": context.config["max_order_amount"],
                 "max_daily_new_buy_amount": context.config["max_daily_new_buy_amount"],
                 "daily_new_buy_amount": daily_new_buy_amount,
+                "liquidity_ratio_limit": LIQUIDITY_RATIO_LIMIT,
+                "status_counts": count_by_key(signals, "status"),
             },
         )
 
@@ -600,7 +643,7 @@ class FreeAgentPipeline:
         portfolio_result.write_json(context.run_dir / "portfolio_manager.json")
         results.append(portfolio_result)
 
-        risk_result = self.risk.run(context)
+        risk_result = self.risk.run(context, analyst_result, research_result)
         risk_result.write_json(context.run_dir / "risk_manager.json")
         results.append(risk_result)
 
@@ -674,6 +717,43 @@ def portfolio_sector_exposure(
     return {
         sector: round(value / portfolio_value, 4)
         for sector, value in sorted(exposure.items())
+    }
+
+
+def build_risk_projection(
+    candidate: Candidate,
+    portfolio: list[PortfolioPosition],
+    portfolio_value: float,
+    suggested_amount: int,
+) -> dict[str, Any]:
+    existing_position_value = sum(
+        position.market_value for position in portfolio if position.ticker == candidate.ticker
+    )
+    sector = candidate.sector or next(
+        (position.sector for position in portfolio if position.ticker == candidate.ticker),
+        "",
+    )
+    existing_sector_value = (
+        sum(position.market_value for position in portfolio if position.sector == sector)
+        if sector
+        else 0.0
+    )
+    projected_position_pct = None
+    projected_sector_pct = None
+    if portfolio_value > 0:
+        projected_position_pct = round((existing_position_value + suggested_amount) / portfolio_value, 6)
+        if sector:
+            projected_sector_pct = round((existing_sector_value + suggested_amount) / portfolio_value, 6)
+    liquidity_ratio = None
+    if candidate.trade_amount and candidate.trade_amount > 0:
+        liquidity_ratio = round(suggested_amount / candidate.trade_amount, 6)
+    return {
+        "projected_position_pct": projected_position_pct,
+        "projected_sector_pct": projected_sector_pct,
+        "liquidity_ratio": liquidity_ratio,
+        "sector": sector,
+        "existing_position_value": existing_position_value,
+        "existing_sector_value": existing_sector_value,
     }
 
 
