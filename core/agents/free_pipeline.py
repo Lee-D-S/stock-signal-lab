@@ -47,7 +47,7 @@ class QuantSignalAgent:
     name = "QuantSignalAgent"
 
     def run(self, context: AgentContext) -> AgentResult:
-        signals = []
+        signals: list[dict[str, Any]] = []
         warnings: list[str] = []
         stale_days = int(context.config.get("stale_signal_days", 3))
         for candidate in context.candidates:
@@ -60,8 +60,20 @@ class QuantSignalAgent:
                     warnings.append(
                         f"{candidate.ticker}: source signal is stale ({age_days:.1f} days)."
                     )
+            elif candidate.source_type != "manual":
+                warnings.append(f"{candidate.ticker}: source file does not exist: {candidate.source}")
+            if not candidate.ticker or not TICKER_RE.fullmatch(candidate.ticker):
+                warnings.append(f"{candidate.ticker or '<missing>'}: ticker is not a 6 digit code.")
+            if not candidate.name:
+                warnings.append(f"{candidate.ticker}: name is missing.")
+            if candidate.current_price is None:
+                warnings.append(f"{candidate.ticker}: current_price is missing.")
+            if candidate.trade_amount is None:
+                warnings.append(f"{candidate.ticker}: trade_amount is missing.")
             if candidate.signal_count <= 0:
                 warnings.append(f"{candidate.ticker}: signal_count is missing.")
+            if not candidate.signal_details:
+                warnings.append(f"{candidate.ticker}: signal_details is empty.")
             signals.append(signal)
         if not signals:
             warnings.append("no candidates were provided or discovered.")
@@ -73,9 +85,14 @@ class QuantSignalAgent:
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Confirm the source signal is still valid before any manual order."
+                "Confirm the source signal is still valid before any manual order.",
+                "Review candidates with missing price or liquidity data before Risk and Trader steps.",
             ],
-            artifacts={"candidate_count": len(signals)},
+            artifacts={
+                "candidate_count": len(signals),
+                "source_type_counts": count_by_key(signals, "source_type"),
+                "stale_signal_days": stale_days,
+            },
         )
 
 
@@ -502,6 +519,14 @@ def combine_statuses(statuses: list[str]) -> str:
     if not statuses:
         return "info"
     return max(statuses, key=lambda status: priority.get(status, 0))
+
+
+def count_by_key(items: list[dict[str, Any]], key: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        value = str(item.get(key) or "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def result_by_ticker(result: AgentResult | None) -> dict[str, dict[str, Any]]:
