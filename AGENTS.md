@@ -22,5 +22,10 @@ This repo does not have a dedicated `tests/` package yet. Validate changes by ru
 ## Commit & Pull Request Guidelines
 Use short, imperative commit messages such as `Add signal pipeline path fix`. Keep one logical change per commit. PRs should include a brief summary, the commands used to verify the change, and screenshots or sample output when dashboard or report paths change.
 
+## Git Sync Guard
+Before making edits, run `rtk git fetch origin` and `rtk git status --short --branch`. If the current branch is behind `origin/main` and the worktree is clean, run `rtk git pull --rebase origin main` before editing. If the worktree is dirty, do not auto-pull; report the behind/dirty state and ask whether to commit, stash, or defer the sync.
+
+Before pushing, run `rtk git fetch origin` and `rtk git status --short --branch`. Do not push while behind `origin/main`; rebase first when the worktree is clean, or stop and report the required sync when local changes are present.
+
 ## Security & Configuration Tips
 Copy `.env.example` to `.env` locally and do not commit secrets. Use `KIS_IS_MOCK=true` unless you are explicitly testing live trading. Treat `auto_invest.db`, `data/`, and token cache files as local artifacts, not source files.
