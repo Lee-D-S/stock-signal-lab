@@ -61,6 +61,39 @@ REQUIRED_PIPELINE_AGENTS = [
     "TraderAgent",
 ]
 
+ANALYST_SECTION_LABELS = {
+    "business_model": "사업모델",
+    "investment_thesis": "투자 가설",
+    "risk": "리스크",
+    "disconfirmation": "반증 조건",
+}
+
+ANALYST_STATUS_LABELS = {
+    "complete": "완료",
+    "partial": "부분",
+    "missing": "없음",
+    "unreadable": "읽기불가",
+}
+
+ANALYST_CONFIDENCE_LABELS = {
+    "high": "높음",
+    "medium": "보통",
+    "low": "낮음",
+    "none": "없음",
+}
+
+
+def label_research_sections(items: list[str]) -> list[str]:
+    return [ANALYST_SECTION_LABELS.get(item, item) for item in items]
+
+
+def label_analyst_status(value: str) -> str:
+    return ANALYST_STATUS_LABELS.get(value, value)
+
+
+def label_confidence(value: str) -> str:
+    return ANALYST_CONFIDENCE_LABELS.get(value, value)
+
 
 class QuantSignalAgent:
     name = "QuantSignalAgent"
@@ -131,7 +164,7 @@ class EquityResearchAnalystAgent:
             if status != "approve":
                 warnings.append(
                     f"{candidate.ticker}: 애널리스트 검토 상태가 {analysis['analysis_status']} 입니다 "
-                    f"({', '.join(analysis['missing_items']) or '누락 항목 상세 없음'})."
+                    f"({', '.join(label_research_sections(analysis['missing_items'])) or '누락 항목 상세 없음'})."
                 )
             if analysis["forbidden_keyword_hits"]:
                 warnings.append(
@@ -194,7 +227,7 @@ class ResearchFileAgent:
             if quality["missing_required_sections"]:
                 warnings.append(
                     f"{candidate.ticker}: 리서치 누락 섹션이 있습니다 - "
-                    + ", ".join(quality["missing_required_sections"])
+                    + ", ".join(label_research_sections(quality["missing_required_sections"]))
                 )
             if quality["readability"] != "ok":
                 warnings.append(f"{candidate.ticker}: 리서치 파일 가독성 상태는 {quality['readability']} 입니다.")
@@ -560,10 +593,10 @@ class ComplianceOfficerAgent:
                 warnings.append("수동 후보 원천이 없습니다.")
                 status = combine_statuses([status, "needs_review"])
             if research_signal.get("analyst_source_file_mismatch"):
-                warnings.append("analyst source files do not match ResearchFile review.")
+                warnings.append("애널리스트 원천 파일과 ResearchFile 검토가 일치하지 않습니다.")
                 status = combine_statuses([status, "needs_review"])
             if research_signal.get("analyst_research_missing_item_mismatch"):
-                warnings.append("analyst missing items conflict with ResearchFile missing sections.")
+                warnings.append("애널리스트 누락 항목과 ResearchFile 누락 섹션이 충돌합니다.")
                 status = combine_statuses([status, "needs_review"])
             if quality.get("forbidden_keyword_hits") and contains_blocking_information(quality["forbidden_keyword_hits"]):
                 status = combine_statuses([status, "block"])
@@ -994,9 +1027,9 @@ def build_final_side_reason(risk_status: str, compliance_status: str, portfolio_
     if portfolio_side == "hold":
         reasons.append("PortfolioManager가 hold를 제안했습니다")
     if risk_status != "approve":
-        reasons.append(f"RiskManager 상태는 {risk_status} 입니다")
+        reasons.append(f"리스크 검토 상태는 {risk_status} 입니다")
     if compliance_status != "approve":
-        reasons.append(f"ComplianceOfficer 상태는 {compliance_status} 입니다")
+        reasons.append(f"준법 검토 상태는 {compliance_status} 입니다")
     return "; ".join(reasons) or "규칙 기반 게이트에서 hold 처리했습니다"
 
 
@@ -1514,13 +1547,17 @@ def render_markdown_report(
             "|---|---|---|---|---|",
         ])
         for signal in analyst.signals:
+            missing_items = [
+                ANALYST_SECTION_LABELS.get(item, item)
+                for item in signal.get("missing_items", [])
+            ]
             lines.append(
                 "| {ticker} | {name} | {analysis} | {confidence} | {missing} |".format(
                     ticker=signal.get("ticker", ""),
                     name=signal.get("name", ""),
-                    analysis=signal.get("analysis_status", ""),
-                    confidence=signal.get("confidence", ""),
-                    missing=", ".join(signal.get("missing_items", [])),
+                    analysis=label_analyst_status(str(signal.get("analysis_status", ""))),
+                    confidence=label_confidence(str(signal.get("confidence", ""))),
+                    missing=", ".join(missing_items),
                 )
             )
 
@@ -1530,7 +1567,7 @@ def render_markdown_report(
             "",
             "## 후보 표",
             "",
-            "| 종목코드 | 종목명 | 방향 | 금액 | 수량 | Risk | Compliance | 주요 사유 |",
+            "| 종목코드 | 종목명 | 방향 | 금액 | 수량 | 리스크 | 준법 | 주요 사유 |",
             "|---|---|---:|---:|---:|---|---|---|",
         ])
         for proposal in trader.signals:
@@ -1541,8 +1578,8 @@ def render_markdown_report(
                     side=proposal["side"],
                     amount=int(proposal["suggested_amount"]),
                     quantity=int(proposal["suggested_quantity"]),
-                    risk=proposal["risk_status"],
-                    compliance=proposal["compliance_status"],
+                    risk=label_analyst_status(str(proposal["risk_status"])),
+                    compliance=label_analyst_status(str(proposal["compliance_status"])),
                     reason=proposal.get("final_side_reason") or proposal.get("reason", ""),
                 )
             )

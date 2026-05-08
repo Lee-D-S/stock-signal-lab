@@ -5,6 +5,17 @@ from typing import Any
 
 from core.agents.free_base import AgentStatus, Candidate, OrderProposal, PortfolioPosition
 
+RESEARCH_SECTION_LABELS = {
+    "business_model": "사업모델",
+    "investment_thesis": "투자 가설",
+    "risk": "리스크",
+    "disconfirmation": "반증 조건",
+}
+
+
+def label_research_sections(items: list[str]) -> list[str]:
+    return [RESEARCH_SECTION_LABELS.get(item, item) for item in items]
+
 
 def worst_status(statuses: list[AgentStatus]) -> AgentStatus:
     priority = {"block": 3, "needs_review": 2, "approve": 1, "info": 0}
@@ -40,7 +51,7 @@ def check_risk_rules(
 
     if suggested_amount > cash:
         statuses.append("needs_review")
-        warnings.append("cash is insufficient for suggested_amount.")
+        warnings.append("현금이 부족하여 제안 금액을 충당할 수 없습니다.")
 
     if daily_new_buy_amount > max_daily_new_buy_amount:
         statuses.append("block")
@@ -77,14 +88,14 @@ def check_risk_rules(
                 )
         else:
             statuses.append("needs_review")
-            warnings.append("sector is missing; sector concentration could not be checked.")
+            warnings.append("섹터 정보가 없어 섹터 집중도를 확인할 수 없습니다.")
 
     if min_liquidity_value is None or min_liquidity_value <= 0:
         statuses.append("needs_review")
-        warnings.append("liquidity data is missing or invalid.")
+        warnings.append("유동성 데이터가 없거나 유효하지 않습니다.")
     elif suggested_amount > min_liquidity_value * 0.01:
         statuses.append("needs_review")
-        warnings.append("suggested_amount exceeds 1% of observed trade amount.")
+        warnings.append("제안 금액이 관측 거래대금의 1%를 초과합니다.")
 
     return worst_status(statuses), warnings
 
@@ -101,27 +112,27 @@ def check_compliance_rules(
 
     if require_research_file and not research_matches:
         statuses.append("needs_review")
-        warnings.append("no research file found for candidate.")
+        warnings.append("후보에 대한 리서치 파일을 찾지 못했습니다.")
 
     if not candidate.ticker or len(candidate.ticker) != 6 or not candidate.ticker.isdigit():
         statuses.append("block")
-        warnings.append("ticker must be a 6 digit code.")
+        warnings.append("종목코드는 6자리 숫자여야 합니다.")
 
     if candidate.source_type == "manual" and not candidate.source:
         statuses.append("needs_review")
-        warnings.append("manual candidate must retain a source.")
+        warnings.append("수동 후보는 원천 정보를 유지해야 합니다.")
 
     if research_quality:
         missing_sections = research_quality.get("missing_required_sections", [])
         if missing_sections:
             statuses.append("needs_review")
-            warnings.append("research file is missing required sections: " + ", ".join(missing_sections))
+            warnings.append("리서치 파일에 필수 섹션이 없습니다: " + ", ".join(label_research_sections(missing_sections)))
         if research_quality.get("is_stale"):
             statuses.append("needs_review")
-            warnings.append("research file is stale.")
+            warnings.append("리서치 파일이 오래됐습니다.")
         if research_quality.get("forbidden_keyword_hits"):
             statuses.append("needs_review")
-            warnings.append("research file contains unverified/rumor keywords.")
+            warnings.append("리서치 파일에 검증되지 않은 정보나 루머 키워드가 있습니다.")
 
     return worst_status(statuses), warnings
 
@@ -142,22 +153,22 @@ def check_order_proposal_rules(proposal: OrderProposal) -> tuple[AgentStatus, li
             continue
         if value in ("", None, []):
             statuses.append("needs_review")
-            warnings.append(f"order proposal field is empty: {key}")
+            warnings.append(f"주문 초안 항목이 비어 있습니다: {key}")
 
     if proposal.side not in {"buy", "sell", "hold"}:
         statuses.append("block")
-        warnings.append("order proposal side must be buy, sell, or hold.")
+        warnings.append("주문 초안 방향은 buy, sell, hold 중 하나여야 합니다.")
 
     if proposal.side != "hold" and proposal.suggested_quantity <= 0:
         statuses.append("needs_review")
-        warnings.append("suggested_quantity is not positive.")
+        warnings.append("제안 수량이 양수가 아닙니다.")
 
     if proposal.side == "hold" and (proposal.suggested_amount != 0 or proposal.suggested_quantity != 0):
         statuses.append("block")
-        warnings.append("hold proposal must have zero amount and zero quantity.")
+        warnings.append("hold 초안은 금액과 수량이 모두 0이어야 합니다.")
 
     if proposal.execution_allowed:
         statuses.append("block")
-        warnings.append("execution_allowed must remain false in the free pipeline.")
+        warnings.append("free pipeline에서는 execution_allowed가 false여야 합니다.")
 
     return worst_status(statuses), warnings
