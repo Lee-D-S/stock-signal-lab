@@ -756,40 +756,106 @@ class FreeAgentPipeline:
         context.run_dir.mkdir(parents=True, exist_ok=True)
 
         results: list[AgentResult] = []
-        for filename, result in [
-            ("quant_signal.json", self.quant.run(context)),
-        ]:
-            result.write_json(context.run_dir / filename)
-            results.append(result)
+        quant_result = self._run_step(context, "quant_signal.json", self.quant.run, context)
+        results.append(quant_result)
 
-        analyst_result = self.analyst.run(context)
-        analyst_result.write_json(context.run_dir / "equity_research_analyst.json")
+        analyst_result = self._run_step(
+            context,
+            "equity_research_analyst.json",
+            self.analyst.run,
+            context,
+        )
         results.append(analyst_result)
 
-        research_result = self.research.run(context, analyst_result)
-        research_result.write_json(context.run_dir / "research_file.json")
+        research_result = self._run_step(
+            context,
+            "research_file.json",
+            self.research.run,
+            context,
+            analyst_result,
+        )
         results.append(research_result)
 
-        portfolio_result = self.portfolio.run(context, analyst_result, research_result)
-        portfolio_result.write_json(context.run_dir / "portfolio_manager.json")
+        portfolio_result = self._run_step(
+            context,
+            "portfolio_manager.json",
+            self.portfolio.run,
+            context,
+            analyst_result,
+            research_result,
+        )
         results.append(portfolio_result)
 
-        risk_result = self.risk.run(context, analyst_result, research_result)
-        risk_result.write_json(context.run_dir / "risk_manager.json")
+        risk_result = self._run_step(
+            context,
+            "risk_manager.json",
+            self.risk.run,
+            context,
+            analyst_result,
+            research_result,
+        )
         results.append(risk_result)
 
-        compliance_result = self.compliance.run(context, analyst_result, research_result)
-        compliance_result.write_json(context.run_dir / "compliance_officer.json")
+        compliance_result = self._run_step(
+            context,
+            "compliance_officer.json",
+            self.compliance.run,
+            context,
+            analyst_result,
+            research_result,
+        )
         results.append(compliance_result)
 
-        trader_result = self.trader.run(context, portfolio_result, risk_result, compliance_result)
-        trader_result.write_json(context.run_dir / "trader_order_proposal.json")
+        trader_result = self._run_step(
+            context,
+            "trader_order_proposal.json",
+            self.trader.run,
+            context,
+            portfolio_result,
+            risk_result,
+            compliance_result,
+        )
         results.append(trader_result)
 
-        operations_result = self.operations.run(context, results)
-        operations_result.write_json(context.run_dir / "operations_report.json")
+        operations_result = self._run_step(
+            context,
+            "operations_report.json",
+            self.operations.run,
+            context,
+            results,
+        )
         results.append(operations_result)
+        try:
+            write_pipeline_manifest(context, results)
+        except Exception as exc:  # noqa: BLE001
+            operations_result.warnings.append(
+                f"failed to write pipeline_manifest.json: {type(exc).__name__}: {exc}"
+            )
+            operations_result.status = combine_statuses([operations_result.status, "needs_review"])
+            operations_result.write_json(context.run_dir / "operations_report.json")
         return results
+
+    def _run_step(self, context: AgentContext, filename: str, func: Any, *args: Any) -> AgentResult:
+        try:
+            result = func(*args)
+        except Exception as exc:  # noqa: BLE001
+            agent_name = infer_agent_name(func)
+            result = AgentResult(
+                agent=agent_name,
+                status="block",
+                summary=f"{agent_name} failed; failure result was recorded.",
+                warnings=[f"{type(exc).__name__}: {exc}"],
+                required_human_checks=[
+                    f"Review {agent_name} failure before using this run for any investment decision."
+                ],
+                artifacts={"failed_step_file": filename},
+            )
+        try:
+            result.write_json(context.run_dir / filename)
+        except Exception as exc:  # noqa: BLE001
+            result.warnings.append(f"failed to write {filename}: {type(exc).__name__}: {exc}")
+            result.status = combine_statuses([result.status, "block"])
+        return result
 
 
 def combine_statuses(statuses: list[str]) -> str:
@@ -970,6 +1036,43 @@ def build_operations_metadata(context: AgentContext, results: list[AgentResult])
         "blocked_by_compliance": blocked_by_compliance,
         "report_integrity_status": report_integrity_status,
     }
+
+
+def infer_agent_name(func: Any) -> str:
+    owner = getattr(func, "__self__", None)
+    return str(getattr(owner, "name", getattr(func, "__name__", "UnknownAgent")))
+
+
+def write_pipeline_manifest(context: AgentContext, results: list[AgentResult]) -> None:
+    trader = next((result for result in results if result.agent == "TraderAgent"), None)
+    broker_api_called = bool(
+        trader and trader.artifacts.get("broker_api_called", False)
+    )
+    manifest = {
+        "run_date": context.run_date.isoformat(),
+        "run_dir": str(context.run_dir),
+        "agent_order": [result.agent for result in results],
+        "final_status": combine_statuses([result.status for result in results]),
+        "candidate_count": len(context.candidates),
+        "broker_api_called": broker_api_called,
+        "actual_order_execution_prohibited": True,
+        "artifacts": {
+            "quant_signal": str(context.run_dir / "quant_signal.json"),
+            "equity_research_analyst": str(context.run_dir / "equity_research_analyst.json"),
+            "research_file": str(context.run_dir / "research_file.json"),
+            "portfolio_manager": str(context.run_dir / "portfolio_manager.json"),
+            "risk_manager": str(context.run_dir / "risk_manager.json"),
+            "compliance_officer": str(context.run_dir / "compliance_officer.json"),
+            "trader_order_proposal": str(context.run_dir / "trader_order_proposal.json"),
+            "operations_report": str(context.run_dir / "operations_report.json"),
+            "final_committee_report": str(context.run_dir / "final_committee_report.md"),
+            "telegram_summary": str(context.run_dir / "telegram_summary.txt"),
+        },
+    }
+    (context.run_dir / "pipeline_manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dict[str, Any]:
