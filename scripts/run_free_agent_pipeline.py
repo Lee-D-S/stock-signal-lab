@@ -24,19 +24,19 @@ DEFAULT_OUTPUT_DIR = ROOT / "data" / "agent_runs"
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the free rule-based investment agent pipeline without LLM/API calls."
+        description="LLM/API 없이 무료 규칙 기반 투자 Agent 파이프라인을 실행합니다."
     )
-    parser.add_argument("--date", default=date.today().isoformat(), help="Run date (YYYY-MM-DD).")
+    parser.add_argument("--date", default=date.today().isoformat(), help="실행 기준일 (YYYY-MM-DD)")
     parser.add_argument(
         "--candidate",
         action="append",
         default=[],
-        help="Candidate in TICKER[:NAME[:AMOUNT]] format. Can be repeated.",
+        help="TICKER[:NAME[:AMOUNT]] 형식의 후보 입력입니다. 여러 번 지정할 수 있습니다.",
     )
     parser.add_argument(
         "--discover",
         action="store_true",
-        help="Discover candidates from recent CSV files when --candidate is not provided.",
+        help="--candidate가 없을 때 최근 CSV 파일에서 후보를 찾습니다.",
     )
     parser.add_argument("--discover-limit", type=int, default=10)
     parser.add_argument("--portfolio-json", type=Path)
@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-require-research-file",
         action="store_true",
-        help="Do not require an existing research file for compliance approval.",
+        help="준법 승인에 기존 리서치 파일을 필수로 요구하지 않습니다.",
     )
     return parser.parse_args()
 
@@ -83,7 +83,7 @@ def main() -> None:
     )
 
     results = FreeAgentPipeline().run(context)
-    print(f"run_dir={context.run_dir}")
+    print(f"실행 폴더={context.run_dir}")
     for result in results:
         print(f"{result.agent}: {result.status} - {result.summary}")
 

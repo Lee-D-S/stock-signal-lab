@@ -77,35 +77,35 @@ class QuantSignalAgent:
                 signal["source_age_days"] = round(age_days, 1)
                 if age_days > stale_days:
                     warnings.append(
-                        f"{candidate.ticker}: source signal is stale ({age_days:.1f} days)."
+                        f"{candidate.ticker}: 원천 신호가 오래됐습니다 ({age_days:.1f}일)."
                     )
             elif candidate.source_type != "manual":
-                warnings.append(f"{candidate.ticker}: source file does not exist: {candidate.source}")
+                warnings.append(f"{candidate.ticker}: 원천 파일이 없습니다: {candidate.source}")
             if not candidate.ticker or not TICKER_RE.fullmatch(candidate.ticker):
-                warnings.append(f"{candidate.ticker or '<missing>'}: ticker is not a 6 digit code.")
+                warnings.append(f"{candidate.ticker or '<missing>'}: 종목코드가 6자리 형식이 아닙니다.")
             if not candidate.name:
-                warnings.append(f"{candidate.ticker}: name is missing.")
+                warnings.append(f"{candidate.ticker}: 종목명이 없습니다.")
             if candidate.current_price is None:
-                warnings.append(f"{candidate.ticker}: current_price is missing.")
+                warnings.append(f"{candidate.ticker}: 현재가가 없습니다.")
             if candidate.trade_amount is None:
-                warnings.append(f"{candidate.ticker}: trade_amount is missing.")
+                warnings.append(f"{candidate.ticker}: 거래대금이 없습니다.")
             if candidate.signal_count <= 0:
-                warnings.append(f"{candidate.ticker}: signal_count is missing.")
+                warnings.append(f"{candidate.ticker}: 신호 개수가 없습니다.")
             if not candidate.signal_details:
-                warnings.append(f"{candidate.ticker}: signal_details is empty.")
+                warnings.append(f"{candidate.ticker}: 신호 상세가 비어 있습니다.")
             signals.append(signal)
         if not signals:
-            warnings.append("no candidates were provided or discovered.")
+            warnings.append("후보가 제공되거나 발견되지 않았습니다.")
 
         return AgentResult(
             agent=self.name,
             status="info" if signals else "needs_review",
-            summary=f"{len(signals)} candidate(s) prepared for rule-based review.",
+            summary=f"{len(signals)}개 후보를 규칙 기반 검토용으로 정리했습니다.",
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Confirm the source signal is still valid before any manual order.",
-                "Review candidates with missing price or liquidity data before Risk and Trader steps.",
+                "수동 주문 전에 원천 신호가 아직 유효한지 확인하세요.",
+                "가격이나 유동성 데이터가 없는 후보는 Risk와 Trader 단계 전에 검토하세요.",
             ],
             artifacts={
                 "candidate_count": len(signals),
@@ -130,32 +130,32 @@ class EquityResearchAnalystAgent:
             statuses.append(status)
             if status != "approve":
                 warnings.append(
-                    f"{candidate.ticker}: analyst review is {analysis['analysis_status']} "
-                    f"({', '.join(analysis['missing_items']) or 'no missing item detail'})."
+                    f"{candidate.ticker}: 애널리스트 검토 상태가 {analysis['analysis_status']} 입니다 "
+                    f"({', '.join(analysis['missing_items']) or '누락 항목 상세 없음'})."
                 )
             if analysis["forbidden_keyword_hits"]:
                 warnings.append(
-                    f"{candidate.ticker}: analyst source contains caution keywords - "
+                    f"{candidate.ticker}: 애널리스트 원천에 주의 키워드가 있습니다 - "
                     + ", ".join(analysis["forbidden_keyword_hits"])
                 )
             if analysis.get("readability") not in {"ok", "missing"}:
                 warnings.append(
-                    f"{candidate.ticker}: analyst source readability is {analysis['readability']}."
+                    f"{candidate.ticker}: 애널리스트 원천 가독성 상태는 {analysis['readability']} 입니다."
                 )
             signals.append(analysis)
 
         if not context.candidates:
-            warnings.append("no candidates available for analyst review.")
+            warnings.append("애널리스트 검토할 후보가 없습니다.")
 
         return AgentResult(
             agent=self.name,
             status=combine_statuses(statuses),
-            summary=f"{len(signals)} candidate research review(s) prepared.",
+            summary=f"{len(signals)}개 후보의 리서치 검토를 준비했습니다.",
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Fill missing business, earnings, valuation, risk, and disconfirmation items before treating a candidate as investable.",
-                "Review stale or partially readable source files before Portfolio and Compliance treat the analysis as reliable.",
+                "후보를 투자 가능 대상으로 보기 전에 사업, 실적, 밸류에이션, 리스크, 반증 조건 누락 항목을 채우세요.",
+                "오래됐거나 부분적으로만 읽히는 원천 파일은 Portfolio와 Compliance가 신뢰하기 전에 다시 확인하세요.",
             ],
             artifacts={
                 "research_root": str(context.research_root),
@@ -173,7 +173,7 @@ class ResearchFileAgent:
         warnings: list[str] = []
         analyst_by_ticker = result_by_ticker(analyst_result)
         if not context.research_root.exists():
-            warnings.append(f"research root does not exist: {context.research_root}")
+            warnings.append(f"리서치 루트가 없습니다: {context.research_root}")
         for candidate in context.candidates:
             matches = find_research_files(context.research_root, candidate)
             quality = analyze_research_files(matches, context.run_date)
@@ -190,25 +190,25 @@ class ResearchFileAgent:
                 and bool(quality["missing_required_sections"])
             )
             if not matches:
-                warnings.append(f"{candidate.ticker}: no research file found.")
+                warnings.append(f"{candidate.ticker}: 리서치 파일을 찾지 못했습니다.")
             if quality["missing_required_sections"]:
                 warnings.append(
-                    f"{candidate.ticker}: missing research sections - "
+                    f"{candidate.ticker}: 리서치 누락 섹션이 있습니다 - "
                     + ", ".join(quality["missing_required_sections"])
                 )
             if quality["readability"] != "ok":
-                warnings.append(f"{candidate.ticker}: research file readability is {quality['readability']}.")
+                warnings.append(f"{candidate.ticker}: 리서치 파일 가독성 상태는 {quality['readability']} 입니다.")
             if quality["is_stale"]:
-                warnings.append(f"{candidate.ticker}: research file is stale.")
+                warnings.append(f"{candidate.ticker}: 리서치 파일이 오래됐습니다.")
             if quality["forbidden_keyword_hits"]:
                 warnings.append(
-                    f"{candidate.ticker}: research file contains caution keywords - "
+                    f"{candidate.ticker}: 리서치 파일에 주의 키워드가 있습니다 - "
                     + ", ".join(quality["forbidden_keyword_hits"])
                 )
             if analyst_source_file_mismatch:
-                warnings.append(f"{candidate.ticker}: analyst source files do not match research files.")
+                warnings.append(f"{candidate.ticker}: 애널리스트 원천 파일과 리서치 파일이 일치하지 않습니다.")
             if analyst_complete_research_incomplete:
-                warnings.append(f"{candidate.ticker}: analyst marked complete but research file is incomplete.")
+                warnings.append(f"{candidate.ticker}: 애널리스트는 complete로 표시했지만 리서치 파일은 불완전합니다.")
             signals.append({
                 "ticker": candidate.ticker,
                 "name": candidate.name,
@@ -235,18 +235,18 @@ class ResearchFileAgent:
             status = "needs_review"
         if not context.candidates:
             status = "needs_review"
-            warnings.append("no candidates available for research file review.")
+            warnings.append("리서치 파일 검토할 후보가 없습니다.")
 
         return AgentResult(
             agent=self.name,
             status=status,
-            summary="Research file presence check completed.",
+            summary="리서치 파일 존재 및 품질 검사를 완료했습니다.",
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Read the matched research files and update the investment thesis manually.",
-                "If no usable report exists, run scripts/run_new_company_reports.py --include-existing-missing.",
-                "Resolve Analyst and ResearchFile mismatches before Compliance treats the evidence chain as complete.",
+                "매칭된 리서치 파일을 읽고 투자 가설을 수동으로 보강하세요.",
+                "쓸 수 있는 보고서가 없다면 scripts/run_new_company_reports.py --include-existing-missing 를 실행하세요.",
+                "Compliance가 증거 체인을 완전하다고 보기 전에 Analyst와 ResearchFile 불일치를 해결하세요.",
             ],
             artifacts={
                 "research_root": str(context.research_root),
@@ -273,14 +273,14 @@ class PortfolioManagerAgent:
         analyst_by_ticker = result_by_ticker(analyst_result)
         research_by_ticker = result_by_ticker(research_result)
         if context.portfolio_value <= 0:
-            warnings.append("portfolio snapshot is missing or has zero value.")
+            warnings.append("포트폴리오 스냅샷이 없거나 가치가 0입니다.")
         if not context.candidates:
-            warnings.append("no candidates available for portfolio review.")
+            warnings.append("포트폴리오 검토할 후보가 없습니다.")
         for position in context.portfolio:
             if position.quantity < 0:
                 warnings.append(f"{position.ticker}: portfolio position quantity is negative.")
             if position.quantity > 0 and position.market_value <= 0:
-                warnings.append(f"{position.ticker}: portfolio position market value is zero.")
+                warnings.append(f"{position.ticker}: 포트폴리오 보유 종목의 평가금액이 0입니다.")
         for candidate in context.candidates:
             amount = candidate.suggested_amount or default_amount
             current_position = portfolio_by_ticker.get(candidate.ticker)
@@ -306,32 +306,32 @@ class PortfolioManagerAgent:
                 if analyst_signal.get("key_risks"):
                     portfolio_constraints.append("analyst_key_risks_present")
             elif context.portfolio_value <= 0:
-                reason = "Portfolio snapshot is missing; allocation decision requires review."
+                reason = "포트폴리오 스냅샷이 없어 배분 결정을 검토해야 합니다."
                 action_detail = "needs_portfolio_snapshot"
                 portfolio_constraints.append("missing_portfolio_snapshot")
-                warnings.append(f"{candidate.ticker}: portfolio snapshot is missing.")
+                warnings.append(f"{candidate.ticker}: 포트폴리오 스냅샷이 없습니다.")
             elif amount > context.cash:
-                reason = "Cash is insufficient for a new buy draft."
+                reason = "새 매수 초안을 만들 현금이 부족합니다."
                 action_detail = "cash_limited"
                 portfolio_constraints.append("cash_limited")
-                warnings.append(f"{candidate.ticker}: cash is insufficient.")
+                warnings.append(f"{candidate.ticker}: 현금이 부족합니다.")
             elif analysis_status != "complete":
-                reason = "Equity research is incomplete; allocation decision requires analyst review."
+                reason = "기업 리서치가 불완전하여 배분 결정을 다시 검토해야 합니다."
                 action_detail = "needs_equity_research"
                 portfolio_constraints.append("incomplete_equity_research")
-                warnings.append(f"{candidate.ticker}: equity research is {analysis_status}.")
+                warnings.append(f"{candidate.ticker}: 기업 리서치 상태가 {analysis_status} 입니다.")
             elif research_quality_status != "usable" or research_is_stale or research_source_mismatch:
-                reason = "Research file quality is insufficient for a new buy draft."
+                reason = "새 매수 초안을 만들기엔 리서치 파일 품질이 부족합니다."
                 action_detail = "needs_research_file_quality"
                 portfolio_constraints.append(f"research_quality_{research_quality_status}")
                 if research_is_stale:
                     portfolio_constraints.append("stale_research")
                 if research_source_mismatch:
                     portfolio_constraints.append("analyst_research_source_mismatch")
-                warnings.append(f"{candidate.ticker}: research file quality is {research_quality_status}.")
+                warnings.append(f"{candidate.ticker}: 리서치 파일 품질 상태가 {research_quality_status} 입니다.")
             else:
                 side = "buy"
-                reason = "New candidate with available cash; draft only, subject to risk and compliance."
+                reason = "현금이 있어 신규 후보를 초안으로 제시합니다. Risk와 Compliance 검토가 필요합니다."
                 action_detail = "new_buy_candidate"
             current_value = current_position.market_value if current_position else 0.0
             current_weight = current_value / context.portfolio_value if context.portfolio_value > 0 else 0.0
@@ -359,11 +359,11 @@ class PortfolioManagerAgent:
         return AgentResult(
             agent=self.name,
             status="needs_review" if warnings or not signals else "info",
-            summary=f"{len(signals)} portfolio action(s) drafted.",
+            summary=f"{len(signals)}개 포트폴리오 조치를 초안으로 작성했습니다.",
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Compare each action with current cash, allocation policy, and thesis quality."
+                "각 조치를 현재 현금, 배분 정책, 투자 가설 품질과 비교하세요."
             ],
             artifacts={
                 "portfolio_value": context.portfolio_value,
@@ -398,9 +398,9 @@ class RiskManagerAgent:
             if not any(position.ticker == candidate.ticker for position in context.portfolio)
         )
         if not context.candidates:
-            all_warnings.append("no candidates available for risk review.")
+            all_warnings.append("리스크 검토할 후보가 없습니다.")
         if context.portfolio_value <= 0:
-            all_warnings.append("portfolio snapshot is missing or has zero value.")
+            all_warnings.append("포트폴리오 스냅샷이 없거나 가치가 0입니다.")
         for candidate in context.candidates:
             amount = candidate.suggested_amount or default_amount
             projection = build_risk_projection(candidate, context.portfolio, context.portfolio_value, amount)
@@ -420,10 +420,10 @@ class RiskManagerAgent:
             analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
             research_signal = research_by_ticker.get(candidate.ticker, {})
             if analyst_signal.get("key_risks"):
-                warnings.append("analyst key risks require manual risk review.")
+                warnings.append("애널리스트 핵심 리스크는 수동 리스크 검토가 필요합니다.")
                 status = combine_statuses([status, "needs_review"])
             if research_signal.get("quality_status") in {"missing", "incomplete", "stale", "unreadable"}:
-                warnings.append("research quality is weak; risk inputs may be incomplete.")
+                warnings.append("리서치 품질이 약해 Risk 입력이 불완전할 수 있습니다.")
                 status = combine_statuses([status, "needs_review"])
             statuses.append(status)
             all_warnings.extend(f"{candidate.ticker}: {warning}" for warning in warnings)
@@ -456,12 +456,12 @@ class RiskManagerAgent:
         return AgentResult(
             agent=self.name,
             status=combine_statuses(statuses),
-            summary="Risk guardrail checks completed.",
+            summary="리스크 가드레일 검사를 완료했습니다.",
             signals=signals,
             warnings=all_warnings,
             required_human_checks=[
-                "Do not place orders for blocked candidates.",
-                "Manually confirm liquidity and event risk before any order.",
+                "차단된 후보는 주문하지 마세요.",
+                "주문 전에 유동성과 이벤트 리스크를 수동으로 확인하세요.",
             ],
             artifacts={
                 "max_position_pct": context.config["max_position_pct"],
@@ -491,7 +491,7 @@ class ComplianceOfficerAgent:
         analyst_by_ticker = result_by_ticker(analyst_result)
         research_by_ticker = result_by_ticker(research_result)
         if not context.candidates:
-            all_warnings.append("no candidates available for compliance review.")
+            all_warnings.append("준법 검토할 후보가 없습니다.")
         for candidate in context.candidates:
             analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
             research_signal = research_by_ticker.get(candidate.ticker, {})
@@ -530,14 +530,14 @@ class ComplianceOfficerAgent:
             }
             if analyst_signal:
                 if analyst_signal.get("analysis_status") != "complete":
-                    warnings.append("equity analyst review is incomplete.")
+                    warnings.append("기업 애널리스트 검토가 불완전합니다.")
                     status = combine_statuses([status, "needs_review"])
                 if analyst_signal.get("confidence") in {"low", "none"}:
-                    warnings.append("equity analyst confidence is low.")
+                    warnings.append("기업 애널리스트 신뢰도가 낮습니다.")
                     status = combine_statuses([status, "needs_review"])
                 analyst_forbidden_hits = analyst_signal.get("forbidden_keyword_hits", [])
                 if analyst_forbidden_hits:
-                    warnings.append("equity analyst found caution keywords.")
+                    warnings.append("기업 애널리스트가 주의 키워드를 발견했습니다.")
                     status = combine_statuses([
                         status,
                         "block" if contains_blocking_information(analyst_forbidden_hits) else "needs_review",
@@ -548,16 +548,16 @@ class ComplianceOfficerAgent:
                     "stale",
                     "unreadable",
                 }:
-                    warnings.append("analyst marked complete but research file review is not usable.")
+                    warnings.append("애널리스트는 complete로 표시했지만 리서치 파일 검토는 사용할 수 없습니다.")
                     status = combine_statuses([status, "needs_review"])
             else:
-                warnings.append("equity analyst result is missing.")
+                warnings.append("기업 애널리스트 결과가 없습니다.")
                 status = combine_statuses([status, "needs_review"])
             if record_status != "complete":
-                warnings.append(f"record status is {record_status}.")
+                warnings.append(f"기록 상태가 {record_status} 입니다.")
                 status = combine_statuses([status, "needs_review"])
             if manual_source_status == "missing":
-                warnings.append("manual candidate source is missing.")
+                warnings.append("수동 후보 원천이 없습니다.")
                 status = combine_statuses([status, "needs_review"])
             if research_signal.get("analyst_source_file_mismatch"):
                 warnings.append("analyst source files do not match ResearchFile review.")
@@ -590,12 +590,12 @@ class ComplianceOfficerAgent:
         return AgentResult(
             agent=self.name,
             status=combine_statuses(statuses),
-            summary="Compliance checklist completed.",
+            summary="준법 체크리스트를 완료했습니다.",
             signals=signals,
             warnings=all_warnings,
             required_human_checks=[
-                "Confirm there is no non-public information, rumor-only thesis, or missing record.",
-                "Resolve Analyst and ResearchFile evidence mismatches before treating the candidate as compliant.",
+                "미공개 정보, 루머만 있는 가설, 누락된 기록이 없는지 확인하세요.",
+                "후보를 준법 승인으로 보기 전에 Analyst와 ResearchFile 증거 불일치를 해결하세요.",
             ],
             artifacts={
                 "require_research_file": require_research,
@@ -658,14 +658,14 @@ class TraderAgent:
                 order_type_hint="manual_review_limit_order",
                 reason=portfolio_signal.get(
                     "reason",
-                    "Rule-based draft only; no broker API call was made.",
+                    "규칙 기반 초안일 뿐이며 브로커 API 호출은 수행하지 않았습니다.",
                 ),
                 risk_status=risk_status,
                 compliance_status=compliance_status,
                 human_checklist=[
-                    "Confirm current price and calculate quantity manually.",
-                    "Confirm ticker, side, amount, and order type before entering any order.",
-                    "Skip if Risk or Compliance status is block or needs_review.",
+                    "현재가를 확인하고 수량을 수동 계산하세요.",
+                    "주문 입력 전에 종목코드, 방향, 금액, 주문 유형을 다시 확인하세요.",
+                    "Risk 또는 Compliance 상태가 block 또는 needs_review이면 건너뛰세요.",
                 ],
                 portfolio_side=portfolio_side if portfolio_side in {"buy", "sell", "hold"} else "hold",
                 final_side_reason=final_side_reason,
@@ -680,12 +680,12 @@ class TraderAgent:
             status, proposal_warnings = check_order_proposal_rules(proposal)
             if risk_status != "approve" or compliance_status != "approve":
                 status = "needs_review" if status != "block" else status
-                proposal_warnings.append("risk or compliance is not approved; order proposal is hold.")
+                proposal_warnings.append("Risk 또는 Compliance가 승인되지 않아 주문 초안은 hold입니다.")
             if portfolio_side == "hold":
                 status = "needs_review" if status != "block" else status
             if side != "hold" and quantity <= 0:
                 status = "needs_review" if status != "block" else status
-                proposal_warnings.append("current price is missing or invalid; quantity could not be calculated.")
+                proposal_warnings.append("현재가가 없거나 유효하지 않아 수량을 계산할 수 없습니다.")
             statuses.append(status)
             warnings.extend(f"{candidate.ticker}: {warning}" for warning in proposal_warnings)
             proposals.append(proposal)
@@ -693,11 +693,11 @@ class TraderAgent:
         return AgentResult(
             agent=self.name,
             status=combine_statuses(statuses),
-            summary=f"{len(proposals)} draft order proposal(s) generated without execution.",
+            summary=f"{len(proposals)}개의 주문 초안을 실행 없이 생성했습니다.",
             signals=[proposal.to_dict() for proposal in proposals],
             warnings=warnings,
             required_human_checks=[
-                "This pipeline never executes orders. Entering an order is a separate manual action."
+                "이 파이프라인은 절대 주문을 실행하지 않습니다. 주문 입력은 별도의 수동 작업입니다."
             ],
             artifacts={
                 "broker_api_called": False,
@@ -722,16 +722,16 @@ class OperationsReportAgent:
         summary_path.write_text(render_short_summary(context, results, metadata), encoding="utf-8")
         warnings = []
         if metadata["missing_agents"]:
-            warnings.append("missing required agents: " + ", ".join(metadata["missing_agents"]))
+            warnings.append("누락된 필수 에이전트: " + ", ".join(metadata["missing_agents"]))
         if metadata["report_integrity_status"] != "ok":
-            warnings.append("report integrity check is " + metadata["report_integrity_status"])
+            warnings.append("보고서 무결성 상태가 " + metadata["report_integrity_status"] + " 입니다.")
         return AgentResult(
             agent=self.name,
             status=combine_statuses([result.status for result in results] + (["needs_review"] if warnings else [])),
-            summary=f"Final report written to {report_path}.",
+            summary=f"최종 보고서를 {report_path}에 작성했습니다.",
             warnings=warnings,
             required_human_checks=[
-                "Confirm the Markdown report and trader JSON show the same candidates, sides, and hold reasons."
+                "Markdown 보고서와 Trader JSON의 후보, 방향, 보유 사유가 같은지 확인하세요."
             ],
             artifacts={
                 "report_path": str(report_path),
@@ -843,10 +843,10 @@ class FreeAgentPipeline:
             result = AgentResult(
                 agent=agent_name,
                 status="block",
-                summary=f"{agent_name} failed; failure result was recorded.",
+                summary=f"{agent_name} 실패가 발생해 실패 결과를 기록했습니다.",
                 warnings=[f"{type(exc).__name__}: {exc}"],
                 required_human_checks=[
-                    f"Review {agent_name} failure before using this run for any investment decision."
+                    f"이 실행을 투자 판단에 쓰기 전에 {agent_name} 실패 원인을 확인하세요."
                 ],
                 artifacts={"failed_step_file": filename},
             )
@@ -992,12 +992,12 @@ def contains_blocking_information(keywords: list[str]) -> bool:
 def build_final_side_reason(risk_status: str, compliance_status: str, portfolio_side: str) -> str:
     reasons: list[str] = []
     if portfolio_side == "hold":
-        reasons.append("PortfolioManager proposed hold")
+        reasons.append("PortfolioManager가 hold를 제안했습니다")
     if risk_status != "approve":
-        reasons.append(f"RiskManager status is {risk_status}")
+        reasons.append(f"RiskManager 상태는 {risk_status} 입니다")
     if compliance_status != "approve":
-        reasons.append(f"ComplianceOfficer status is {compliance_status}")
-    return "; ".join(reasons) or "held by rule-based gate"
+        reasons.append(f"ComplianceOfficer 상태는 {compliance_status} 입니다")
+    return "; ".join(reasons) or "규칙 기반 게이트에서 hold 처리했습니다"
 
 
 def build_operations_metadata(context: AgentContext, results: list[AgentResult]) -> dict[str, Any]:
@@ -1149,7 +1149,7 @@ def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dic
     )
     key_risks = build_analyst_risks(section_status, age_days, readability)
     disconfirmation = (
-        ["Disconfirmation condition section exists; verify details manually."]
+        ["반증 조건 섹션이 있어 세부 내용은 수동으로 확인하세요."]
         if section_status["disconfirmation"] in {"present", "weak"}
         else []
     )
@@ -1204,18 +1204,35 @@ def classify_analyst_section(text: str, keywords: tuple[str, ...]) -> str:
 def build_analyst_risks(section_status: dict[str, str], age_days: int, readability: str) -> list[str]:
     risks: list[str] = []
     if section_status.get("risk") == "missing":
-        risks.append("Risk section is missing.")
+        risks.append("리스크 섹션이 없습니다.")
     elif section_status.get("risk") == "weak":
-        risks.append("Risk section is weak and needs manual review.")
+        risks.append("리스크 섹션이 약해서 수동 검토가 필요합니다.")
     if section_status.get("valuation") in {"missing", "weak"}:
-        risks.append("Valuation support is insufficient.")
+        risks.append("밸류에이션 근거가 충분하지 않습니다.")
     if section_status.get("disconfirmation") in {"missing", "weak"}:
-        risks.append("Disconfirmation condition is insufficient.")
+        risks.append("반증 조건이 충분하지 않습니다.")
     if age_days > ANALYST_STALE_DAYS:
-        risks.append(f"Latest research file is stale ({age_days} days old).")
+        risks.append(f"최신 리서치 파일이 오래됐습니다 ({age_days}일).")
     if readability != "ok":
-        risks.append(f"Research readability is {readability}.")
-    return risks or ["Risk section exists; verify details manually."]
+        risks.append(f"리서치 가독성 상태는 {readability} 입니다.")
+    return risks or ["리스크 섹션이 있어 세부 내용은 수동으로 확인하세요."]
+
+
+def build_analyst_risks(section_status: dict[str, str], age_days: int, readability: str) -> list[str]:
+    risks: list[str] = []
+    if section_status.get("risk") == "missing":
+        risks.append("리스크 섹션이 없습니다.")
+    elif section_status.get("risk") == "weak":
+        risks.append("리스크 섹션이 약해서 수동 검토가 필요합니다.")
+    if section_status.get("valuation") in {"missing", "weak"}:
+        risks.append("밸류에이션 근거가 충분하지 않습니다.")
+    if section_status.get("disconfirmation") in {"missing", "weak"}:
+        risks.append("반증 조건이 충분하지 않습니다.")
+    if age_days > ANALYST_STALE_DAYS:
+        risks.append(f"최신 리서치 파일이 오래됐습니다 ({age_days}일).")
+    if readability != "ok":
+        risks.append(f"리서치 가독성 상태는 {readability} 입니다.")
+    return risks or ["리스크 섹션이 있어 세부 내용은 수동으로 확인하세요."]
 
 
 def combine_readability(values: list[str]) -> str:
@@ -1463,36 +1480,36 @@ def render_markdown_report(
     status_counts = metadata["status_counts"]
     candidate_counts = metadata["candidate_counts"]
     lines = [
-        "# Daily Investment Committee Report",
+        "# 일일 투자위원회 보고서",
         "",
-        "- No broker API call was made.",
-        "- Actual order execution is prohibited by this pipeline.",
-        "- This report is a review aid, not an investment instruction.",
+        "- 브로커 API 호출은 수행하지 않았습니다.",
+        "- 이 파이프라인에서는 실제 주문 실행이 금지됩니다.",
+        "- 이 보고서는 검토 보조 자료이며 투자 지시가 아닙니다.",
         "",
-        f"- Run date: {context.run_date.isoformat()}",
-        f"- Candidate count: {len(context.candidates)}",
-        f"- Portfolio value: {context.portfolio_value:,.0f}",
-        f"- Status counts: block={status_counts.get('block', 0)}, needs_review={status_counts.get('needs_review', 0)}, approve={status_counts.get('approve', 0)}, info={status_counts.get('info', 0)}",
-        f"- Draft buys: {candidate_counts['draft_buys']}, holds: {candidate_counts['holds']}",
-        f"- Blocked by Risk: {metadata['blocked_by_risk']}, blocked by Compliance: {metadata['blocked_by_compliance']}",
-        f"- Report integrity: {metadata['report_integrity_status']}",
+        f"- 실행 기준일: {context.run_date.isoformat()}",
+        f"- 후보 수: {len(context.candidates)}",
+        f"- 포트폴리오 가치: {context.portfolio_value:,.0f}",
+        f"- 상태 집계: block={status_counts.get('block', 0)}, needs_review={status_counts.get('needs_review', 0)}, approve={status_counts.get('approve', 0)}, info={status_counts.get('info', 0)}",
+        f"- 매수 초안: {candidate_counts['draft_buys']}, 보유/대기: {candidate_counts['holds']}",
+        f"- Risk 차단: {metadata['blocked_by_risk']}, Compliance 차단: {metadata['blocked_by_compliance']}",
+        f"- 보고서 무결성: {metadata['report_integrity_status']}",
         f"- Trader JSON: {context.run_dir / 'trader_order_proposal.json'}",
         "",
-        "## Agent Status",
+        "## 에이전트 상태",
         "",
     ]
     for result in results:
         lines.append(f"- {result.agent}: {result.status} - {result.summary}")
     if metadata["missing_agents"]:
-        lines.extend(["", "Missing required agents: " + ", ".join(metadata["missing_agents"])])
+        lines.extend(["", "누락된 필수 에이전트: " + ", ".join(metadata["missing_agents"])])
 
     analyst = next((result for result in results if result.agent == "EquityResearchAnalystAgent"), None)
     if analyst:
         lines.extend([
             "",
-            "## Equity Research Review",
+            "## 기업 리서치 검토",
             "",
-            "| Ticker | Name | Analysis | Confidence | Missing Items |",
+            "| 종목코드 | 종목명 | 분석 | 신뢰도 | 누락 항목 |",
             "|---|---|---|---|---|",
         ])
         for signal in analyst.signals:
@@ -1510,9 +1527,9 @@ def render_markdown_report(
     if trader:
         lines.extend([
             "",
-            "## Candidate Table",
+            "## 후보 표",
             "",
-            "| Ticker | Name | Side | Amount | Quantity | Risk | Compliance | Main Reason |",
+            "| 종목코드 | 종목명 | 방향 | 금액 | 수량 | Risk | Compliance | 주요 사유 |",
             "|---|---|---:|---:|---:|---|---|---|",
         ])
         for proposal in trader.signals:
@@ -1528,10 +1545,10 @@ def render_markdown_report(
                     reason=proposal.get("final_side_reason") or proposal.get("reason", ""),
                 )
             )
-        lines.extend(["", "## Draft Order Proposals", ""])
+        lines.extend(["", "## 주문 초안", ""])
         for proposal in trader.signals:
             lines.append(
-                "- {ticker} {name}: {side}, amount={amount:,}, quantity={quantity}, risk={risk}, compliance={compliance}".format(
+                "- {ticker} {name}: {side}, 금액={amount:,}, 수량={quantity}, risk={risk}, compliance={compliance}".format(
                     ticker=proposal["ticker"],
                     name=proposal["name"],
                     side=proposal["side"],
@@ -1542,7 +1559,7 @@ def render_markdown_report(
                 )
             )
     else:
-        lines.extend(["", "## Candidate Table", "", "Trader result missing; no candidate table was produced."])
+        lines.extend(["", "## 후보 표", "", "Trader 결과가 없어 후보 표를 생성하지 못했습니다."])
 
     warning_groups = {
         result.agent: result.warnings
@@ -1550,7 +1567,7 @@ def render_markdown_report(
         if result.warnings
     }
     if warning_groups:
-        lines.extend(["", "## Warnings", ""])
+        lines.extend(["", "## 경고", ""])
         for agent, warnings in warning_groups.items():
             lines.append(f"### {agent}")
             lines.extend(f"- {warning}" for warning in warnings)
@@ -1562,16 +1579,16 @@ def render_markdown_report(
         for check in result.required_human_checks
     })
     if checks:
-        lines.extend(["", "## Required Human Checks", ""])
+        lines.extend(["", "## 사람이 확인할 항목", ""])
         lines.extend(f"- {check}" for check in checks)
 
     lines.extend([
         "",
-        "## Notes",
+        "## 참고",
         "",
-        "- No broker API call was made.",
-        "- Actual order execution is prohibited by this pipeline.",
-        "- This report is a review aid, not an investment instruction.",
+        "- 브로커 API 호출은 수행하지 않았습니다.",
+        "- 이 파이프라인에서는 실제 주문 실행이 금지됩니다.",
+        "- 이 보고서는 검토 보조 자료이며 투자 지시가 아닙니다.",
         "",
     ])
     return "\n".join(lines)
@@ -1585,15 +1602,15 @@ def render_short_summary(
     final_status = combine_statuses([result.status for result in results])
     candidate_counts = metadata["candidate_counts"]
     return "\n".join([
-        f"{context.run_date.isoformat()} investment committee: {final_status}",
+        f"{context.run_date.isoformat()} 투자위원회: {final_status}",
         (
             f"candidates={len(context.candidates)}, "
-            f"draft_buys={candidate_counts['draft_buys']}, "
-            f"holds={candidate_counts['holds']}, "
+            f"매수초안={candidate_counts['draft_buys']}, "
+            f"보유대기={candidate_counts['holds']}, "
             f"blocked_by_risk={metadata['blocked_by_risk']}, "
             f"blocked_by_compliance={metadata['blocked_by_compliance']}"
         ),
-        "No broker API call was made. Manual review is required.",
+        "브로커 API 호출은 수행하지 않았습니다. 수동 검토가 필요합니다.",
         str(context.run_dir / "final_committee_report.md"),
         "",
     ])
