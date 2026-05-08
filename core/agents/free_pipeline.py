@@ -41,6 +41,14 @@ ANALYST_SECTION_KEYWORDS = {
     "risk": ("리스크", "risk", "위험"),
     "disconfirmation": ("반증", "반증 조건", "disconfirm", "무효화"),
 }
+ANALYST_STRONG_SECTIONS = {
+    "business_model",
+    "earnings_quality",
+    "valuation",
+    "risk",
+    "disconfirmation",
+}
+ANALYST_STALE_DAYS = 120
 
 
 class QuantSignalAgent:
@@ -119,6 +127,10 @@ class EquityResearchAnalystAgent:
                     f"{candidate.ticker}: analyst source contains caution keywords - "
                     + ", ".join(analysis["forbidden_keyword_hits"])
                 )
+            if analysis.get("readability") not in {"ok", "missing"}:
+                warnings.append(
+                    f"{candidate.ticker}: analyst source readability is {analysis['readability']}."
+                )
             signals.append(analysis)
 
         if not context.candidates:
@@ -131,9 +143,14 @@ class EquityResearchAnalystAgent:
             signals=signals,
             warnings=warnings,
             required_human_checks=[
-                "Fill missing business, earnings, valuation, risk, and disconfirmation items before treating a candidate as investable."
+                "Fill missing business, earnings, valuation, risk, and disconfirmation items before treating a candidate as investable.",
+                "Review stale or partially readable source files before Portfolio and Compliance treat the analysis as reliable.",
             ],
-            artifacts={"research_root": str(context.research_root)},
+            artifacts={
+                "research_root": str(context.research_root),
+                "confidence_counts": count_by_key(signals, "confidence"),
+                "analysis_status_counts": count_by_key(signals, "analysis_status"),
+            },
         )
 
 
@@ -557,27 +574,52 @@ def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dic
             "missing_items": missing_items,
             "forbidden_keyword_hits": [],
             "source_files": [],
+            "section_statuses": {
+                section: "missing" for section in ANALYST_SECTION_KEYWORDS
+            },
+            "readability": "missing",
+            "latest_modified": "",
+            "source_file_count": 0,
             "analyst_notes": "No matching research file was found for this candidate.",
             "agent_status": "needs_review",
         }
 
     latest = max(matches, key=lambda path: path.stat().st_mtime)
-    text = read_text_best_effort(latest)
+    documents = [read_text_with_quality(path) for path in matches[:5]]
+    readable_documents = [document for document in documents if document["readability"] != "unreadable"]
+    text = "\n\n".join(str(document["text"]) for document in readable_documents)[:300_000]
     lowered = text.lower()
-    section_status = {
-        section: "present" if any(keyword.lower() in lowered for keyword in keywords) else "missing"
-        for section, keywords in ANALYST_SECTION_KEYWORDS.items()
-    }
+    if not readable_documents:
+        section_status = {
+            section: "unreadable" for section in ANALYST_SECTION_KEYWORDS
+        }
+    else:
+        section_status = {
+            section: classify_analyst_section(lowered, keywords)
+            for section, keywords in ANALYST_SECTION_KEYWORDS.items()
+        }
     missing_items = [
-        section for section, status in section_status.items() if status == "missing"
+        section
+        for section, status in section_status.items()
+        if status in {"missing", "unreadable"} or (section in ANALYST_STRONG_SECTIONS and status == "weak")
     ]
     forbidden_hits = [
         keyword for keyword in FORBIDDEN_RESEARCH_KEYWORDS if keyword.lower() in lowered
     ]
-    analysis_status = "complete" if not missing_items else "partial"
-    if len(missing_items) >= 5:
+    latest_dt = datetime.fromtimestamp(latest.stat().st_mtime)
+    age_days = (datetime.now() - latest_dt).days
+    readability = combine_readability([str(document["readability"]) for document in documents])
+    if readability == "unreadable":
+        analysis_status = "partial"
+    elif not missing_items and age_days <= ANALYST_STALE_DAYS:
+        analysis_status = "complete"
+    else:
+        analysis_status = "partial"
+    if readability == "unreadable" or len(missing_items) >= 5:
         confidence = "low"
     elif missing_items:
+        confidence = "medium"
+    elif age_days > ANALYST_STALE_DAYS:
         confidence = "medium"
     else:
         confidence = "high"
@@ -586,14 +628,10 @@ def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dic
         lowered,
         ANALYST_SECTION_KEYWORDS["catalyst"],
     )
-    key_risks = (
-        ["Risk section requires manual review."]
-        if section_status["risk"] == "present"
-        else ["Risk section is missing."]
-    )
+    key_risks = build_analyst_risks(section_status, age_days, readability)
     disconfirmation = (
         ["Disconfirmation condition section exists; verify details manually."]
-        if section_status["disconfirmation"] == "present"
+        if section_status["disconfirmation"] in {"present", "weak"}
         else []
     )
     status = "approve" if analysis_status == "complete" and not forbidden_hits else "needs_review"
@@ -619,13 +657,56 @@ def analyze_candidate_research(candidate: Candidate, matches: list[Path]) -> dic
         "missing_items": missing_items,
         "forbidden_keyword_hits": forbidden_hits,
         "source_files": [str(path) for path in matches[:5]],
-        "analyst_notes": f"Latest source reviewed: {latest}",
+        "section_statuses": section_status,
+        "readability": readability,
+        "latest_modified": latest_dt.isoformat(timespec="seconds"),
+        "source_file_count": len(matches),
+        "analyst_notes": (
+            f"Reviewed {len(readable_documents)}/{min(len(matches), 5)} source files; "
+            f"latest source: {latest}; age_days={age_days}."
+        ),
         "agent_status": status,
     }
 
 
 def extract_matching_keywords(text: str, keywords: tuple[str, ...]) -> list[str]:
     return [keyword for keyword in keywords if keyword.lower() in text]
+
+
+def classify_analyst_section(text: str, keywords: tuple[str, ...]) -> str:
+    hit_count = sum(1 for keyword in keywords if keyword.lower() in text)
+    if hit_count >= 2:
+        return "present"
+    if hit_count == 1:
+        return "weak"
+    return "missing"
+
+
+def build_analyst_risks(section_status: dict[str, str], age_days: int, readability: str) -> list[str]:
+    risks: list[str] = []
+    if section_status.get("risk") == "missing":
+        risks.append("Risk section is missing.")
+    elif section_status.get("risk") == "weak":
+        risks.append("Risk section is weak and needs manual review.")
+    if section_status.get("valuation") in {"missing", "weak"}:
+        risks.append("Valuation support is insufficient.")
+    if section_status.get("disconfirmation") in {"missing", "weak"}:
+        risks.append("Disconfirmation condition is insufficient.")
+    if age_days > ANALYST_STALE_DAYS:
+        risks.append(f"Latest research file is stale ({age_days} days old).")
+    if readability != "ok":
+        risks.append(f"Research readability is {readability}.")
+    return risks or ["Risk section exists; verify details manually."]
+
+
+def combine_readability(values: list[str]) -> str:
+    if not values:
+        return "missing"
+    if all(value == "unreadable" for value in values):
+        return "unreadable"
+    if any(value in {"decode_loss", "unreadable"} for value in values):
+        return "partial"
+    return "ok"
 
 
 def research_quality_status(matches: list[Path], quality: dict[str, Any]) -> str:
@@ -687,6 +768,28 @@ def read_text_best_effort(path: Path) -> str:
         except OSError:
             return ""
     return ""
+
+
+def read_text_with_quality(path: Path) -> dict[str, str]:
+    for encoding in ("utf-8", "utf-8-sig", "cp949"):
+        try:
+            return {
+                "text": path.read_text(encoding=encoding),
+                "encoding": encoding,
+                "readability": "ok",
+            }
+        except UnicodeDecodeError:
+            continue
+        except OSError:
+            return {"text": "", "encoding": "", "readability": "unreadable"}
+    try:
+        return {
+            "text": path.read_text(encoding="utf-8", errors="ignore"),
+            "encoding": "utf-8",
+            "readability": "decode_loss",
+        }
+    except OSError:
+        return {"text": "", "encoding": "", "readability": "unreadable"}
 
 
 def discover_candidates_from_csv(root: Path, limit: int) -> list[Candidate]:
