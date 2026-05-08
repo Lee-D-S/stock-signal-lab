@@ -462,7 +462,9 @@ async def main() -> None:
 
     tickers = load_watched_tickers()
     if not tickers:
-        print("관찰 종목 없음")
+        msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n관찰 종목 없음"
+        await send_telegram(msg)
+        safe_print(msg)
         return
 
     corp_codes = load_corp_codes()
