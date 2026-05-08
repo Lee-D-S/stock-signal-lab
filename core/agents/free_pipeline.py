@@ -32,6 +32,7 @@ REQUIRED_RESEARCH_SECTIONS = {
     "disconfirmation": ("반증 조건", "반증", "disconfirm", "무효화"),
 }
 FORBIDDEN_RESEARCH_KEYWORDS = ("루머", "찌라시", "미확인", "확인필요", "미공개")
+RESEARCH_STALE_DAYS = 120
 ANALYST_SECTION_KEYWORDS = {
     "business_model": ("사업모델", "business model", "BM", "매출 구조", "수익 구조"),
     "earnings_quality": ("실적", "매출", "영업이익", "순이익", "earnings"),
@@ -161,13 +162,23 @@ class ResearchFileAgent:
         signals: list[dict[str, Any]] = []
         warnings: list[str] = []
         analyst_by_ticker = result_by_ticker(analyst_result)
+        if not context.research_root.exists():
+            warnings.append(f"research root does not exist: {context.research_root}")
         for candidate in context.candidates:
             matches = find_research_files(context.research_root, candidate)
             quality = analyze_research_files(matches, context.run_date)
             analyst_signal = analyst_by_ticker.get(candidate.ticker, {})
             analyst_files = set(analyst_signal.get("source_files", []))
             matched_files = {str(path) for path in matches}
-            analyst_source_file_mismatch = bool(analyst_files and not analyst_files.issubset(matched_files))
+            missing_analyst_files = sorted(path for path in analyst_files if path not in matched_files)
+            analyst_source_file_mismatch = bool(missing_analyst_files)
+            analyst_missing_items = set(analyst_signal.get("missing_items", []))
+            research_missing_items = set(quality["missing_required_sections"])
+            missing_item_mismatch = bool(analyst_missing_items.symmetric_difference(research_missing_items))
+            analyst_complete_research_incomplete = (
+                analyst_signal.get("analysis_status") == "complete"
+                and bool(quality["missing_required_sections"])
+            )
             if not matches:
                 warnings.append(f"{candidate.ticker}: no research file found.")
             if quality["missing_required_sections"]:
@@ -175,10 +186,19 @@ class ResearchFileAgent:
                     f"{candidate.ticker}: missing research sections - "
                     + ", ".join(quality["missing_required_sections"])
                 )
+            if quality["readability"] != "ok":
+                warnings.append(f"{candidate.ticker}: research file readability is {quality['readability']}.")
             if quality["is_stale"]:
                 warnings.append(f"{candidate.ticker}: research file is stale.")
+            if quality["forbidden_keyword_hits"]:
+                warnings.append(
+                    f"{candidate.ticker}: research file contains caution keywords - "
+                    + ", ".join(quality["forbidden_keyword_hits"])
+                )
             if analyst_source_file_mismatch:
                 warnings.append(f"{candidate.ticker}: analyst source files do not match research files.")
+            if analyst_complete_research_incomplete:
+                warnings.append(f"{candidate.ticker}: analyst marked complete but research file is incomplete.")
             signals.append({
                 "ticker": candidate.ticker,
                 "name": candidate.name,
@@ -187,9 +207,17 @@ class ResearchFileAgent:
                 "missing_required_sections": quality["missing_required_sections"],
                 "forbidden_keyword_hits": quality["forbidden_keyword_hits"],
                 "is_stale": quality["is_stale"],
+                "readability": quality["readability"],
+                "latest_file": quality["latest_file"],
+                "latest_file_age_days": quality["latest_file_age_days"],
+                "file_count": len(matches),
                 "quality_status": research_quality_status(matches, quality),
                 "analyst_source_file_mismatch": analyst_source_file_mismatch,
+                "missing_analyst_source_files": missing_analyst_files,
                 "analyst_analysis_status": analyst_signal.get("analysis_status", ""),
+                "analyst_missing_items": sorted(analyst_missing_items),
+                "analyst_research_missing_item_mismatch": missing_item_mismatch,
+                "analyst_complete_research_incomplete": analyst_complete_research_incomplete,
             })
 
         status = "approve"
@@ -197,6 +225,7 @@ class ResearchFileAgent:
             status = "needs_review"
         if not context.candidates:
             status = "needs_review"
+            warnings.append("no candidates available for research file review.")
 
         return AgentResult(
             agent=self.name,
@@ -207,8 +236,14 @@ class ResearchFileAgent:
             required_human_checks=[
                 "Read the matched research files and update the investment thesis manually.",
                 "If no usable report exists, run scripts/run_new_company_reports.py --include-existing-missing.",
+                "Resolve Analyst and ResearchFile mismatches before Compliance treats the evidence chain as complete.",
             ],
-            artifacts={"research_root": str(context.research_root)},
+            artifacts={
+                "research_root": str(context.research_root),
+                "quality_status_counts": count_by_key(signals, "quality_status"),
+                "readability_counts": count_by_key(signals, "readability"),
+                "stale_threshold_days": RESEARCH_STALE_DAYS,
+            },
         )
 
 
@@ -712,6 +747,8 @@ def combine_readability(values: list[str]) -> str:
 def research_quality_status(matches: list[Path], quality: dict[str, Any]) -> str:
     if not matches:
         return "missing"
+    if quality.get("readability") == "unreadable":
+        return "unreadable"
     if quality.get("is_stale"):
         return "stale"
     if quality.get("missing_required_sections"):
@@ -738,36 +775,35 @@ def find_research_files(research_root: Path, candidate: Candidate) -> list[Path]
 def analyze_research_files(paths: list[Path], run_date: date) -> dict[str, Any]:
     if not paths:
         return {
+            "latest_file": "",
             "latest_modified": "",
             "missing_required_sections": list(REQUIRED_RESEARCH_SECTIONS),
             "forbidden_keyword_hits": [],
             "is_stale": False,
+            "readability": "missing",
+            "latest_file_age_days": None,
         }
     latest = max(paths, key=lambda path: path.stat().st_mtime)
     latest_dt = datetime.fromtimestamp(latest.stat().st_mtime)
-    text = read_text_best_effort(latest)[:200_000].lower()
+    document = read_text_with_quality(latest)
+    text = str(document["text"])[:200_000].lower()
     missing = [
         section
         for section, keywords in REQUIRED_RESEARCH_SECTIONS.items()
-        if not any(keyword.lower() in text for keyword in keywords)
+        if document["readability"] == "unreadable"
+        or not any(keyword.lower() in text for keyword in keywords)
     ]
     hits = [keyword for keyword in FORBIDDEN_RESEARCH_KEYWORDS if keyword.lower() in text]
-    age_days = (datetime.combine(run_date, datetime.min.time()) - latest_dt).days
+    age_days = max(0, (datetime.combine(run_date, datetime.min.time()) - latest_dt).days)
     return {
+        "latest_file": str(latest),
         "latest_modified": latest_dt.isoformat(timespec="seconds"),
         "missing_required_sections": missing,
         "forbidden_keyword_hits": hits,
-        "is_stale": age_days > 120,
+        "is_stale": age_days > RESEARCH_STALE_DAYS,
+        "readability": str(document["readability"]),
+        "latest_file_age_days": age_days,
     }
-
-
-def read_text_best_effort(path: Path) -> str:
-    for encoding in ("utf-8", "utf-8-sig", "cp949"):
-        try:
-            return path.read_text(encoding=encoding, errors="ignore")
-        except OSError:
-            return ""
-    return ""
 
 
 def read_text_with_quality(path: Path) -> dict[str, str]:
