@@ -76,7 +76,7 @@ Pipeline은 `AgentContext`를 중심으로 실행된다.
 
 | 필드 | 의미 |
 |---|---|
-| `run_date` | 실행 기준일 |
+| `run_date` | 투자 판단 기준일(as-of date). 미래 매매 예측일이 아니며, 오늘보다 미래 날짜는 운영 실행에서 차단한다. |
 | `candidates` | 수동 입력 또는 CSV 발견 후보 |
 | `portfolio` | 보유 종목 목록 |
 | `cash` | 주문 가능 현금 또는 현금 추정값 |
@@ -98,13 +98,15 @@ Pipeline은 입력이 부족해도 실행을 멈추지 않는다. 부족한 입�
 
 ## 4. 출력 계약
 
-실행 결과는 날짜별 폴더에 저장된다.
+실행 결과는 기준일과 실행 ID별 폴더에 저장된다.
 
 기본 경로:
 
 ```text
-data/agent_runs/YYYY-MM-DD/
+data/agent_runs/YYYY-MM-DD/HHMMSS_microseconds/
 ```
+
+`YYYY-MM-DD`는 투자 판단 기준일이고, 하위 실행 ID는 같은 기준일에 여러 번 실행해도 결과를 덮어쓰지 않기 위한 값이다.
 
 목표 산출물:
 
@@ -280,6 +282,12 @@ v1에서 하지 않는 구현:
 rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:100000
 ```
 
+기준일을 명시하는 실행:
+
+```powershell
+rtk python scripts/run_free_agent_pipeline.py --as-of-date 2026-05-08 --candidate 005930:삼성전자:100000
+```
+
 CSV 자동 후보 발견:
 
 ```powershell
@@ -303,6 +311,8 @@ rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자 --
 - 기본은 리서치 파일 필수다.
 - 포트폴리오 JSON이 없으면 매수 판단은 대부분 `needs_review`가 된다.
 - `--no-require-research-file`은 테스트/탐색용이며, 실전 검토에서는 기본값을 유지한다.
+- `--date`와 `--as-of-date`는 같은 옵션이며, 투자 판단 기준일을 뜻한다.
+- 미래 날짜는 미래 시세나 미래 매매 신호를 의미하지 않으므로 기본 실행에서 차단한다.
 - 명령 실행 후 `run_dir` 경로와 Agent별 status를 확인한다.
 
 ## 11. 테스트 시나리오

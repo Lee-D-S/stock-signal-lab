@@ -26,7 +26,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="LLM/API 없이 무료 규칙 기반 투자 Agent 파이프라인을 실행합니다."
     )
-    parser.add_argument("--date", default=date.today().isoformat(), help="실행 기준일 (YYYY-MM-DD)")
+    parser.add_argument(
+        "--date",
+        "--as-of-date",
+        dest="date",
+        default=date.today().isoformat(),
+        help="투자 판단 기준일/as-of date (YYYY-MM-DD). 미래 날짜는 기본 차단됩니다.",
+    )
     parser.add_argument(
         "--candidate",
         action="append",
@@ -49,6 +55,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-daily-new-buy-amount", type=int, default=settings.max_daily_spend)
     parser.add_argument("--stale-signal-days", type=int, default=3)
     parser.add_argument(
+        "--allow-future-date",
+        action="store_true",
+        help="테스트 목적으로 오늘보다 미래인 기준일 실행을 허용합니다. 실운영에서는 사용하지 마세요.",
+    )
+    parser.add_argument(
         "--no-require-research-file",
         action="store_true",
         help="준법 승인에 기존 리서치 파일을 필수로 요구하지 않습니다.",
@@ -59,6 +70,14 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     run_date = date.fromisoformat(args.date)
+    today = date.today()
+    if run_date > today and not args.allow_future_date:
+        raise SystemExit(
+            f"--date는 투자 판단 기준일(as-of date)입니다. "
+            f"미래 날짜({run_date.isoformat()})는 사용할 수 없습니다. "
+            f"오늘 기준일은 {today.isoformat()}입니다. "
+            "테스트 목적이면 --allow-future-date를 명시하세요."
+        )
     run_id = datetime.now().strftime("%H%M%S_%f")
     candidates = [parse_candidate(raw, args.default_amount) for raw in args.candidate]
     if not candidates and args.discover:

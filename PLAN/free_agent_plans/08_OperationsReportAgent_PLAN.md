@@ -42,7 +42,7 @@ OperationsReportAgent의 목표는 좋은 결론이 아니라 완전한 기록�
 
 | 필드 | 용도 |
 |---|---|
-| `run_date` | 보고서 기준일 |
+| `run_date` | 투자 판단 기준일(as-of date). 미래 매매 예측일이 아니다. |
 | `candidates` | 후보 수와 후보 목록 요약 |
 | `portfolio_value` | 계좌 총 평가 기준 표시 |
 | `cash` | 현금 요약 표시 |
