@@ -14,6 +14,10 @@ PATTERN_DIR = BASE_DIR / "04_패턴분석"
 HYPOTHESIS_DIR = BASE_DIR / "05_가설검토"
 BACKTEST_DIR = BASE_DIR / "06_백테스트"
 
+# Backward-compatible aliases used by older research scripts.
+DATA_DIR = RAW_DIR
+REVIEW_DIR = HYPOTHESIS_DIR
+
 STRATEGY_DIR = BASE_DIR / "07_전략신호"
 UNIVERSE_DIR = STRATEGY_DIR / "00_유니버스"
 WATCHLIST_DIR = STRATEGY_DIR / "01_관심종목"
