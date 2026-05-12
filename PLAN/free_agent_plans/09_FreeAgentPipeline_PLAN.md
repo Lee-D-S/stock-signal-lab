@@ -37,10 +37,11 @@ Pipeline은 결론을 좋게 만드는 장치가 아니라, 판단 누락을 막
 
 ## 2. 목표 실행 순서
 
-목표 v1 구조는 **8개 Agent + 1개 orchestrator**다.
+목표 v1 구조는 **9개 Agent + 1개 orchestrator**다.
 
 ```text
 QuantSignalAgent
+→ StrategyDecisionAgent
 → EquityResearchAnalystAgent
 → ResearchFileAgent
 → PortfolioManagerAgent
@@ -55,18 +56,21 @@ QuantSignalAgent
 | 순서 | Agent | 목적 |
 |---|---|---|
 | 1 | `QuantSignalAgent` | 후보 종목과 신호 출처 표준화 |
-| 2 | `EquityResearchAnalystAgent` | 기업 분석, 촉매, 리스크, 반증 조건 정리 |
-| 3 | `ResearchFileAgent` | 분석 파일 존재와 품질 검수 |
-| 4 | `PortfolioManagerAgent` | 계좌 관점 액션 초안 작성 |
-| 5 | `RiskManagerAgent` | 금액, 비중, 현금, 유동성, 한도 검사 |
-| 6 | `ComplianceOfficerAgent` | 출처, 리서치, 금지 정보, 기록 요건 검사 |
-| 7 | `TraderAgent` | 실제 주문 없는 주문 제안 JSON 생성 |
-| 8 | `OperationsReportAgent` | 최종 보고서와 짧은 요약 생성 |
+| 2 | `StrategyDecisionAgent` | 기대수익, hit rate, 진입 규칙, 보유기간, 전략 방향 해석 |
+| 3 | `EquityResearchAnalystAgent` | 기업 분석, 촉매, 리스크, 반증 조건 정리 |
+| 4 | `ResearchFileAgent` | 분석 파일 존재와 품질 검수 |
+| 5 | `PortfolioManagerAgent` | 계좌 관점 액션 초안 작성 |
+| 6 | `RiskManagerAgent` | 금액, 비중, 현금, 유동성, 한도 검사 |
+| 7 | `ComplianceOfficerAgent` | 출처, 리서치, 금지 정보, 기록 요건 검사 |
+| 8 | `TraderAgent` | 실제 주문 없는 주문 제안 JSON 생성 |
+| 9 | `OperationsReportAgent` | 최종 보고서와 짧은 요약 생성 |
 
 현재 구현 상태:
 
 - 현재 코드에는 `EquityResearchAnalystAgent`가 연결되어 있다.
-- 현재 실행 순서는 Quant → Analyst → ResearchFile → Portfolio → Risk → Compliance → Trader → Operations다.
+- 현재 코드 실행 순서는 Quant → Analyst → ResearchFile → Portfolio → Risk → Compliance → Trader → Operations다.
+- 목표 실행 순서는 Quant → StrategyDecision → Analyst → ResearchFile → Portfolio → Risk → Compliance → Trader → Operations다.
+- `StrategyDecisionAgent`는 아직 코드에 연결되지 않은 신규 계획 단계다.
 - `equity_research_analyst.json`을 날짜별 실행 폴더에 저장한다.
 - ResearchFile, Portfolio, Compliance, Operations는 Analyst 결과를 입력으로 사용할 수 있다.
 
@@ -113,6 +117,7 @@ data/agent_runs/YYYY-MM-DD/HHMMSS_microseconds/
 | 파일 | 생성 Agent | 목적 |
 |---|---|---|
 | `quant_signal.json` | QuantSignalAgent | 후보와 신호 출처 |
+| `strategy_decision.json` | StrategyDecisionAgent | 후보별 전략 방향, 기대수익, hit rate, 진입 규칙, 보유기간 |
 | `equity_research_analyst.json` | EquityResearchAnalystAgent | 기업 분석 상태 |
 | `research_file.json` | ResearchFileAgent | 리서치 파일 품질 검수 |
 | `portfolio_manager.json` | PortfolioManagerAgent | 포트폴리오 액션 초안 |
@@ -134,6 +139,8 @@ Candidate[]
   ↓
 QuantSignalAgent
   ↓ quant_signal.json
+StrategyDecisionAgent
+  ↓ strategy_decision.json
 EquityResearchAnalystAgent
   ↓ equity_research_analyst.json
 ResearchFileAgent
@@ -154,8 +161,10 @@ OperationsReportAgent
 
 | 연결 | 계약 |
 |---|---|
-| Quant → Analyst | 후보별 ticker/name/source/signal_details 전달 |
+| Quant → StrategyDecision | 후보별 ticker/name/source/signal_details, condition/hypothesis_id 전달 |
+| StrategyDecision → Analyst | 후보별 전략 방향, 보유기간, 기대수익, 회피/청산 감시 여부 전달 |
 | Analyst → ResearchFile | source_files, missing_items, forbidden_keyword_hits 전달 |
+| StrategyDecision → Portfolio | decision_type, expected_return_pct, hit_rate, planned_hold_days, entry_rule 전달 |
 | Analyst → Portfolio | analysis_status, confidence, key_risks 전달 |
 | Analyst → Compliance | source_files, forbidden_keyword_hits, analysis_status 전달 |
 | ResearchFile → Compliance | research_files, quality_status, missing sections 전달 |
@@ -259,10 +268,12 @@ Pipeline 수준에서 항상 보장해야 하는 값:
 2. `combine_statuses()` 기준을 모든 Agent와 guardrail에서 일관되게 사용한다.
 3. 후보 없음, 리서치 없음, 포트폴리오 없음 케이스를 회귀 테스트로 고정한다.
 4. `broker_api_called=false`가 항상 유지되는지 테스트한다.
-5. Analyst 체크리스트 키워드를 실제 리서치 문서 템플릿과 맞춰 보강한다.
-6. ResearchFile/Compliance의 중복 파일 검색을 공통 결과 재사용 구조로 줄인다.
-7. Operations 보고서에 Analyst 핵심 리스크와 반증 조건을 더 자세히 표시한다.
-8. README 또는 상위 PLAN 인덱스에 현재 구현 상태를 표시한다.
+5. `StrategyDecisionAgent`를 Quant와 Portfolio 사이에 추가한다.
+6. StrategyDecision 결과를 Portfolio, Trader, Operations 보고서에 전달한다.
+7. Analyst 체크리스트 키워드를 실제 리서치 문서 템플릿과 맞춰 보강한다.
+8. ResearchFile/Compliance의 중복 파일 검색을 공통 결과 재사용 구조로 줄인다.
+9. Operations 보고서에 Analyst 핵심 리스크와 반증 조건을 더 자세히 표시한다.
+10. README 또는 상위 PLAN 인덱스에 현재 구현 상태를 표시한다.
 
 v1에서 하지 않는 구현:
 
@@ -424,7 +435,21 @@ rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 5
 - `broker_api_called=false`
 - 최종 보고서에 실제 주문 금지 문구 포함
 
-### 11.9 Analyst 추가 이후
+### 11.9 StrategyDecision 추가 이후
+
+조건:
+
+- StrategyDecision 구현 완료
+- 후보에 `hypothesis_id` 또는 조건명이 있음
+- 전략 조건 파일에 action_hint, preferred_hold_days, avg_score_return_pct, hit_rate 존재
+
+기대 결과:
+
+- `strategy_decision.json` 생성
+- 후보별 `decision_type`, `planned_hold_days`, `expected_return_pct`, `hit_rate` 기록
+- 회피/청산 감시 후보는 Portfolio에서 신규 매수 초안으로 쓰이지 않음
+
+### 11.10 Analyst 추가 이후
 
 조건:
 
@@ -441,7 +466,8 @@ rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 5
 
 `FreeAgentPipeline`은 다음 조건을 만족해야 성공이다.
 
-- 8개 Agent 목표 구조가 명확하다.
+- 9개 Agent 목표 구조가 명확하다.
+- StrategyDecision이 Quant와 Portfolio 사이의 전략 해석 책임을 가진다.
 - Analyst가 포함된 현재 구현 상태가 명확하다.
 - 모든 Agent 결과가 날짜별 JSON으로 저장된다.
 - 중간 차단이 있어도 최종 보고서가 생성된다.

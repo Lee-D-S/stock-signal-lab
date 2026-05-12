@@ -38,11 +38,13 @@
 
 ## 3. 무료 버전 Agent 구조
 
-초기 Agent는 7개로 단순화한다.
+초기 Agent는 9개로 단순화한다.
 
 | Agent | 무료 버전 구현 방식 |
 |---|---|
-| `QuantSignalAgent` | 기존 스크리너, 가격/거래량 조건, 백테스트 결과를 실행/요약 |
+| `QuantSignalAgent` | 기존 스크리너, 가격/거래량 조건, 백테스트 결과를 후보 신호로 표준화 |
+| `StrategyDecisionAgent` | 조건별 기대수익, hit rate, 진입 규칙, 보유기간, 매수/반등감시/회피/청산감시 방향을 해석 |
+| `EquityResearchAnalystAgent` | 기업의 사업, 실적, 밸류에이션, 촉매, 리스크, 반증 조건을 체크리스트화 |
 | `ResearchFileAgent` | 사람이 작성한 기업 리포트, DART/뉴스 수집 결과, 기존 분석 문서를 읽어 체크리스트화 |
 | `PortfolioManagerAgent` | 보유 비중, 현금 비중, 후보 종목 점수 기반으로 매수/매도/보류 제안 |
 | `RiskManagerAgent` | 종목/섹터 비중, 손실한도, 유동성, 데이터 누락을 코드로 차단 |
@@ -56,24 +58,30 @@
 
 ```text
 1. QuantSignalAgent
-   기존 scripts 기반으로 후보군, 점수, 백테스트/관찰 결과 생성
+   기존 scripts 기반으로 후보군, 점수, 신호 출처 생성
 
-2. ResearchFileAgent
+2. StrategyDecisionAgent
+   신호의 전략 방향, 기대수익, hit rate, 진입 규칙, 보유기간 해석
+
+3. EquityResearchAnalystAgent
+   후보 기업의 사업, 실적, 밸류에이션, 촉매, 리스크, 반증 조건 확인
+
+4. ResearchFileAgent
    기업별 리포트/공시 점검 결과/뉴스 수집 결과에서 투자근거 존재 여부 확인
 
-3. PortfolioManagerAgent
+5. PortfolioManagerAgent
    후보 종목을 현재 포트폴리오와 비교해 액션 제안
 
-4. RiskManagerAgent
+6. RiskManagerAgent
    코드 기반 한도 검사로 approve/block/needs_review 산출
 
-5. ComplianceOfficerAgent
+7. ComplianceOfficerAgent
    투자근거/기록/금지조건 체크
 
-6. TraderAgent
+8. TraderAgent
    실제 주문이 아닌 주문안 생성
 
-7. OperationsReportAgent
+9. OperationsReportAgent
    결과 저장 및 사람이 읽을 보고서 생성
 ```
 
@@ -146,6 +154,7 @@ artifacts
 ```text
 data/agent_runs/YYYY-MM-DD/
   quant_signal.json
+  strategy_decision.json
   research_file.json
   portfolio_manager.json
   risk_manager.json
@@ -164,6 +173,7 @@ data/agent_runs/YYYY-MM-DD/
 | `scripts/run_daily_universe_refresh.py` | 후보군 갱신 |
 | `scripts/run_scoring.py` | 점수/조건 평가 |
 | `scripts/run_backtest.py` | 필요한 경우 전략 검증 |
+| `scripts/classify_gaps_and_draft_strategy.py` | 조건별 action_hint, preferred_hold_days, 기대수익, hit rate 산출 |
 | `scripts/screener.py` | 스크리닝 실행 |
 | `scripts/screener_lib/` | DART, 가격 데이터, 유니버스, 출력 유틸 |
 
@@ -297,6 +307,7 @@ human_checklist
 
 - 후보 종목 1개를 넣었을 때 Agent 실행 폴더가 생성되는지 확인한다.
 - 기존 스크리닝/신호 결과를 `QuantSignalAgent`가 읽어 표준 JSON으로 변환하는지 확인한다.
+- `StrategyDecisionAgent`가 조건별 action_hint, 기대수익, hit rate, 보유기간을 후보별 전략 결정으로 변환하는지 확인한다.
 - 투자근거 파일이 없으면 `ComplianceOfficerAgent`가 `needs_review` 또는 `block`을 반환하는지 확인한다.
 - 종목 비중 한도를 넘기면 `RiskManagerAgent`가 `block`을 반환하는지 확인한다.
 - `TraderAgent`가 실제 주문 없이 주문안 파일만 생성하는지 확인한다.
@@ -324,5 +335,4 @@ human_checklist
 
 ## 15. 다음 작업
 
-다음 단계는 `ResearchFileAgent`와 `QuantSignalAgent`의 상세 PLAN을 작성하는 것이다. 무료 버전에서는 이 두 Agent가 가장 먼저 동작해야 전체 파이프라인의 입력이 생긴다.
-
+다음 단계는 `StrategyDecisionAgent`를 Quant와 Portfolio 사이에 연결하는 것이다. 무료 버전에서는 Quant가 후보를 만들고, StrategyDecision이 그 후보의 전략적 의미를 해석한 뒤, Portfolio가 계좌 적합성을 판단해야 한다.

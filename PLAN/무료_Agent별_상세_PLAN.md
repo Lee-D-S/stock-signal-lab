@@ -15,10 +15,11 @@
 > - `PLAN/free_agent_plans/07_TraderAgent_PLAN.md`
 > - `PLAN/free_agent_plans/08_OperationsReportAgent_PLAN.md`
 > - `PLAN/free_agent_plans/09_FreeAgentPipeline_PLAN.md`
+> - `PLAN/free_agent_plans/12_StrategyDecisionAgent_PLAN.md`
 
 ## 1. 목적
 
-이 문서는 `PLAN/무료_1인_투자기업_Agent_시스템_PLAN.md`를 바탕으로, 무료 버전 8개 Agent를 각각 어떻게 발전시킬지 정리한 상세 계획이다.
+이 문서는 `PLAN/무료_1인_투자기업_Agent_시스템_PLAN.md`를 바탕으로, 무료 버전 Agent를 각각 어떻게 발전시킬지 정리한 상세 계획이다.
 
 현재 구현은 OpenAI API 없이 동작하는 v1 골격이다. 각 Agent는 `core/agents/free_pipeline.py` 안에 Python 클래스로 구현되어 있으며, `FreeAgentPipeline`이 전체 실행 순서를 조율한다. 실제 주문은 하지 않고, 날짜별 JSON 결과와 최종 Markdown 보고서를 생성한다.
 
@@ -57,6 +58,7 @@ artifacts
 ```text
 data/agent_runs/YYYY-MM-DD/
   quant_signal.json
+  strategy_decision.json
   equity_research_analyst.json
   research_file.json
   portfolio_manager.json
@@ -106,7 +108,49 @@ data/agent_runs/YYYY-MM-DD/
 - 후보마다 최소 `ticker`, `name`, `source`, `signal_count`가 기록된다.
 - 기존 CSV 형식이 조금 달라도 파이프라인이 실패하지 않고 경고를 남긴다.
 
-## 4. ResearchFileAgent PLAN
+## 4. StrategyDecisionAgent PLAN
+
+### 역할
+
+Quant가 만든 후보 신호를 전략 행동 언어로 해석한다. 이 Agent는 매수 승인자가 아니라, 조건별 기대수익, hit rate, 진입 규칙, 계획 보유기간, 회피 또는 청산 감시 방향을 표준화한다.
+
+### 현재 상태
+
+- 전담 Agent는 아직 없다.
+- `전략_조건_초안.csv`와 후보 CSV에는 `action_hint`, `preferred_entry_mode`, `preferred_hold_days`, `avg_score_return_pct`, `hit_rate`가 존재한다.
+- 현재 free pipeline은 이 값을 Portfolio 판단에 충분히 반영하지 못한다.
+
+### 입력
+
+- Quant 후보와 `signal_details`
+- `07_전략신호/05_전략/전략_조건_초안.csv`
+- `07_전략신호/02_신규조건/신규조건_전략_조건.csv`
+- 관찰 성과 요약 CSV
+
+### 출력
+
+- 전략 방향: `buy_candidate`, `rebound_watch`, `avoid`, `exit_watch`, `hold`
+- 진입 규칙
+- 계획 보유기간
+- 기대수익과 hit rate
+- 청산/회피 감시 조건
+- 전략 해석 신뢰도와 경고
+
+### v1 보강 과제
+
+- `hypothesis_id` 또는 조건명을 기준으로 후보와 전략 조건을 매칭한다.
+- `action_hint`를 표준 `decision_type`으로 변환한다.
+- `preferred_entry_mode`, `preferred_hold_days`, `avg_score_return_pct`, `hit_rate`를 후보별 결과에 남긴다.
+- 회피 조건은 매수 후보로 넘기지 않고 `avoid` 또는 `exit_watch`로 표시한다.
+- Portfolio가 `strategy_decision.json`을 사용해 신규 매수 초안을 만들도록 연결한다.
+
+### 성공 기준
+
+- Quant 후보만 보고 매수/회피 방향이 섞이지 않는다.
+- 조건별 기대수익과 보유기간이 Portfolio와 최종 보고서까지 전달된다.
+- 매도/청산 감시 후보는 신규 매수 후보와 분리된다.
+
+## 5. ResearchFileAgent PLAN
 
 ### 역할
 
@@ -144,7 +188,7 @@ data/agent_runs/YYYY-MM-DD/
 - 리서치 파일이 있어도 오래됐거나 필수 섹션이 없으면 `needs_review`가 유지된다.
 - Agent가 리포트를 새로 작성하지는 않고, 필요한 작업만 명확히 표시한다.
 
-## 5. PortfolioManagerAgent PLAN
+## 6. PortfolioManagerAgent PLAN
 
 ### 역할
 
@@ -185,7 +229,7 @@ data/agent_runs/YYYY-MM-DD/
 - 신규 후보와 기존 보유 종목의 액션이 구분된다.
 - 실제 주문 결정을 하지 않고 사람 검토용 제안만 만든다.
 
-## 6. RiskManagerAgent PLAN
+## 7. RiskManagerAgent PLAN
 
 ### 역할
 
@@ -225,7 +269,7 @@ data/agent_runs/YYYY-MM-DD/
 - 차단 사유가 최종 보고서에 후보별로 표시된다.
 - 데이터가 없어서 판단 못 하는 상황은 통과가 아니라 `needs_review`로 남는다.
 
-## 7. ComplianceOfficerAgent PLAN
+## 8. ComplianceOfficerAgent PLAN
 
 ### 역할
 
@@ -264,7 +308,7 @@ data/agent_runs/YYYY-MM-DD/
 - 준법 경고가 최종 보고서와 주문안 JSON에 모두 남는다.
 - Compliance가 `block`한 후보는 주문안에서 `hold`로 바뀐다.
 
-## 8. TraderAgent PLAN
+## 9. TraderAgent PLAN
 
 ### 역할
 
@@ -307,7 +351,7 @@ data/agent_runs/YYYY-MM-DD/
 - 차단 후보는 주문안에서 `hold`로 표시된다.
 - 수량 계산이 불가능하면 실패하지 않고 사람 확인 항목으로 남긴다.
 
-## 9. OperationsReportAgent PLAN
+## 10. OperationsReportAgent PLAN
 
 ### 역할
 
@@ -346,7 +390,7 @@ data/agent_runs/YYYY-MM-DD/
 - 보고서만 봐도 어떤 후보가 왜 막혔는지 알 수 있다.
 - JSON 산출물과 Markdown 보고서가 같은 내용을 가리킨다.
 
-## 10. FreeAgentPipeline / InvestmentCommittee 역할 PLAN
+## 11. FreeAgentPipeline / InvestmentCommittee 역할 PLAN
 
 ### 역할
 
@@ -354,7 +398,7 @@ data/agent_runs/YYYY-MM-DD/
 
 ### 현재 상태
 
-- 8개 Agent를 순서대로 실행한다.
+- 9개 Agent를 순서대로 실행한다.
 - 각 결과를 날짜별 JSON 파일로 저장한다.
 - 마지막에 최종 보고서를 생성한다.
 
@@ -372,7 +416,7 @@ data/agent_runs/YYYY-MM-DD/
 - 실제 주문 없이 모든 산출물이 생성된다.
 - 실패 가능한 입력에서도 파이프라인 전체가 중간 결과와 경고를 남긴다.
 
-## 11. 구현 우선순위
+## 12. 구현 우선순위
 
 1. `QuantSignalAgent`: 기존 신호 CSV 해석 강화
 2. `ResearchFileAgent`: 리서치 파일 최신성/필수 섹션 검사
@@ -382,7 +426,7 @@ data/agent_runs/YYYY-MM-DD/
 6. `OperationsReportAgent`: 후보별 표와 최종 상태 요약 추가
 7. `FreeAgentPipeline`: run id, 설정 파일, 재실행 정책 정리
 
-## 12. 테스트 계획
+## 13. 테스트 계획
 
 공통 테스트:
 
@@ -401,7 +445,7 @@ Agent별 테스트:
 - Trader: 차단 후보는 `hold` 주문안으로 바뀐다.
 - Operations: 보고서에 경고와 사람 확인 항목이 모두 포함된다.
 
-## 13. 제외 범위
+## 14. 제외 범위
 
 - 실제 주문 자동화
 - OpenAI API, Gemini API 등 유료 LLM 호출

@@ -29,13 +29,14 @@
 
 ## 2. 전체 Agent 구조
 
-초기 버전은 8개 Agent로 구성한다.
+초기 버전은 9개 Agent로 구성한다.
 
 | Agent | 역할 |
 |---|---|
 | `InvestmentCommitteeAgent` | 전체 흐름 조율, 최종 투자위원회 판단 |
 | `ResearchAnalystAgent` | 기업/산업/공시/뉴스 분석, 투자 가설 작성 |
 | `QuantSignalAgent` | 스크리닝, 가격/거래량 신호, 백테스트 요약 |
+| `StrategyDecisionAgent` | 신호를 매수/반등감시/회피/청산감시 방향, 기대수익, 보유기간으로 해석 |
 | `PortfolioManagerAgent` | 포트폴리오 관점의 비중/매수/매도 제안 |
 | `RiskManagerAgent` | 손실한도, 집중도, 유동성, 변동성 검사 |
 | `ComplianceOfficerAgent` | 투자근거, 금지행위, 기록 누락, 규칙 위반 검사 |
@@ -80,6 +81,20 @@
 - 과거 성과 요약
 - 데이터 품질 경고
 - 모델/조건의 한계
+
+### StrategyDecisionAgent
+
+Quant가 표준화한 신호를 실제 투자 검토 언어로 해석한다. 이 Agent는 `전략_조건_초안.csv`, 후보 CSV, 관찰 성과 요약을 참고해 후보별 전략 방향, 기대수익, hit rate, 진입 규칙, 계획 보유기간, 청산/회피 조건을 만든다.
+
+주요 산출물:
+
+- `buy_candidate`, `rebound_watch`, `avoid`, `exit_watch`, `hold` 같은 전략 방향
+- 조건별 기대수익과 hit rate
+- 진입 규칙과 계획 보유기간
+- 청산 또는 무효화 감시 조건
+- 전략 해석의 신뢰도와 한계
+
+이 Agent는 주문 승인자가 아니다. 전략적으로 매수형 신호라고 해석해도 Portfolio, Risk, Compliance를 반드시 통과해야 한다.
 
 ### PortfolioManagerAgent
 
@@ -149,22 +164,25 @@
 2. QuantSignalAgent
    가격/거래량/팩터/백테스트 신호 확인
 
-3. PortfolioManagerAgent
+3. StrategyDecisionAgent
+   신호를 매수/반등감시/회피/청산감시 방향, 기대수익, 보유기간으로 해석
+
+4. PortfolioManagerAgent
    현재 포트폴리오 기준으로 매수/매도/보류 제안
 
-4. RiskManagerAgent
+5. RiskManagerAgent
    비중, 손실한도, 유동성, 집중도 검사
 
-5. ComplianceOfficerAgent
+6. ComplianceOfficerAgent
    투자근거, 금지행위, 기록 요건 검사
 
-6. TraderAgent
+7. TraderAgent
    실제 주문이 아닌 주문안 생성
 
-7. 사용자 승인
+8. 사용자 승인
    사람이 최종 확인
 
-8. OperationsReportAgent
+9. OperationsReportAgent
    기록 저장, 보고서 생성
 ```
 
@@ -238,12 +256,13 @@ docs/
 
 1. `ResearchAnalystAgent`
 2. `QuantSignalAgent`
-3. `PortfolioManagerAgent`
-4. `RiskManagerAgent`
-5. `ComplianceOfficerAgent`
-6. `TraderAgent`
-7. `OperationsReportAgent`
-8. `InvestmentCommitteeAgent`
+3. `StrategyDecisionAgent`
+4. `PortfolioManagerAgent`
+5. `RiskManagerAgent`
+6. `ComplianceOfficerAgent`
+7. `TraderAgent`
+8. `OperationsReportAgent`
+9. `InvestmentCommitteeAgent`
 
 ### Phase 2. 읽기 전용 Agent 프로토타입
 
@@ -345,4 +364,3 @@ Risk/Compliance 결과는 `approve`, `block`, `needs_review` 중 하나로 표�
 ## 10. 다음 작업
 
 다음 단계는 각 Agent별 상세 PLAN을 순서대로 작성하는 것이다. 가장 먼저 `ResearchAnalystAgent`의 입력, 출력, 도구, 판단 기준, 리포트 형식을 구체화한다.
-
