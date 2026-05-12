@@ -134,7 +134,7 @@ def markdown_table(df: pd.DataFrame) -> str:
 
 
 def write_strategy_files(strategy: pd.DataFrame, snapshot: Path, verdict: str) -> None:
-    STRATEGY_DIR.mkdir(parents=True, exist_ok=True)
+    NEW_CONDITION_DIR.mkdir(parents=True, exist_ok=True)
     strategy.to_csv(NEW_STRATEGY_CSV, index=False, encoding="utf-8-sig")
     lines = [
         "# 신규 조건 별도 관찰 전략",
