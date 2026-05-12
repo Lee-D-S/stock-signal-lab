@@ -212,7 +212,8 @@ def build_markdown(source: pd.DataFrame, summary: pd.DataFrame) -> str:
 
 
 def main() -> None:
-    OBS_DIR.mkdir(parents=True, exist_ok=True)
+    SUMMARY_CSV.parent.mkdir(parents=True, exist_ok=True)
+    SUMMARY_MD.parent.mkdir(parents=True, exist_ok=True)
     observations = read_observations()
     summary = build_summary(observations)
     summary.to_csv(SUMMARY_CSV, index=False, encoding="utf-8-sig")
