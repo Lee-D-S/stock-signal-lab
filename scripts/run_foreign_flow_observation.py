@@ -238,9 +238,19 @@ def write_rows(
     encoding: str,
     errors: str = "strict",
 ) -> None:
+    normalized_fieldnames = [field.lstrip("\ufeff") for field in fieldnames]
+    for row in rows:
+        for key in list(row.keys()):
+            clean_key = str(key).lstrip("\ufeff")
+            if clean_key != key:
+                row[clean_key] = row.pop(key)
+            if clean_key not in normalized_fieldnames:
+                normalized_fieldnames.append(clean_key)
+        for field in normalized_fieldnames:
+            row.setdefault(field, "")
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding=encoding, errors=errors, newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=normalized_fieldnames, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -456,17 +466,16 @@ async def update_tracking_row(row: dict[str, str], as_of: pd.Timestamp) -> bool:
     return changed
 
 
-def append_new_observations(existing: list[dict[str, str]], candidates: pd.DataFrame) -> int:
+def append_new_observations(existing: list[dict[str, str]], candidates: pd.DataFrame, columns: list[str]) -> int:
     seen = {(row.get("signal_date", ""), row.get("ticker", "")) for row in existing}
     added = 0
     for _, candidate in candidates.iterrows():
         key = (str(candidate["signal_date"]), str(candidate["ticker"]).zfill(6))
         if key in seen:
             continue
-        row = {col: "" for col in OBS_COLUMNS}
+        row = {col: "" for col in columns}
         for col in candidates.columns:
-            if col in row:
-                row[col] = as_text(candidate[col])
+            row[col] = as_text(candidate[col])
         existing.append(row)
         seen.add(key)
         added += 1
@@ -539,7 +548,7 @@ async def run_one(args: argparse.Namespace, config: FlowConfig) -> tuple[str, in
     for col in columns:
         if col not in fieldnames:
             fieldnames.append(col)
-    added = append_new_observations(rows, candidates)
+    added = append_new_observations(rows, candidates, columns)
 
     updated = 0
     for row in rows:
