@@ -62,10 +62,17 @@ def load_targets(include_existing_missing: bool) -> pd.DataFrame:
     return universe[universe["universe_status"] == "new"].copy()
 
 
+async def safe_fetch_stock_info(ticker: str) -> tuple[dict[str, Any], str]:
+    try:
+        return await fetch_stock_info(ticker), ""
+    except Exception as exc:
+        return {}, repr(exc)
+
+
 async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: float) -> dict[str, Any]:
     company_dir = OUT_DIR / name
     company_dir.mkdir(parents=True, exist_ok=True)
-    stock_info = await fetch_stock_info(ticker)
+    stock_info, stock_info_error = await safe_fetch_stock_info(ticker)
     listing_date = listing_date_from_stock_info(stock_info)
     skipped_pre_listing = sum(1 for _, _, _, end in PERIODS if is_pre_listing_period(end, listing_date))
     missing = missing_periods(name, listing_date)
@@ -80,6 +87,7 @@ async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: 
             "skipped_pre_listing": skipped_pre_listing,
             "events_path": str(events_path(name, ticker)),
             "error": "",
+            "stock_info_error": stock_info_error,
         }
 
     try:
@@ -102,6 +110,7 @@ async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: 
             "skipped_pre_listing": skipped_pre_listing,
             "events_path": str(events_path(name, ticker)),
             "error": "",
+            "stock_info_error": stock_info_error,
         }
     except Exception as exc:
         return {
@@ -114,6 +123,7 @@ async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: 
             "skipped_pre_listing": skipped_pre_listing if "skipped_pre_listing" in locals() else 0,
             "events_path": str(events_path(name, ticker)),
             "error": repr(exc),
+            "stock_info_error": stock_info_error,
         }
 
 
@@ -147,6 +157,8 @@ async def main() -> None:
         )
         if result["error"]:
             print(f"  error={result['error']}")
+        if result.get("stock_info_error"):
+            print(f"  stock_info_warning={result['stock_info_error']}")
         await asyncio.sleep(args.delay)
 
     out = pd.DataFrame(rows)
@@ -156,6 +168,11 @@ async def main() -> None:
         print(out["status"].value_counts().to_string())
     else:
         print("targets=0")
+
+
+def is_retryable_windows_event_loop_error(exc: BaseException) -> bool:
+    text = repr(exc).lower()
+    return "event loop" in text or "proactor" in text or "selector" in text
 
 
 def run_async_entrypoint() -> None:
@@ -180,6 +197,8 @@ def run_async_entrypoint() -> None:
                 loop.close()
         except BaseException as exc:
             last_error = exc
+            if not is_retryable_windows_event_loop_error(exc):
+                raise
             continue
     if last_error:
         raise last_error
