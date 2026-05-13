@@ -22,6 +22,8 @@ from analysis_paths import (  # noqa: E402
     OBS_COMMON_SUMMARY_CSV,
     OBS_FOREIGN_FLOW_ERROR_CSV,
     OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
+    OBS_NTM_PER_CSV,
+    OBS_NTM_PER_SUMMARY_CSV,
     OBS_NEW_CONDITION_UTF8_CSV,
     PLAN_DIR,
     SUMMARY_DIR,
@@ -45,6 +47,8 @@ OBS_CSV = OBS_COMMON_ERROR_CSV
 NEW_OBS_CSV = OBS_NEW_CONDITION_UTF8_CSV
 FOREIGN_FLOW_OBS_CSV = OBS_FOREIGN_FLOW_ERROR_CSV
 FOREIGN_SELL_FLOW_OBS_CSV = OBS_FOREIGN_SELL_FLOW_ERROR_CSV
+NTM_PER_CSV = OBS_NTM_PER_CSV
+NTM_PER_SUMMARY_CSV = OBS_NTM_PER_SUMMARY_CSV
 PERFORMANCE_CSV = OBS_COMMON_SUMMARY_CSV
 
 
@@ -111,6 +115,8 @@ def build_summary(target_date: str) -> str:
     new_observations = read_csv(NEW_OBS_CSV, dtype={"ticker": str})
     foreign_flow_observations = read_csv(FOREIGN_FLOW_OBS_CSV, dtype={"ticker": str})
     foreign_sell_flow_observations = read_csv(FOREIGN_SELL_FLOW_OBS_CSV, dtype={"ticker": str})
+    ntm_per = read_csv(NTM_PER_CSV, dtype={"ticker": str})
+    ntm_per_summary = read_csv(NTM_PER_SUMMARY_CSV)
     performance = read_csv(PERFORMANCE_CSV)
 
     signal_date = target_date or latest_signal_date(watchlist, confirmed, observations) or "latest"
@@ -257,6 +263,36 @@ def build_summary(target_date: str) -> str:
             ],
         ),
         "",
+        "### NTM PER 관찰",
+        "",
+        markdown_table(
+            ntm_per[ntm_per["signal_date"].astype(str) == signal_date] if not ntm_per.empty and "signal_date" in ntm_per.columns else ntm_per,
+            [
+                "signal_date",
+                "ticker",
+                "name",
+                "current_price",
+                "ntm_eps",
+                "ntm_per",
+                "ntm_per_status",
+                "peg_growth_5y_pct",
+                "peg",
+                "peg_status",
+            ],
+        ),
+        "",
+        "### NTM PER 일별 요약",
+        "",
+        markdown_table(ntm_per_summary, [
+            "run_date",
+            "pool_size",
+            "ntm_per_available",
+            "peg_available",
+            "estimate_missing",
+            "eps_nonpositive",
+            "peg_over_1_5",
+        ]),
+        "",
         "## 3. 관찰 로그",
         "",
         f"- 누적 관찰 후보: {fmt_int(len(observations))}",
@@ -317,6 +353,8 @@ def build_telegram_message(target_date: str) -> str:
     new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
     foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
     foreign_sell_flow_watchlist = read_csv(FOREIGN_SELL_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
+    ntm_per = read_csv(NTM_PER_CSV, dtype={"ticker": str})
+    ntm_per_summary = read_csv(NTM_PER_SUMMARY_CSV)
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
     performance = read_csv(PERFORMANCE_CSV)
 
@@ -368,6 +406,20 @@ def build_telegram_message(target_date: str) -> str:
             status = str(row.get("result_status", "표본 부족"))
             perf_lines.append(f"  {hid}: {cnt}건 ({status})")
 
+    ntm_line = "NTM PER 관찰: 0건"
+    if not ntm_per.empty and "signal_date" in ntm_per.columns:
+        ntm_today = ntm_per[ntm_per["signal_date"].astype(str) == signal_date]
+        available = int(ntm_today["ntm_per"].notna().sum()) if "ntm_per" in ntm_today.columns else 0
+        peg_over = int((ntm_today["peg_status"].astype(str) == "peg_over_1_5").sum()) if "peg_status" in ntm_today.columns else 0
+        ntm_line = f"NTM PER 관찰: {len(ntm_today)}건 | 계산가능 {available}건 | PEG>1.5 {peg_over}건"
+    elif not ntm_per_summary.empty:
+        latest = ntm_per_summary.tail(1).iloc[0]
+        ntm_line = (
+            f"NTM PER 관찰: {int(latest.get('rows_written', 0) or 0)}건 | "
+            f"계산가능 {int(latest.get('ntm_per_available', 0) or 0)}건 | "
+            f"PEG>1.5 {int(latest.get('peg_over_1_5', 0) or 0)}건"
+        )
+
     lines = [
         f"[auto-invest] 일일 요약 {signal_date}",
         "",
@@ -377,6 +429,7 @@ def build_telegram_message(target_date: str) -> str:
         f"신규 조건 확정: {new_conf_count}건",
         f"외국인 연속 순매수 후보: {len(foreign_flow_watchlist)}건",
         f"외국인 연속 순매도 후보: {len(foreign_sell_flow_watchlist)}건",
+        ntm_line,
         "",
         "■ 관찰 로그",
         f"누적: {len(observations)}건 | 오늘 신규: {obs_today_count}건",

@@ -36,6 +36,7 @@ from analysis_paths import (  # noqa: E402
     FOREIGN_FLOW_WATCHLIST_MD,
     FOREIGN_SELL_FLOW_WATCHLIST_MD,
     OBS_FOREIGN_SELL_FLOW_MD,
+    OBS_NTM_PER_MD,
 )
 
 
@@ -169,6 +170,15 @@ def run_daily(args: argparse.Namespace) -> None:
             dry_run=args.dry_run,
         )
 
+    if not args.skip_ntm_per_observation:
+        ntm_per_args: list[str] = ["--pool-size", str(args.ntm_per_pool_size), "--delay", str(args.delay)]
+        if args.date:
+            ntm_per_args.extend(["--date", args.date])
+        run_step(
+            Step("NTM PER 관찰 기록", "run_ntm_per_observation.py", tuple(ntm_per_args), network=True),
+            dry_run=args.dry_run,
+        )
+
 
 def run_backtest(args: argparse.Namespace) -> None:
     for step in BACKTEST_STEPS:
@@ -230,6 +240,7 @@ def print_outputs() -> None:
         OBS_NEW_CONDITION_MD,
         OBS_FOREIGN_FLOW_MD,
         OBS_FOREIGN_SELL_FLOW_MD,
+        OBS_NTM_PER_MD,
     ]
     print("\n주요 산출물:")
     for path in outputs:
@@ -260,6 +271,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--scoring-pool-size", type=int, default=300, help="팩터 스코어링 스캔 종목 수 (기본: 300)")
     parser.add_argument("--skip-alignment-observation", action="store_true", help="단기/장기 정배열 관찰 기록/추적을 건너뜀")
     parser.add_argument("--alignment-pool-size", type=int, default=300, help="정배열 스캔 시총 상위 N개 (기본: 300)")
+    parser.add_argument("--skip-ntm-per-observation", action="store_true", help="NTM PER 관찰 기록을 건너뜀")
+    parser.add_argument("--ntm-per-pool-size", type=int, default=80, help="NTM PER 조회 대상 거래대금 유니버스 상위 N개 (기본: 80)")
     parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="backtest 산출물 스냅샷 기준일 YYYY-MM-DD")
     parser.add_argument("--promote-strategy", action="store_true", help="backtest로 만든 조건 초안을 active 전략 조건으로 승격")
     parser.add_argument("--include-reports", action="store_true", help="full 모드에서 분기 보고서 배치 생성까지 실행")

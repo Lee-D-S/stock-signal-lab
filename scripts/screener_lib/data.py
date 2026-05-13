@@ -37,6 +37,49 @@ async def get_kis_valuation(ticker: str) -> dict | None:
         return None
 
 
+async def get_kis_quote_snapshot(ticker: str) -> dict | None:
+    """KIS 현재가/기본 밸류에이션 스냅샷 조회."""
+    try:
+        data = await get_marketdata(
+            "/uapi/domestic-stock/v1/quotations/inquire-price",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": ticker,
+            },
+            tr_id="FHKST01010100",
+        )
+        output = data.get("output") or {}
+
+        def _f(key: str) -> float | None:
+            v = output.get(key, "")
+            try:
+                return float(str(v).replace(",", "")) if v not in ("", None) else None
+            except (ValueError, TypeError):
+                return None
+
+        return {
+            "price": _f("stck_prpr"),
+            "per": _f("per"),
+            "pbr": _f("pbr"),
+            "eps": _f("eps"),
+            "bps": _f("bps"),
+        }
+    except Exception:
+        return None
+
+
+async def get_kis_estimate_performance(ticker: str) -> dict | None:
+    """KIS 국내주식 종목추정실적 원본 응답 조회."""
+    try:
+        return await get_marketdata(
+            "/uapi/domestic-stock/v1/quotations/estimate-perform",
+            params={"SHT_CD": ticker},
+            tr_id="HHKST668300C0",
+        )
+    except Exception:
+        return None
+
+
 async def get_ohlcv(ticker: str) -> tuple[pd.DataFrame, int]:
     """일봉 OHLCV + 최근 거래 대금 조회 (400 캘린더일, 오래된 순 정렬).
 
