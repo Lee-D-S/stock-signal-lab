@@ -113,8 +113,12 @@ def read_observation_rows(path: Path, encoding: str) -> tuple[list[str], list[di
         return OBS_FIELDNAMES.copy(), []
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
-        rows = list(reader)
-        fieldnames = list(reader.fieldnames or [])
+        raw_fieldnames = list(reader.fieldnames or [])
+        fieldnames = [field.lstrip("\ufeff") for field in raw_fieldnames]
+        rows = [
+            {str(key).lstrip("\ufeff"): value for key, value in row.items()}
+            for row in reader
+        ]
         for field in OBS_FIELDNAMES:
             if field not in fieldnames:
                 fieldnames.append(field)

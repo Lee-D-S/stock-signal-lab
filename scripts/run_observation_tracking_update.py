@@ -88,7 +88,12 @@ def calc_return(close: Any, event_close: Any) -> str:
 def read_rows(path: Path, encoding: str = "utf-8") -> tuple[list[str], list[dict[str, str]]]:
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
-        return list(reader.fieldnames or []), list(reader)
+        fieldnames = [field.lstrip("\ufeff") for field in list(reader.fieldnames or [])]
+        rows = [
+            {str(key).lstrip("\ufeff"): value for key, value in row.items()}
+            for row in reader
+        ]
+        return fieldnames, rows
 
 
 def write_rows(path: Path, fieldnames: list[str], rows: list[dict[str, str]], encoding: str) -> None:
