@@ -14,12 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 
 from analysis_paths import (  # noqa: E402
     FOREIGN_FLOW_WATCHLIST_CSV,
+    FOREIGN_SELL_FLOW_WATCHLIST_CSV,
     NEW_CONDITION_CONFIRMED_CSV,
     NEW_CONDITION_WATCHLIST_CSV,
     OBS_COMMON_CSV,
     OBS_COMMON_ERROR_CSV,
     OBS_COMMON_SUMMARY_CSV,
     OBS_FOREIGN_FLOW_ERROR_CSV,
+    OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
     OBS_NEW_CONDITION_UTF8_CSV,
     PLAN_DIR,
     SUMMARY_DIR,
@@ -38,9 +40,11 @@ ERROR_CSV = WATCHLIST_SCAN_ERROR_CSV
 NEW_WATCHLIST_CSV = NEW_CONDITION_WATCHLIST_CSV
 NEW_CONFIRMED_CSV = NEW_CONDITION_CONFIRMED_CSV
 FOREIGN_FLOW_WATCHLIST_CSV = FOREIGN_FLOW_WATCHLIST_CSV
+FOREIGN_SELL_FLOW_WATCHLIST_CSV = FOREIGN_SELL_FLOW_WATCHLIST_CSV
 OBS_CSV = OBS_COMMON_ERROR_CSV
 NEW_OBS_CSV = OBS_NEW_CONDITION_UTF8_CSV
 FOREIGN_FLOW_OBS_CSV = OBS_FOREIGN_FLOW_ERROR_CSV
+FOREIGN_SELL_FLOW_OBS_CSV = OBS_FOREIGN_SELL_FLOW_ERROR_CSV
 PERFORMANCE_CSV = OBS_COMMON_SUMMARY_CSV
 
 
@@ -102,9 +106,11 @@ def build_summary(target_date: str) -> str:
     new_watchlist = read_csv(NEW_WATCHLIST_CSV, dtype={"ticker": str})
     new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
     foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
+    foreign_sell_flow_watchlist = read_csv(FOREIGN_SELL_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
     new_observations = read_csv(NEW_OBS_CSV, dtype={"ticker": str})
     foreign_flow_observations = read_csv(FOREIGN_FLOW_OBS_CSV, dtype={"ticker": str})
+    foreign_sell_flow_observations = read_csv(FOREIGN_SELL_FLOW_OBS_CSV, dtype={"ticker": str})
     performance = read_csv(PERFORMANCE_CSV)
 
     signal_date = target_date or latest_signal_date(watchlist, confirmed, observations) or "latest"
@@ -230,6 +236,27 @@ def build_summary(target_date: str) -> str:
             ],
         ),
         "",
+        "### 외국인 연속 순매도 관찰",
+        "",
+        f"- 기준일 후보: {fmt_int(len(foreign_sell_flow_watchlist))}",
+        f"- 누적 관찰: {fmt_int(len(foreign_sell_flow_observations))}",
+        "",
+        markdown_table(
+            foreign_sell_flow_watchlist,
+            [
+                "signal_date",
+                "ticker",
+                "name",
+                "foreign_net_sell_streak",
+                "foreign_qty",
+                "foreign_net_sell_2d_qty",
+                "foreign_net_sell_3d_qty",
+                "foreign_volume_ratio_pct",
+                "matched_conditions",
+                "event_close",
+            ],
+        ),
+        "",
         "## 3. 관찰 로그",
         "",
         f"- 누적 관찰 후보: {fmt_int(len(observations))}",
@@ -289,6 +316,7 @@ def build_telegram_message(target_date: str) -> str:
     confirmed = read_csv(CONFIRMED_CSV, dtype={"ticker": str})
     new_confirmed = read_csv(NEW_CONFIRMED_CSV, dtype={"ticker": str})
     foreign_flow_watchlist = read_csv(FOREIGN_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
+    foreign_sell_flow_watchlist = read_csv(FOREIGN_SELL_FLOW_WATCHLIST_CSV, dtype={"ticker": str})
     observations = read_csv(OBS_CSV, dtype={"ticker": str})
     performance = read_csv(PERFORMANCE_CSV)
 
@@ -348,6 +376,7 @@ def build_telegram_message(target_date: str) -> str:
         *(confirmed_lines or ["  (없음)"]),
         f"신규 조건 확정: {new_conf_count}건",
         f"외국인 연속 순매수 후보: {len(foreign_flow_watchlist)}건",
+        f"외국인 연속 순매도 후보: {len(foreign_sell_flow_watchlist)}건",
         "",
         "■ 관찰 로그",
         f"누적: {len(observations)}건 | 오늘 신규: {obs_today_count}건",

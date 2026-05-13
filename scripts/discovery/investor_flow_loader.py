@@ -184,11 +184,17 @@ def add_investor_flow_features(records: pd.DataFrame, investor: pd.DataFrame) ->
         for col in (
             "foreign_qty",
             "foreign_net_buy_streak",
+            "foreign_net_sell_streak",
             "foreign_net_buy_2d_qty",
+            "foreign_net_sell_2d_qty",
             "foreign_net_buy_3d_qty",
+            "foreign_net_sell_3d_qty",
             "foreign_net_buy_2d_all",
+            "foreign_net_sell_2d_all",
             "foreign_net_buy_3d_all",
+            "foreign_net_sell_3d_all",
             "foreign_net_buy_today_volume_ratio",
+            "foreign_net_sell_today_volume_ratio",
         ):
             out[col] = pd.NA
         return out
@@ -199,12 +205,19 @@ def add_investor_flow_features(records: pd.DataFrame, investor: pd.DataFrame) ->
     flow["foreign_qty"] = pd.to_numeric(flow["foreign_qty"], errors="coerce")
 
     is_buy = flow["foreign_qty"] > 0
-    streak_group = (~is_buy).cumsum()
-    flow["foreign_net_buy_streak"] = is_buy.astype("int64").groupby(streak_group).cumsum()
+    is_sell = flow["foreign_qty"] < 0
+    buy_streak_group = (~is_buy).cumsum()
+    sell_streak_group = (~is_sell).cumsum()
+    flow["foreign_net_buy_streak"] = is_buy.astype("int64").groupby(buy_streak_group).cumsum()
+    flow["foreign_net_sell_streak"] = is_sell.astype("int64").groupby(sell_streak_group).cumsum()
     flow["foreign_net_buy_2d_qty"] = flow["foreign_qty"].rolling(2, min_periods=2).sum()
     flow["foreign_net_buy_3d_qty"] = flow["foreign_qty"].rolling(3, min_periods=3).sum()
+    flow["foreign_net_sell_2d_qty"] = flow["foreign_qty"].rolling(2, min_periods=2).sum()
+    flow["foreign_net_sell_3d_qty"] = flow["foreign_qty"].rolling(3, min_periods=3).sum()
     flow["foreign_net_buy_2d_all"] = (is_buy.rolling(2, min_periods=2).sum() == 2).astype("float64")
     flow["foreign_net_buy_3d_all"] = (is_buy.rolling(3, min_periods=3).sum() == 3).astype("float64")
+    flow["foreign_net_sell_2d_all"] = (is_sell.rolling(2, min_periods=2).sum() == 2).astype("float64")
+    flow["foreign_net_sell_3d_all"] = (is_sell.rolling(3, min_periods=3).sum() == 3).astype("float64")
 
     keep_cols = [
         "date",
@@ -212,22 +225,32 @@ def add_investor_flow_features(records: pd.DataFrame, investor: pd.DataFrame) ->
         "institution_qty",
         "individual_qty",
         "foreign_net_buy_streak",
+        "foreign_net_sell_streak",
         "foreign_net_buy_2d_qty",
+        "foreign_net_sell_2d_qty",
         "foreign_net_buy_3d_qty",
+        "foreign_net_sell_3d_qty",
         "foreign_net_buy_2d_all",
+        "foreign_net_sell_2d_all",
         "foreign_net_buy_3d_all",
+        "foreign_net_sell_3d_all",
     ]
     out = out.merge(flow[keep_cols], on="date", how="left")
 
     if "volume" in out.columns:
         volume = pd.to_numeric(out["volume"], errors="coerce")
         out["foreign_net_buy_today_volume_ratio"] = pd.NA
+        out["foreign_net_sell_today_volume_ratio"] = pd.NA
         valid_volume = volume > 0
         out.loc[valid_volume, "foreign_net_buy_today_volume_ratio"] = (
             out.loc[valid_volume, "foreign_qty"] / volume.loc[valid_volume]
         )
+        out.loc[valid_volume, "foreign_net_sell_today_volume_ratio"] = (
+            -out.loc[valid_volume, "foreign_qty"] / volume.loc[valid_volume]
+        )
     else:
         out["foreign_net_buy_today_volume_ratio"] = pd.NA
+        out["foreign_net_sell_today_volume_ratio"] = pd.NA
 
     return out
 

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import csv
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -29,10 +30,17 @@ from analysis_paths import (  # noqa: E402
     FOREIGN_FLOW_SCAN_CSV,
     FOREIGN_FLOW_WATCHLIST_CSV,
     FOREIGN_FLOW_WATCHLIST_MD,
+    FOREIGN_SELL_FLOW_SCAN_CSV,
+    FOREIGN_SELL_FLOW_WATCHLIST_CSV,
+    FOREIGN_SELL_FLOW_WATCHLIST_MD,
     OBS_FOREIGN_FLOW_CSV,
     OBS_FOREIGN_FLOW_ERROR_CSV,
     OBS_FOREIGN_FLOW_ERROR_MD,
     OBS_FOREIGN_FLOW_MD,
+    OBS_FOREIGN_SELL_FLOW_CSV,
+    OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
+    OBS_FOREIGN_SELL_FLOW_ERROR_MD,
+    OBS_FOREIGN_SELL_FLOW_MD,
 )
 
 SCAN_CSV = FOREIGN_FLOW_SCAN_CSV
@@ -78,6 +86,71 @@ OBS_COLUMNS = [
     "result_label",
     "review_note",
 ]
+
+
+@dataclass(frozen=True)
+class FlowConfig:
+    mode: str
+    label: str
+    condition_prefix: str
+    scan_csv: Path
+    watchlist_csv: Path
+    watchlist_md: Path
+    obs_utf8_csv: Path
+    obs_cp949_csv: Path
+    obs_md: Path
+    streak_col: str
+    qty_2d_col: str
+    qty_3d_col: str
+    all_2d_col: str
+    all_3d_col: str
+    ratio_col: str
+
+
+BUY_CONFIG = FlowConfig(
+    mode="buy",
+    label="순매수",
+    condition_prefix="foreign_buy",
+    scan_csv=FOREIGN_FLOW_SCAN_CSV,
+    watchlist_csv=FOREIGN_FLOW_WATCHLIST_CSV,
+    watchlist_md=FOREIGN_FLOW_WATCHLIST_MD,
+    obs_utf8_csv=OBS_FOREIGN_FLOW_ERROR_CSV,
+    obs_cp949_csv=OBS_FOREIGN_FLOW_CSV,
+    obs_md=OBS_FOREIGN_FLOW_MD,
+    streak_col="foreign_net_buy_streak",
+    qty_2d_col="foreign_net_buy_2d_qty",
+    qty_3d_col="foreign_net_buy_3d_qty",
+    all_2d_col="foreign_net_buy_2d_all",
+    all_3d_col="foreign_net_buy_3d_all",
+    ratio_col="foreign_net_buy_today_volume_ratio",
+)
+SELL_CONFIG = FlowConfig(
+    mode="sell",
+    label="순매도",
+    condition_prefix="foreign_sell",
+    scan_csv=FOREIGN_SELL_FLOW_SCAN_CSV,
+    watchlist_csv=FOREIGN_SELL_FLOW_WATCHLIST_CSV,
+    watchlist_md=FOREIGN_SELL_FLOW_WATCHLIST_MD,
+    obs_utf8_csv=OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
+    obs_cp949_csv=OBS_FOREIGN_SELL_FLOW_CSV,
+    obs_md=OBS_FOREIGN_SELL_FLOW_MD,
+    streak_col="foreign_net_sell_streak",
+    qty_2d_col="foreign_net_sell_2d_qty",
+    qty_3d_col="foreign_net_sell_3d_qty",
+    all_2d_col="foreign_net_sell_2d_all",
+    all_3d_col="foreign_net_sell_3d_all",
+    ratio_col="foreign_net_sell_today_volume_ratio",
+)
+
+
+def observation_columns(config: FlowConfig) -> list[str]:
+    columns = OBS_COLUMNS.copy()
+    replacements = {
+        "foreign_net_buy_streak": config.streak_col,
+        "foreign_net_buy_2d_qty": config.qty_2d_col,
+        "foreign_net_buy_3d_qty": config.qty_3d_col,
+    }
+    return [replacements.get(col, col) for col in columns]
 
 
 def as_text(value: Any) -> str:
@@ -138,12 +211,17 @@ def format_ratio_pct(value: Any) -> str:
     return f"{number:.2f}"
 
 
-def read_rows(path: Path, encoding: str = "utf-8-sig") -> tuple[list[str], list[dict[str, str]]]:
+def read_rows(
+    path: Path,
+    encoding: str = "utf-8-sig",
+    default_columns: list[str] | None = None,
+) -> tuple[list[str], list[dict[str, str]]]:
+    default_columns = default_columns or OBS_COLUMNS
     if not path.exists():
-        return OBS_COLUMNS.copy(), []
+        return default_columns.copy(), []
     with path.open(encoding=encoding, newline="") as handle:
         reader = csv.DictReader(handle)
-        fieldnames = [name.lstrip("\ufeff") for name in (reader.fieldnames or OBS_COLUMNS)]
+        fieldnames = [name.lstrip("\ufeff") for name in (reader.fieldnames or default_columns)]
         rows = []
         for row in reader:
             cleaned = {}
@@ -231,28 +309,33 @@ async def latest_ohlcv_row(ticker: str, end: pd.Timestamp) -> pd.Series | None:
     return df.iloc[-1]
 
 
-def matched_conditions(row: pd.Series) -> list[str]:
+def matched_conditions(row: pd.Series, config: FlowConfig) -> list[str]:
     conditions = []
-    streak = parse_float(row.get("foreign_net_buy_streak")) or 0
-    ratio = parse_float(row.get("foreign_net_buy_today_volume_ratio"))
+    streak = parse_float(row.get(config.streak_col)) or 0
+    ratio = parse_float(row.get(config.ratio_col))
     if streak >= 2:
-        conditions.append("foreign_buy_streak_2")
+        conditions.append(f"{config.condition_prefix}_streak_2")
     if streak >= 3:
-        conditions.append("foreign_buy_streak_3")
-    if parse_float(row.get("foreign_net_buy_2d_all")) == 1:
-        conditions.append("foreign_buy_2d_all")
-    if parse_float(row.get("foreign_net_buy_3d_all")) == 1:
-        conditions.append("foreign_buy_3d_all")
+        conditions.append(f"{config.condition_prefix}_streak_3")
+    if parse_float(row.get(config.all_2d_col)) == 1:
+        conditions.append(f"{config.condition_prefix}_2d_all")
+    if parse_float(row.get(config.all_3d_col)) == 1:
+        conditions.append(f"{config.condition_prefix}_3d_all")
     if ratio is not None and ratio >= 0.005:
-        conditions.append("foreign_buy_vol_0_5pct")
+        conditions.append(f"{config.condition_prefix}_vol_0_5pct")
     if ratio is not None and ratio >= 0.01:
-        conditions.append("foreign_buy_vol_1pct")
+        conditions.append(f"{config.condition_prefix}_vol_1pct")
     if ratio is not None and ratio >= 0.02:
-        conditions.append("foreign_buy_vol_2pct")
+        conditions.append(f"{config.condition_prefix}_vol_2pct")
     return conditions
 
 
-async def scan_ticker(stock: dict[str, Any], as_of: pd.Timestamp, min_streak: int) -> dict[str, Any] | None:
+async def scan_ticker(
+    stock: dict[str, Any],
+    as_of: pd.Timestamp,
+    min_streak: int,
+    config: FlowConfig,
+) -> dict[str, Any] | None:
     ticker = str(stock.get("ticker", "")).zfill(6)
     name = str(stock.get("name", "")).strip()
     price_row = await latest_ohlcv_row(ticker, as_of)
@@ -277,36 +360,36 @@ async def scan_ticker(stock: dict[str, Any], as_of: pd.Timestamp, min_streak: in
     )
     features = add_investor_flow_features(records, investor)
     row = features.iloc[0]
-    streak = parse_float(row.get("foreign_net_buy_streak")) or 0
-    conditions = matched_conditions(row)
+    streak = parse_float(row.get(config.streak_col)) or 0
+    conditions = matched_conditions(row, config)
     if streak < min_streak:
         return None
 
-    ratio = parse_float(row.get("foreign_net_buy_today_volume_ratio"))
+    ratio = parse_float(row.get(config.ratio_col))
     return {
         "signal_date": signal_date.strftime("%Y-%m-%d"),
         "ticker": ticker,
         "name": name,
-        "condition_id": f"foreign_buy_streak_{int(streak)}",
+        "condition_id": f"{config.condition_prefix}_streak_{int(streak)}",
         "matched_conditions": ",".join(conditions),
-        "foreign_net_buy_streak": str(int(streak)),
+        config.streak_col: str(int(streak)),
         "foreign_qty": fmt_price(row.get("foreign_qty")),
-        "foreign_net_buy_2d_qty": fmt_price(row.get("foreign_net_buy_2d_qty")),
-        "foreign_net_buy_3d_qty": fmt_price(row.get("foreign_net_buy_3d_qty")),
+        config.qty_2d_col: fmt_price(row.get(config.qty_2d_col)),
+        config.qty_3d_col: fmt_price(row.get(config.qty_3d_col)),
         "foreign_volume_ratio_pct": format_ratio_pct(ratio * 100 if ratio is not None else None),
         "event_close": fmt_price(price_row["close"]),
     }
 
 
-async def scan_candidates(as_of: pd.Timestamp, top: int, pool_size: int, min_streak: int) -> pd.DataFrame:
+async def scan_candidates(as_of: pd.Timestamp, top: int, pool_size: int, min_streak: int, config: FlowConfig) -> pd.DataFrame:
     stocks = (await get_stock_universe("amount"))[:pool_size]
     rows = []
     for idx, stock in enumerate(stocks, 1):
-        candidate = await scan_ticker(stock, as_of, min_streak)
+        candidate = await scan_ticker(stock, as_of, min_streak, config)
         if candidate is not None:
             rows.append(candidate)
         if idx % 20 == 0 or idx == len(stocks):
-            print(f"[foreign-flow] scanned={idx}/{len(stocks)} candidates={len(rows)}")
+            print(f"[foreign-flow:{config.mode}] scanned={idx}/{len(stocks)} candidates={len(rows)}")
         if len(rows) >= top:
             break
     return pd.DataFrame(rows)
@@ -390,9 +473,9 @@ def append_new_observations(existing: list[dict[str, str]], candidates: pd.DataF
     return added
 
 
-def build_watchlist_markdown(candidates: pd.DataFrame, as_of: pd.Timestamp) -> str:
+def build_watchlist_markdown(candidates: pd.DataFrame, as_of: pd.Timestamp, config: FlowConfig) -> str:
     lines = [
-        f"# 외국인 연속 순매수 후보 - {as_of.strftime('%Y-%m-%d')}",
+        f"# 외국인 연속 {config.label} 후보 - {as_of.strftime('%Y-%m-%d')}",
         "",
         f"- 후보 수: {len(candidates):,}",
         "",
@@ -402,10 +485,10 @@ def build_watchlist_markdown(candidates: pd.DataFrame, as_of: pd.Timestamp) -> s
                 "signal_date",
                 "ticker",
                 "name",
-                "foreign_net_buy_streak",
+                config.streak_col,
                 "foreign_qty",
-                "foreign_net_buy_2d_qty",
-                "foreign_net_buy_3d_qty",
+                config.qty_2d_col,
+                config.qty_3d_col,
                 "foreign_volume_ratio_pct",
                 "matched_conditions",
                 "event_close",
@@ -416,11 +499,11 @@ def build_watchlist_markdown(candidates: pd.DataFrame, as_of: pd.Timestamp) -> s
     return "\n".join(lines)
 
 
-def build_observation_markdown(rows: list[dict[str, str]]) -> str:
+def build_observation_markdown(rows: list[dict[str, str]], config: FlowConfig) -> str:
     lines = [
-        "# 외국인 연속 순매수 관찰 로그",
+        f"# 외국인 연속 {config.label} 관찰 로그",
         "",
-        "외국인 순매수가 2거래일 이상 이어진 종목의 다음 거래일 및 이후 수익률을 누적 추적한다.",
+        f"외국인 {config.label}가 2거래일 이상 이어진 종목의 다음 거래일 및 이후 수익률을 누적 추적한다.",
         "",
         "| 신호일 | 종목 | 코드 | 연속일 | 조건 | 신호일 종가 | D+1 시가 | D+1 종가 | D+5 | D+10 | D+20 | 결과 | 메모 |",
         "| --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |",
@@ -428,7 +511,7 @@ def build_observation_markdown(rows: list[dict[str, str]]) -> str:
     for row in sorted(rows, key=lambda r: (r.get("signal_date", ""), r.get("ticker", ""))):
         lines.append(
             f"| {row.get('signal_date', '')} | {row.get('name', '')} | {row.get('ticker', '')} | "
-            f"{row.get('foreign_net_buy_streak', '')} | {row.get('matched_conditions', '')} | "
+            f"{row.get(config.streak_col, '')} | {row.get('matched_conditions', '')} | "
             f"{format_int(row.get('event_close'))} | "
             f"{format_int(row.get('next_open'))} ({signed_pct(row.get('next_open_return_pct'))}) | "
             f"{format_int(row.get('next_close'))} ({signed_pct(row.get('next_close_return_pct'))}) | "
@@ -441,18 +524,19 @@ def build_observation_markdown(rows: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
-async def run(args: argparse.Namespace) -> tuple[int, int, int]:
+async def run_one(args: argparse.Namespace, config: FlowConfig) -> tuple[str, int, int, int]:
     as_of = pd.Timestamp(args.date).normalize() if args.date else pd.Timestamp.today().normalize()
     FOREIGN_FLOW_DIR.mkdir(parents=True, exist_ok=True)
-    OBS_UTF8_CSV.parent.mkdir(parents=True, exist_ok=True)
+    config.obs_utf8_csv.parent.mkdir(parents=True, exist_ok=True)
 
-    candidates = await scan_candidates(as_of, args.top, args.pool_size, args.min_streak)
-    candidates.to_csv(SCAN_CSV, index=False, encoding="utf-8-sig")
-    candidates.to_csv(WATCHLIST_CSV, index=False, encoding="utf-8-sig")
-    WATCHLIST_MD.write_text(build_watchlist_markdown(candidates, as_of), encoding="utf-8")
+    candidates = await scan_candidates(as_of, args.top, args.pool_size, args.min_streak, config)
+    candidates.to_csv(config.scan_csv, index=False, encoding="utf-8-sig")
+    candidates.to_csv(config.watchlist_csv, index=False, encoding="utf-8-sig")
+    config.watchlist_md.write_text(build_watchlist_markdown(candidates, as_of, config), encoding="utf-8")
 
-    fieldnames, rows = read_rows(OBS_UTF8_CSV)
-    for col in OBS_COLUMNS:
+    columns = observation_columns(config)
+    fieldnames, rows = read_rows(config.obs_utf8_csv, default_columns=columns)
+    for col in columns:
         if col not in fieldnames:
             fieldnames.append(col)
     added = append_new_observations(rows, candidates)
@@ -465,32 +549,48 @@ async def run(args: argparse.Namespace) -> tuple[int, int, int]:
             updated += 1
 
     if not args.dry_run:
-        write_rows(OBS_UTF8_CSV, fieldnames, rows, "utf-8")
-        write_rows(OBS_CP949_CSV, fieldnames, rows, "cp949", errors="replace")
-        OBS_MD.write_text(build_observation_markdown(rows), encoding="utf-8")
+        write_rows(config.obs_utf8_csv, fieldnames, rows, "utf-8")
+        write_rows(config.obs_cp949_csv, fieldnames, rows, "cp949", errors="replace")
+        config.obs_md.write_text(build_observation_markdown(rows, config), encoding="utf-8")
 
-    return len(candidates), added, updated
+    return config.mode, len(candidates), added, updated
+
+
+async def run(args: argparse.Namespace) -> list[tuple[str, int, int, int]]:
+    configs = []
+    if args.mode in {"buy", "both"}:
+        configs.append(BUY_CONFIG)
+    if args.mode in {"sell", "both"}:
+        configs.append(SELL_CONFIG)
+
+    results = []
+    for config in configs:
+        results.append(await run_one(args, config))
+    return results
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="외국인 연속 순매수 후보 자동 기록 및 D+ 추적")
+    parser = argparse.ArgumentParser(description="외국인 연속 순매수/순매도 후보 자동 기록 및 D+ 추적")
     parser.add_argument("--date", help="YYYY-MM-DD. 생략하면 오늘 기준으로 KIS 최신 일봉 사용")
     parser.add_argument("--top", type=int, default=50, help="기록할 최대 후보 수")
     parser.add_argument("--pool-size", type=int, default=120, help="거래대금 상위 조회 후보 수")
-    parser.add_argument("--min-streak", type=int, default=2, help="최소 외국인 연속 순매수 일수")
+    parser.add_argument("--min-streak", type=int, default=2, help="최소 외국인 연속 순매수/순매도 일수")
+    parser.add_argument("--mode", choices=["buy", "sell", "both"], default="both", help="관찰 방향")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    candidates, added, updated = asyncio.run(run(args))
-    print(f"foreign_flow_candidates={candidates}")
-    print(f"observations_added={added}")
-    print(f"observations_updated={updated}")
-    print(f"watchlist_csv={WATCHLIST_CSV}")
-    print(f"observation_csv={OBS_UTF8_CSV}")
-    print(f"observation_md={OBS_MD}")
+    results = asyncio.run(run(args))
+    for mode, candidates, added, updated in results:
+        config = BUY_CONFIG if mode == "buy" else SELL_CONFIG
+        print(f"foreign_flow_{mode}_candidates={candidates}")
+        print(f"foreign_flow_{mode}_observations_added={added}")
+        print(f"foreign_flow_{mode}_observations_updated={updated}")
+        print(f"foreign_flow_{mode}_watchlist_csv={config.watchlist_csv}")
+        print(f"foreign_flow_{mode}_observation_csv={config.obs_utf8_csv}")
+        print(f"foreign_flow_{mode}_observation_md={config.obs_md}")
 
 
 if __name__ == "__main__":

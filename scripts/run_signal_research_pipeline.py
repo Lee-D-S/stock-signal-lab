@@ -34,6 +34,8 @@ from analysis_paths import (  # noqa: E402
     NEW_CONDITION_CONFIRMED_MD,
     NEW_CONDITION_WATCHLIST_MD,
     FOREIGN_FLOW_WATCHLIST_MD,
+    FOREIGN_SELL_FLOW_WATCHLIST_MD,
+    OBS_FOREIGN_SELL_FLOW_MD,
 )
 
 
@@ -138,7 +140,7 @@ def run_daily(args: argparse.Namespace) -> None:
         if args.date:
             foreign_flow_args.extend(["--date", args.date])
         run_step(
-            Step("외국인 연속 순매수 관찰 기록/추적", "run_foreign_flow_observation.py", tuple(foreign_flow_args), network=True),
+            Step("외국인 연속 순매수/순매도 관찰 기록/추적", "run_foreign_flow_observation.py", tuple(foreign_flow_args), network=True),
             dry_run=args.dry_run,
         )
 
@@ -223,9 +225,11 @@ def print_outputs() -> None:
         NEW_CONDITION_WATCHLIST_MD,
         NEW_CONDITION_CONFIRMED_MD,
         FOREIGN_FLOW_WATCHLIST_MD,
+        FOREIGN_SELL_FLOW_WATCHLIST_MD,
         OBS_COMMON_MD,
         OBS_NEW_CONDITION_MD,
         OBS_FOREIGN_FLOW_MD,
+        OBS_FOREIGN_SELL_FLOW_MD,
     ]
     print("\n주요 산출물:")
     for path in outputs:
@@ -248,9 +252,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--refresh-universe", action="store_true", help="daily 전에 거래대금 상위 유니버스를 갱신")
     parser.add_argument("--universe-top", type=int, default=30, help="거래대금 상위 유니버스 종목 수")
     parser.add_argument("--skip-observation-update", action="store_true", help="recheck 후 확정 후보 관찰 로그 자동 추가를 건너뜀")
-    parser.add_argument("--skip-foreign-flow-observation", action="store_true", help="외국인 연속 순매수 관찰 기록/추적을 건너뜀")
-    parser.add_argument("--foreign-flow-top", type=int, default=50, help="외국인 연속 순매수 최대 기록 후보 수")
-    parser.add_argument("--foreign-flow-pool-size", type=int, default=120, help="외국인 연속 순매수 스캔 대상 거래대금 상위 후보 수")
+    parser.add_argument("--skip-foreign-flow-observation", action="store_true", help="외국인 연속 순매수/순매도 관찰 기록/추적을 건너뜀")
+    parser.add_argument("--foreign-flow-top", type=int, default=50, help="외국인 연속 순매수/순매도 최대 기록 후보 수")
+    parser.add_argument("--foreign-flow-pool-size", type=int, default=120, help="외국인 연속 순매수/순매도 스캔 대상 거래대금 상위 후보 수")
     parser.add_argument("--skip-scoring-observation", action="store_true", help="팩터 스코어링 스크린 + 관찰 기록/추적을 건너뜀")
     parser.add_argument("--scoring-threshold", type=float, default=0.60, help="팩터 스코어 관찰 기록 임계값 (기본: 0.60)")
     parser.add_argument("--scoring-pool-size", type=int, default=300, help="팩터 스코어링 스캔 종목 수 (기본: 300)")
