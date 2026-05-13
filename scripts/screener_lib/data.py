@@ -80,6 +80,19 @@ async def get_kis_estimate_performance(ticker: str) -> dict | None:
         return None
 
 
+async def get_kis_estimate_performance_result(ticker: str) -> dict:
+    """KIS estimate-perform response with explicit error metadata."""
+    try:
+        raw = await get_marketdata(
+            "/uapi/domestic-stock/v1/quotations/estimate-perform",
+            params={"SHT_CD": ticker},
+            tr_id="HHKST668300C0",
+        )
+        return {"ok": True, "raw": raw, "error": ""}
+    except Exception as exc:
+        return {"ok": False, "raw": None, "error": repr(exc)}
+
+
 async def get_ohlcv(ticker: str) -> tuple[pd.DataFrame, int]:
     """일봉 OHLCV + 최근 거래 대금 조회 (400 캘린더일, 오래된 순 정렬).
 

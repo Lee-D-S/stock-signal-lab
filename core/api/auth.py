@@ -56,6 +56,26 @@ def _save_to_file(token: TokenInfo) -> None:
         logger.warning(f"토큰 파일 저장 실패: {e}")
 
 
+def invalidate_access_token() -> None:
+    """Clear cached mock/default KIS token after the API reports it expired."""
+    global _token_cache
+    _token_cache = None
+    try:
+        _TOKEN_CACHE_FILE.unlink(missing_ok=True)
+    except Exception as e:
+        logger.warning("KIS token cache delete failed: %s", e)
+
+
+def invalidate_real_access_token() -> None:
+    """Clear cached real KIS token after the API reports it expired."""
+    global _real_token_cache
+    _real_token_cache = None
+    try:
+        _REAL_TOKEN_CACHE_FILE.unlink(missing_ok=True)
+    except Exception as e:
+        logger.warning("KIS real token cache delete failed: %s", e)
+
+
 async def get_access_token() -> str:
     global _token_cache
 

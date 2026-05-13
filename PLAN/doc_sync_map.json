@@ -1,0 +1,92 @@
+{
+  "default_docs": [
+    "PLAN/PLAN.md",
+    "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
+    "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md"
+  ],
+  "rules": [
+    {
+      "id": "signal_pipeline",
+      "patterns": [
+        "scripts/run_signal_research_pipeline.py",
+        ".github/workflows/**"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/daily_morning_자동실행_흐름.md",
+        "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md",
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md"
+      ],
+      "reason": "Daily/morning workflow behavior changed."
+    },
+    {
+      "id": "agent_plans",
+      "patterns": [
+        "PLAN/**/*.md",
+        "scripts/run_agent_feedback_loop.py"
+      ],
+      "docs": [
+        "PLAN/1인_투자기업_AI_Agent_시스템_PLAN.md",
+        "PLAN/무료_1인_투자기업_Agent_시스템_PLAN.md",
+        "PLAN/무료_Agent별_상세_PLAN.md",
+        "PLAN/free_agent_plans/**"
+      ],
+      "reason": "Agent responsibilities or interaction flow changed."
+    },
+    {
+      "id": "ntm_per_peg_proxy",
+      "patterns": [
+        "scripts/run_ntm_per_observation.py",
+        "scripts/run_daily_research_summary.py",
+        "scripts/screener_lib/data.py",
+        "core/api/client.py",
+        "core/api/auth.py"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
+        "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md",
+        "ai 주가 변동 원인 분석/08_관찰기록/06_밸류에이션/NTM_PER_관찰_로그.md"
+      ],
+      "reason": "Valuation, KIS token, NTM PER, or PEG proxy behavior changed."
+    },
+    {
+      "id": "foreign_flow",
+      "patterns": [
+        "scripts/run_foreign_flow_observation.py"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/전략_세트와_관찰_방식_정리.md",
+        "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md",
+        "ai 주가 변동 원인 분석/08_관찰기록/01_외국인수급/**"
+      ],
+      "reason": "Foreign buy/sell streak detection or logging changed."
+    },
+    {
+      "id": "new_company_reports",
+      "patterns": [
+        "scripts/run_new_company_reports.py",
+        "scripts/quarterly_stock_analysis.py",
+        "ai 주가 변동 원인 분석/00_기업별분석/**",
+        "ai 주가 변동 원인 분석/01_기획/신규_기업_보고서_생성_상태.csv"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/신규_기업_추가_대상.md",
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
+        "ai 주가 변동 원인 분석/01_기획/운영_루틴.md"
+      ],
+      "reason": "New company universe or report generation flow changed."
+    },
+    {
+      "id": "portfolio_test_data",
+      "patterns": [
+        "scripts/*portfolio*.py",
+        "data/test_portfolio*",
+        "data/mock*"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
+        "PLAN/PLAN.md"
+      ],
+      "reason": "Portfolio test/live/mock data behavior changed."
+    }
+  ]
+}

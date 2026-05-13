@@ -47,10 +47,13 @@ LOG_COLS = [
     "eps_year_2",
     "eps_source",
     "estimate_status",
+    "estimate_detail",
+    "estimate_error",
     "ntm_per_status",
-    "peg_growth_5y_pct",
-    "peg",
-    "peg_status",
+    "growth_pct",
+    "growth_method",
+    "peg_proxy",
+    "peg_proxy_status",
     "review_note",
 ]
 
@@ -59,10 +62,13 @@ SUMMARY_COLS = [
     "pool_size",
     "rows_written",
     "ntm_per_available",
-    "peg_available",
+    "peg_proxy_available",
     "estimate_missing",
+    "estimate_api_error",
+    "estimate_empty",
+    "estimate_unparsed",
     "eps_nonpositive",
-    "peg_over_1_5",
+    "peg_proxy_over_1_5",
 ]
 
 
@@ -93,6 +99,33 @@ def _flatten_outputs(raw: dict | None) -> list[dict[str, Any]]:
     return rows
 
 
+def _raw_output_summary(raw: dict | None) -> str:
+    if not raw:
+        return "raw_empty"
+    parts: list[str] = []
+    for key in ("output", "output1", "output2", "output3", "output4"):
+        value = raw.get(key)
+        if isinstance(value, list):
+            parts.append(f"{key}:list[{len(value)}]")
+        elif isinstance(value, dict):
+            parts.append(f"{key}:dict[{len(value)}]")
+        elif value not in ("", None):
+            parts.append(f"{key}:{type(value).__name__}")
+    return ",".join(parts) if parts else "outputs_empty"
+
+
+def _estimate_status(result: dict[str, Any], raw: dict | None, rows: list[dict[str, Any]], eps_points: list[tuple[str, float, str]]) -> str:
+    if not result.get("ok"):
+        return "api_error"
+    if not raw:
+        return "empty_response"
+    if not rows:
+        return "empty_response"
+    if eps_points:
+        return "ok"
+    return "unparsed_response"
+
+
 def _row_text(row: dict[str, Any]) -> str:
     label_keys = [
         "name",
@@ -114,6 +147,34 @@ def _period_key(row: dict[str, Any], key: str) -> str:
         if row.get(candidate):
             return str(row[candidate])
     return key
+
+
+def _extract_kis_estimate_eps_points(raw: dict | None) -> list[tuple[str, float, str]]:
+    """Extract EPS from KIS estimate-perform table output.
+
+    In observed responses, output4 contains fiscal periods and output3[1]
+    contains EPS values scaled by 10 in data1..data5.
+    """
+    if not raw:
+        return []
+    periods = raw.get("output4")
+    rows = raw.get("output3")
+    if not isinstance(periods, list) or not isinstance(rows, list) or len(rows) < 2:
+        return []
+
+    eps_row = rows[1]
+    if not isinstance(eps_row, dict):
+        return []
+
+    points: list[tuple[str, float, str]] = []
+    for idx, period_row in enumerate(periods, 1):
+        if not isinstance(period_row, dict):
+            continue
+        period = str(period_row.get("dt") or f"data{idx}")
+        value = _to_float(eps_row.get(f"data{idx}"))
+        if value is not None:
+            points.append((period, round(value / 10.0, 4), f"output3[1].data{idx}/10"))
+    return points
 
 
 def _extract_eps_points(rows: list[dict[str, Any]]) -> list[tuple[str, float, str]]:
@@ -175,11 +236,29 @@ def _extract_growth_5y(rows: list[dict[str, Any]]) -> tuple[float | None, str]:
     return None, ""
 
 
-def _sort_eps_points(points: list[tuple[str, float, str]]) -> list[tuple[str, float, str]]:
-    def _period_year(period: str) -> int:
-        digits = "".join(ch for ch in period if ch.isdigit())
-        return int(digits[:4]) if len(digits) >= 4 else 9999
+def _period_year(period: str) -> int:
+    digits = "".join(ch for ch in period if ch.isdigit())
+    return int(digits[:4]) if len(digits) >= 4 else 9999
 
+
+def _eps_cagr_growth(points: list[tuple[str, float, str]], as_of: date) -> tuple[float | None, str]:
+    positives = [
+        point
+        for point in _sort_eps_points(points)
+        if point[1] > 0 and _period_year(point[0]) >= as_of.year
+    ]
+    if len(positives) < 2:
+        return None, ""
+    start = positives[0]
+    end = positives[-1]
+    years = max(1, _period_year(end[0]) - _period_year(start[0]))
+    if start[1] <= 0 or end[1] <= 0:
+        return None, ""
+    cagr = ((end[1] / start[1]) ** (1 / years) - 1) * 100
+    return round(cagr, 2), f"eps_cagr_proxy:{start[0]}-{end[0]}"
+
+
+def _sort_eps_points(points: list[tuple[str, float, str]]) -> list[tuple[str, float, str]]:
     def _sort_key(item: tuple[str, float, str]) -> tuple[int, str]:
         period = item[0]
         return _period_year(period), period
@@ -188,10 +267,6 @@ def _sort_eps_points(points: list[tuple[str, float, str]]) -> list[tuple[str, fl
 
 
 def _ntm_eps(points: list[tuple[str, float, str]], as_of: date) -> tuple[float | None, float | None, float | None, str]:
-    def _period_year(period: str) -> int:
-        digits = "".join(ch for ch in period if ch.isdigit())
-        return int(digits[:4]) if len(digits) >= 4 else 9999
-
     positives = [
         point
         for point in _sort_eps_points(points)
@@ -228,14 +303,14 @@ def _ntm_status(ntm_per: float | None, ntm_eps: float | None, has_estimate: bool
     return "normal"
 
 
-def _peg_status(peg: float | None) -> str:
-    if peg is None:
+def _peg_proxy_status(peg_proxy: float | None) -> str:
+    if peg_proxy is None:
         return ""
-    if peg >= 1.5:
-        return "peg_over_1_5"
-    if peg >= 1.0:
-        return "peg_1_0_to_1_5"
-    return "peg_below_1_0"
+    if peg_proxy >= 1.5:
+        return "peg_proxy_over_1_5"
+    if peg_proxy >= 1.0:
+        return "peg_proxy_1_0_to_1_5"
+    return "peg_proxy_below_1_0"
 
 
 def _load_universe(limit: int) -> list[dict[str, Any]]:
@@ -276,35 +351,55 @@ def _append_summary(run_date: str, pool_size: int, rows: list[dict[str, Any]]) -
         "pool_size": pool_size,
         "rows_written": len(rows),
         "ntm_per_available": sum(1 for r in rows if pd.notna(r.get("ntm_per"))),
-        "peg_available": sum(1 for r in rows if pd.notna(r.get("peg"))),
-        "estimate_missing": sum(1 for r in rows if r.get("estimate_status") == "missing"),
+        "peg_proxy_available": sum(1 for r in rows if pd.notna(r.get("peg_proxy"))),
+        "estimate_missing": sum(1 for r in rows if r.get("estimate_status") != "ok"),
+        "estimate_api_error": sum(1 for r in rows if r.get("estimate_status") == "api_error"),
+        "estimate_empty": sum(1 for r in rows if r.get("estimate_status") == "empty_response"),
+        "estimate_unparsed": sum(1 for r in rows if r.get("estimate_status") == "unparsed_response"),
         "eps_nonpositive": sum(1 for r in rows if r.get("ntm_per_status") == "eps_nonpositive"),
-        "peg_over_1_5": sum(1 for r in rows if r.get("peg_status") == "peg_over_1_5"),
+        "peg_proxy_over_1_5": sum(1 for r in rows if r.get("peg_proxy_status") == "peg_proxy_over_1_5"),
     }
-    pd.concat([df, pd.DataFrame([row])], ignore_index=True).to_csv(OBS_NTM_PER_SUMMARY_CSV, index=False, encoding="utf-8-sig")
+    out = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    out = out[[col for col in SUMMARY_COLS if col in out.columns]]
+    out.to_csv(OBS_NTM_PER_SUMMARY_CSV, index=False, encoding="utf-8-sig")
 
 
 async def _build_row(stock: dict[str, Any], as_of: date, write_raw: bool) -> dict[str, Any]:
-    from screener_lib.data import get_kis_estimate_performance, get_kis_quote_snapshot
+    from screener_lib.data import get_kis_estimate_performance_result, get_kis_quote_snapshot
 
     ticker = str(stock.get("ticker", "")).zfill(6)
     name = str(stock.get("name", ""))
     quote = await get_kis_quote_snapshot(ticker) or {}
-    raw = await get_kis_estimate_performance(ticker)
+    estimate_result = await get_kis_estimate_performance_result(ticker)
+    raw = estimate_result.get("raw") if estimate_result.get("ok") else None
 
-    if write_raw and raw:
+    if write_raw:
         with OBS_NTM_PER_RAW_JSONL.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"signal_date": as_of.isoformat(), "ticker": ticker, "name": name, "raw": raw}, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "signal_date": as_of.isoformat(),
+                        "ticker": ticker,
+                        "name": name,
+                        "estimate_result": estimate_result,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
 
     rows = _flatten_outputs(raw)
-    eps_points = _extract_eps_points(rows)
+    eps_points = _extract_kis_estimate_eps_points(raw) or _extract_eps_points(rows)
     ntm_eps, eps1, eps2, eps_source = _ntm_eps(eps_points, as_of)
     growth, growth_source = _extract_growth_5y(rows)
+    if growth is None:
+        growth, growth_source = _eps_cagr_growth(eps_points, as_of)
 
     price = quote.get("price") or _to_float(stock.get("price")) or _to_float(stock.get("close"))
     ntm_per = round(price / ntm_eps, 2) if price and ntm_eps and ntm_eps > 0 else None
-    peg = round(ntm_per / growth, 2) if ntm_per and growth and growth > 0 else None
-    estimate_status = "ok" if eps_points else "missing"
+    peg_proxy = round(ntm_per / growth, 2) if ntm_per and growth and growth > 0 else None
+    estimate_status = _estimate_status(estimate_result, raw, rows, eps_points)
+    estimate_detail = _raw_output_summary(raw)
 
     return {
         "signal_date": as_of.isoformat(),
@@ -319,10 +414,13 @@ async def _build_row(stock: dict[str, Any], as_of: date, write_raw: bool) -> dic
         "eps_year_2": eps2,
         "eps_source": eps_source,
         "estimate_status": estimate_status,
+        "estimate_detail": estimate_detail,
+        "estimate_error": estimate_result.get("error", ""),
         "ntm_per_status": _ntm_status(ntm_per, ntm_eps, bool(eps_points)),
-        "peg_growth_5y_pct": growth,
-        "peg": peg,
-        "peg_status": _peg_status(peg),
+        "growth_pct": growth,
+        "growth_method": growth_source,
+        "peg_proxy": peg_proxy,
+        "peg_proxy_status": _peg_proxy_status(peg_proxy),
         "review_note": f"growth_source={growth_source}" if growth_source else "",
     }
 

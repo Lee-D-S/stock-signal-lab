@@ -1,7 +1,12 @@
 import httpx
 
 from config import settings
-from .auth import get_access_token, get_real_access_token
+from .auth import (
+    get_access_token,
+    get_real_access_token,
+    invalidate_access_token,
+    invalidate_real_access_token,
+)
 
 REAL_BASE_URL = "https://openapi.koreainvestment.com:9443"
 
@@ -29,6 +34,28 @@ async def get_marketdata(
 
 
 async def _request(
+    method: str,
+    path: str,
+    params: dict | None = None,
+    body: dict | None = None,
+    tr_id: str = "",
+    force_real: bool = False,
+    tr_cont: str = "",
+) -> dict:
+    for attempt in range(2):
+        data = await _send_request(method, path, params, body, tr_id, force_real, tr_cont)
+        if _is_expired_token_data(data):
+            if attempt == 0:
+                _invalidate_token(force_real)
+                continue
+            msg = data.get("msg1", "Expired token")
+            raise RuntimeError(f"API error [EGW00123]: {msg}")
+        return data
+
+    raise RuntimeError("API request failed")
+
+
+async def _send_request(
     method: str,
     path: str,
     params: dict | None = None,
@@ -66,8 +93,11 @@ async def _request(
         else:
             resp = await http.post(url, headers=headers, json=body)
 
+    data = _json_or_empty(resp)
+    if _is_expired_token_data(data):
+        return data
+
     resp.raise_for_status()
-    data = resp.json()
 
     rt_cd = data.get("rt_cd", "0")
     if rt_cd != "0":
@@ -77,3 +107,24 @@ async def _request(
     # 페이지네이션 여부를 호출자가 확인할 수 있도록 응답 헤더의 tr_cont 포함
     data["__tr_cont__"] = resp.headers.get("tr_cont", "") or resp.headers.get("tr-cont", "")
     return data
+
+
+def _json_or_empty(resp: httpx.Response) -> dict:
+    try:
+        data = resp.json()
+        return data if isinstance(data, dict) else {}
+    except ValueError:
+        return {}
+
+
+def _is_expired_token_data(data: dict) -> bool:
+    msg_cd = str(data.get("msg_cd", ""))
+    msg = str(data.get("msg1", "")).lower()
+    return msg_cd == "EGW00123" or ("token" in msg and "만료" in msg)
+
+
+def _invalidate_token(force_real: bool) -> None:
+    if force_real:
+        invalidate_real_access_token()
+    else:
+        invalidate_access_token()

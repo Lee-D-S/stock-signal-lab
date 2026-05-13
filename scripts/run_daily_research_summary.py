@@ -275,9 +275,10 @@ def build_summary(target_date: str) -> str:
                 "ntm_eps",
                 "ntm_per",
                 "ntm_per_status",
-                "peg_growth_5y_pct",
-                "peg",
-                "peg_status",
+                "growth_pct",
+                "growth_method",
+                "peg_proxy",
+                "peg_proxy_status",
             ],
         ),
         "",
@@ -287,10 +288,10 @@ def build_summary(target_date: str) -> str:
             "run_date",
             "pool_size",
             "ntm_per_available",
-            "peg_available",
+            "peg_proxy_available",
             "estimate_missing",
             "eps_nonpositive",
-            "peg_over_1_5",
+            "peg_proxy_over_1_5",
         ]),
         "",
         "## 3. 관찰 로그",
@@ -410,15 +411,37 @@ def build_telegram_message(target_date: str) -> str:
     if not ntm_per.empty and "signal_date" in ntm_per.columns:
         ntm_today = ntm_per[ntm_per["signal_date"].astype(str) == signal_date]
         available = int(ntm_today["ntm_per"].notna().sum()) if "ntm_per" in ntm_today.columns else 0
-        peg_over = int((ntm_today["peg_status"].astype(str) == "peg_over_1_5").sum()) if "peg_status" in ntm_today.columns else 0
-        ntm_line = f"NTM PER 관찰: {len(ntm_today)}건 | 계산가능 {available}건 | PEG>1.5 {peg_over}건"
+        peg_status_col = "peg_proxy_status" if "peg_proxy_status" in ntm_today.columns else "peg_status"
+        peg_over_value = "peg_proxy_over_1_5" if peg_status_col == "peg_proxy_status" else "peg_over_1_5"
+        peg_over = int((ntm_today[peg_status_col].astype(str) == peg_over_value).sum()) if peg_status_col in ntm_today.columns else 0
+        ntm_line = f"NTM PER 관찰: {len(ntm_today)}건 | 계산가능 {available}건 | PEG proxy>1.5 {peg_over}건"
+        if "estimate_status" in ntm_today.columns:
+            statuses = ntm_today["estimate_status"].astype(str).value_counts()
+            diagnostics = [
+                f"{status} {int(count)}건"
+                for status, count in statuses.items()
+                if status not in {"ok", "", "nan", "None"}
+            ]
+            if diagnostics:
+                ntm_line = f"{ntm_line} | " + ", ".join(diagnostics[:3])
     elif not ntm_per_summary.empty:
         latest = ntm_per_summary.tail(1).iloc[0]
         ntm_line = (
             f"NTM PER 관찰: {int(latest.get('rows_written', 0) or 0)}건 | "
             f"계산가능 {int(latest.get('ntm_per_available', 0) or 0)}건 | "
-            f"PEG>1.5 {int(latest.get('peg_over_1_5', 0) or 0)}건"
+            f"PEG proxy>1.5 {int(latest.get('peg_proxy_over_1_5', latest.get('peg_over_1_5', 0)) or 0)}건"
         )
+        diagnostics = []
+        for key, label in [
+            ("estimate_api_error", "api_error"),
+            ("estimate_empty", "empty_response"),
+            ("estimate_unparsed", "unparsed_response"),
+        ]:
+            count = int(latest.get(key, 0) or 0)
+            if count:
+                diagnostics.append(f"{label} {count}건")
+        if diagnostics:
+            ntm_line = f"{ntm_line} | " + ", ".join(diagnostics)
 
     lines = [
         f"[auto-invest] 일일 요약 {signal_date}",
