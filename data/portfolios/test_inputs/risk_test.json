@@ -1,0 +1,15 @@
+{
+  "cash": 5000000,
+  "metadata": {
+    "account_source": "test_risk_test",
+    "field_policy": {
+      "mock_fields": ["cash", "ticker", "name", "quantity", "avg_price"],
+      "live_fields": ["current_price", "valuation", "sector", "trade_amount"],
+      "derived_fields": ["market_value", "invested_amount", "unrealized_pl", "return_pct"]
+    }
+  },
+  "positions": [
+    {"ticker": "005930", "name": "삼성전자", "quantity": 1000, "avg_price": 75000},
+    {"ticker": "000660", "name": "SK하이닉스", "quantity": 300, "avg_price": 180000}
+  ]
+}

@@ -50,7 +50,18 @@ def parse_args() -> argparse.Namespace:
 
 async def main() -> None:
     args = parse_args()
-    raw = json.loads(args.input.read_text(encoding="utf-8"))
+    snapshot = await build_portfolio_snapshot(args.input, args.output)
+    print(f"작성 완료: {args.output}")
+    print(f"보유 종목 수={len(snapshot['positions'])}, 현금={snapshot['cash']:,.0f}")
+    warnings = snapshot.get("metadata", {}).get("warnings", [])
+    if warnings:
+        print("경고:")
+        for warning in warnings:
+            print(f"- {warning}")
+
+
+async def build_portfolio_snapshot(input_path: Path, output_path: Path) -> dict[str, Any]:
+    raw = json.loads(input_path.read_text(encoding="utf-8"))
     holdings = raw.get("positions", [])
     positions: list[dict[str, Any]] = []
     warnings: list[str] = []
@@ -133,21 +144,20 @@ async def main() -> None:
         "positions": positions,
         "metadata": {
             "generated_at": datetime.now().isoformat(timespec="seconds"),
-            "input_file": str(args.input),
+            "input_file": str(input_path),
             "market_data_source": "KIS",
-            "account_source": raw.get("account_source", "manual"),
+            "account_source": raw.get("account_source") or raw.get("metadata", {}).get("account_source", "manual"),
+            "field_policy": {
+                "mock_fields": ["cash", "ticker", "name", "quantity", "avg_price"],
+                "live_fields": ["current_price", "valuation", "sector", "trade_amount"],
+                "derived_fields": ["market_value", "invested_amount", "unrealized_pl", "return_pct"],
+            },
             "warnings": warnings,
         },
     }
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    print(f"작성 완료: {args.output}")
-    print(f"보유 종목 수={len(positions)}, 현금={snapshot['cash']:,.0f}")
-    if warnings:
-        print("경고:")
-        for warning in warnings:
-            print(f"- {warning}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(snapshot, ensure_ascii=False, indent=2), encoding="utf-8")
+    return snapshot
 
 
 async def get_stock_info(ticker: str) -> dict[str, Any]:

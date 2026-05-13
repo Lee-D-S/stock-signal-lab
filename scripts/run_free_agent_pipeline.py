@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -15,11 +16,19 @@ from core.agents.free_pipeline import (  # noqa: E402
     discover_candidates_from_csv,
     load_portfolio,
 )
+from scripts.build_portfolio_snapshot import build_portfolio_snapshot  # noqa: E402
 
 
 DEFAULT_RESEARCH_ROOT = ROOT / "ai 주가 변동 원인 분석" / "00_기업별분석"
 DEFAULT_DISCOVERY_ROOT = ROOT / "ai 주가 변동 원인 분석" / "07_전략신호"
 DEFAULT_OUTPUT_DIR = ROOT / "data" / "agent_runs"
+PORTFOLIO_DIR = ROOT / "data" / "portfolios"
+TEST_PORTFOLIOS = {
+    "balanced": PORTFOLIO_DIR / "test_inputs" / "balanced.json",
+    "cash-heavy": PORTFOLIO_DIR / "test_inputs" / "cash_heavy.json",
+    "growth": PORTFOLIO_DIR / "test_inputs" / "growth.json",
+    "risk-test": PORTFOLIO_DIR / "test_inputs" / "risk_test.json",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,6 +55,11 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--discover-limit", type=int, default=10)
     parser.add_argument("--portfolio-json", type=Path)
+    parser.add_argument(
+        "--test-portfolio",
+        choices=sorted(TEST_PORTFOLIOS),
+        help="Use a test portfolio preset. Cannot be combined with --portfolio-json.",
+    )
     parser.add_argument("--research-root", type=Path, default=DEFAULT_RESEARCH_ROOT)
     parser.add_argument("--discovery-root", type=Path, default=DEFAULT_DISCOVERY_ROOT)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -83,7 +97,8 @@ def main() -> None:
     if not candidates and args.discover:
         candidates = discover_candidates_from_csv(args.discovery_root, args.discover_limit)
 
-    portfolio, cash = load_portfolio(args.portfolio_json)
+    portfolio_path = resolve_portfolio_path(args, run_date, run_id)
+    portfolio, cash = load_portfolio(portfolio_path)
     context = AgentContext(
         run_date=run_date,
         candidates=candidates,
@@ -107,6 +122,19 @@ def main() -> None:
     print(f"실행 폴더={context.run_dir}")
     for result in results:
         print(f"{result.agent}: {result.status} - {result.summary}")
+
+
+def resolve_portfolio_path(args: argparse.Namespace, run_date: date, run_id: str) -> Path | None:
+    if args.portfolio_json and args.test_portfolio:
+        raise SystemExit("--portfolio-json and --test-portfolio cannot be used together.")
+    if args.test_portfolio:
+        input_path = TEST_PORTFOLIOS[args.test_portfolio]
+        if not input_path.exists():
+            raise SystemExit(f"test portfolio input file not found: {input_path}")
+        output_path = args.output_dir / run_date.isoformat() / run_id / f"test_portfolio_{args.test_portfolio}_snapshot.json"
+        asyncio.run(build_portfolio_snapshot(input_path, output_path))
+        return output_path
+    return args.portfolio_json
 
 
 def parse_candidate(raw: str, default_amount: int) -> Candidate:

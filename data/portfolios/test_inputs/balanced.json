@@ -1,0 +1,17 @@
+{
+  "cash": 40000000,
+  "metadata": {
+    "account_source": "test_balanced",
+    "field_policy": {
+      "mock_fields": ["cash", "ticker", "name", "quantity", "avg_price"],
+      "live_fields": ["current_price", "valuation", "sector", "trade_amount"],
+      "derived_fields": ["market_value", "invested_amount", "unrealized_pl", "return_pct"]
+    }
+  },
+  "positions": [
+    {"ticker": "005930", "name": "삼성전자", "quantity": 200, "avg_price": 72000},
+    {"ticker": "000660", "name": "SK하이닉스", "quantity": 50, "avg_price": 175000},
+    {"ticker": "035420", "name": "NAVER", "quantity": 100, "avg_price": 205000},
+    {"ticker": "005380", "name": "현대차", "quantity": 40, "avg_price": 240000}
+  ]
+}

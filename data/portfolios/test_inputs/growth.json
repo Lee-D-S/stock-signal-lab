@@ -1,0 +1,16 @@
+{
+  "cash": 10000000,
+  "metadata": {
+    "account_source": "test_growth",
+    "field_policy": {
+      "mock_fields": ["cash", "ticker", "name", "quantity", "avg_price"],
+      "live_fields": ["current_price", "valuation", "sector", "trade_amount"],
+      "derived_fields": ["market_value", "invested_amount", "unrealized_pl", "return_pct"]
+    }
+  },
+  "positions": [
+    {"ticker": "247540", "name": "에코프로비엠", "quantity": 100, "avg_price": 210000},
+    {"ticker": "042700", "name": "한미반도체", "quantity": 150, "avg_price": 140000},
+    {"ticker": "454910", "name": "두산로보틱스", "quantity": 200, "avg_price": 85000}
+  ]
+}
