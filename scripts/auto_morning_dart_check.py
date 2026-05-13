@@ -5,8 +5,10 @@ import asyncio
 import io
 import json
 import re
+import sqlite3
 import sys
 import zipfile
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from html import escape, unescape
 from pathlib import Path
@@ -16,12 +18,23 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "scripts"))
 
 from config import settings  # noqa: E402
 from analysis_paths import (  # noqa: E402
+    FOREIGN_FLOW_WATCHLIST_CSV,
+    FOREIGN_SELL_FLOW_WATCHLIST_CSV,
+    NEW_CONDITION_CONFIRMED_CSV,
+    OBS_FOREIGN_FLOW_ERROR_CSV,
+    OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
+    OBS_NEW_CONDITION_UTF8_CSV,
     OBS_COMMON_CSV,
     OBS_COMMON_ERROR_CSV,
     OBS_COMMON_MD,
+    PLAN_DIR,
+    UNIVERSE_CSV,
+    UNIVERSE_MASTER_CSV,
+    WATCHLIST_CONFIRMED_CSV,
 )
 
 DART_API_KEY = settings.dart_api_key
@@ -30,6 +43,11 @@ CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
 OBS_UTF8_CSV = OBS_COMMON_ERROR_CSV
 OBS_CP949_CSV = OBS_COMMON_CSV
 OBS_MD = OBS_COMMON_MD
+REPORT_STATUS_CSV = PLAN_DIR / "신규_기업_보고서_생성_상태.csv"
+POSITION_DB = ROOT / "auto_invest.db"
+MAX_UNIVERSE_TARGETS = 50
+MAX_REPORT_NEEDED_TARGETS = 30
+MAX_TELEGRAM_DISCLOSURE_BLOCKS = 20
 
 POSITIVE_DISCLOSURE_KEYWORDS = [
     "단일판매",
@@ -112,6 +130,14 @@ NEGATIVE_EVIDENCE_WORDS = ["감소", "적자전환", "적자지속", "손실", "
 POSITIVE_EVIDENCE_WORDS = ["증가", "흑자전환", "흑자지속", "개선", "계약금액", "수주"]
 
 
+@dataclass
+class MorningTarget:
+    ticker: str
+    name: str
+    sources: set[str] = field(default_factory=set)
+    reasons: list[str] = field(default_factory=list)
+
+
 def normalize_title(text: str) -> str:
     return text.replace(" ", "")
 
@@ -121,18 +147,191 @@ def safe_print(message: str) -> None:
     print(message.encode(encoding, errors="replace").decode(encoding, errors="replace"))
 
 
-def load_watched_tickers() -> list[tuple[str, str]]:
-    """관찰 로그에서 아직 결과 라벨이 비어 있는 종목 (ticker, name) 반환."""
-    if OBS_UTF8_CSV.exists():
-        df = pd.read_csv(OBS_UTF8_CSV, encoding="utf-8-sig", dtype={"ticker": str})
-    elif OBS_CP949_CSV.exists():
-        df = pd.read_csv(OBS_CP949_CSV, encoding="cp949", dtype={"ticker": str})
-    else:
-        return []
-    if df.empty or not {"ticker", "name", "result_label"}.issubset(df.columns):
-        return []
-    active = df[df["result_label"].isna() | (df["result_label"] == "")]
-    return list(zip(active["ticker"].str.zfill(6), active["name"]))
+def read_csv_safely(path: Path, encoding: str = "utf-8-sig") -> pd.DataFrame:
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path, encoding=encoding, dtype={"ticker": str})
+    except Exception as exc:
+        safe_print(f"[morning] CSV 로드 실패: {path.name} ({type(exc).__name__})")
+        return pd.DataFrame()
+
+
+def active_observation_rows(path: Path) -> pd.DataFrame:
+    df = read_csv_safely(path)
+    if df.empty or not {"ticker", "name"}.issubset(df.columns):
+        return pd.DataFrame()
+    if "result_label" not in df.columns:
+        return df
+    result = df["result_label"]
+    return df[result.isna() | (result.astype(str).str.strip() == "")]
+
+
+def normalize_ticker(value: object) -> str:
+    text = "" if value is None or pd.isna(value) else str(value).strip()
+    if not text:
+        return ""
+    return text.zfill(6)
+
+
+def add_target(
+    targets: dict[str, MorningTarget],
+    source_counts: dict[str, int],
+    ticker: object,
+    name: object,
+    source: str,
+    reason: str,
+) -> None:
+    normalized_ticker = normalize_ticker(ticker)
+    normalized_name = "" if name is None or pd.isna(name) else str(name).strip()
+    if not normalized_ticker or not normalized_name:
+        return
+    source_counts[source] = source_counts.get(source, 0) + 1
+    target = targets.setdefault(normalized_ticker, MorningTarget(normalized_ticker, normalized_name))
+    if not target.name:
+        target.name = normalized_name
+    target.sources.add(source)
+    if reason and reason not in target.reasons:
+        target.reasons.append(reason)
+
+
+def add_targets_from_frame(
+    targets: dict[str, MorningTarget],
+    source_counts: dict[str, int],
+    df: pd.DataFrame,
+    source: str,
+    reason: str,
+    limit: int | None = None,
+) -> None:
+    if df.empty or not {"ticker", "name"}.issubset(df.columns):
+        return
+    frame = df.head(limit) if limit else df
+    for _, row in frame.iterrows():
+        add_target(targets, source_counts, row.get("ticker"), row.get("name"), source, reason)
+
+
+def add_position_targets(targets: dict[str, MorningTarget], source_counts: dict[str, int]) -> None:
+    if not POSITION_DB.exists():
+        return
+    try:
+        with sqlite3.connect(POSITION_DB) as conn:
+            rows = conn.execute("select ticker, name from positions where quantity > 0").fetchall()
+    except sqlite3.Error as exc:
+        safe_print(f"[morning] 보유 DB 조회 실패: {type(exc).__name__}")
+        return
+    for ticker, name in rows:
+        add_target(targets, source_counts, ticker, name, "보유", "로컬 보유 종목")
+
+
+def load_morning_targets() -> tuple[list[MorningTarget], dict[str, int]]:
+    """장 시작 전 공시 조기 경보 대상 종목을 여러 운영 산출물에서 통합한다."""
+    targets: dict[str, MorningTarget] = {}
+    source_counts: dict[str, int] = {}
+
+    add_position_targets(targets, source_counts)
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        active_observation_rows(OBS_COMMON_ERROR_CSV),
+        "공통관찰",
+        "공통 관찰 active",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        active_observation_rows(OBS_FOREIGN_FLOW_ERROR_CSV),
+        "외국인순매수관찰",
+        "외국인 연속 순매수 active",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        active_observation_rows(OBS_FOREIGN_SELL_FLOW_ERROR_CSV),
+        "외국인순매도관찰",
+        "외국인 연속 순매도 active",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        active_observation_rows(OBS_NEW_CONDITION_UTF8_CSV),
+        "신규조건관찰",
+        "신규조건 active",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        read_csv_safely(WATCHLIST_CONFIRMED_CSV),
+        "확정후보",
+        "최근 확정 후보",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        read_csv_safely(NEW_CONDITION_CONFIRMED_CSV),
+        "신규조건확정",
+        "신규조건 확정 후보",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        read_csv_safely(FOREIGN_FLOW_WATCHLIST_CSV),
+        "외국인순매수후보",
+        "외국인 연속 순매수 기준일 후보",
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        read_csv_safely(FOREIGN_SELL_FLOW_WATCHLIST_CSV),
+        "외국인순매도후보",
+        "외국인 연속 순매도 기준일 후보",
+    )
+
+    universe = read_csv_safely(UNIVERSE_CSV)
+    if universe.empty:
+        universe = read_csv_safely(UNIVERSE_MASTER_CSV)
+    if not universe.empty and "rank" in universe.columns:
+        universe = universe.sort_values("rank", na_position="last")
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        universe,
+        "거래대금상위",
+        "거래대금 상위 유니버스",
+        limit=MAX_UNIVERSE_TARGETS,
+    )
+
+    report_needed = read_csv_safely(UNIVERSE_MASTER_CSV)
+    if not report_needed.empty and "report_status" in report_needed.columns:
+        report_needed = report_needed[
+            report_needed["report_status"].astype(str).str.contains("필요|needed", case=False, regex=True, na=False)
+        ]
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        report_needed,
+        "보고서필요",
+        "신규 보고서 필요",
+        limit=MAX_REPORT_NEEDED_TARGETS,
+    )
+    add_targets_from_frame(
+        targets,
+        source_counts,
+        read_csv_safely(REPORT_STATUS_CSV),
+        "보고서생성상태",
+        "보고서 생성 상태 파일",
+        limit=MAX_REPORT_NEEDED_TARGETS,
+    )
+
+    return sorted(targets.values(), key=lambda item: (min(item.sources), item.ticker)), source_counts
+
+
+def format_target_summary(targets: list[MorningTarget], source_counts: dict[str, int], missing_corp_count: int = 0) -> str:
+    source_text = ", ".join(f"{source} {count}" for source, count in sorted(source_counts.items())) or "없음"
+    return (
+        f"조회 대상: {len(targets):,}개\n"
+        f"대상 출처: {source_text}\n"
+        f"corp_code 누락: {missing_corp_count:,}개"
+    )
 
 
 def load_observation_frame() -> pd.DataFrame:
@@ -460,25 +659,32 @@ async def main() -> None:
     bgn = (today - timedelta(days=3)).strftime("%Y%m%d")
     end = today.strftime("%Y%m%d")
 
-    tickers = load_watched_tickers()
-    if not tickers:
-        msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n관찰 종목 없음"
+    targets, source_counts = load_morning_targets()
+    if not targets:
+        msg = (
+            f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n"
+            + escape(format_target_summary(targets, source_counts))
+        )
         await send_telegram(msg)
         safe_print(msg)
         return
 
     corp_codes = load_corp_codes()
     found: list[str] = []
+    missing_corp_count = 0
     disclosures_by_ticker: dict[str, list[dict]] = {}
     disclosures_by_name: dict[str, list[dict]] = {}
     analyses_by_ticker: dict[str, list[dict[str, str]]] = {}
     analyses_by_name: dict[str, list[dict[str, str]]] = {}
 
     async with aiohttp.ClientSession() as session:
-        for ticker, name in tickers:
+        for target in targets:
+            ticker = target.ticker
+            name = target.name
             corp_code = corp_codes.get(ticker)
             if not corp_code:
-                print(f"[{name}] corp_code 없음 (ticker={ticker})")
+                missing_corp_count += 1
+                print(f"[{name}] corp_code 없음 (ticker={ticker}, sources={','.join(sorted(target.sources))})")
                 continue
             try:
                 disclosures = await fetch_disclosures(session, corp_code, bgn, end)
@@ -491,7 +697,12 @@ async def main() -> None:
                     analyses.append(await analyze_disclosure_detail(session, disclosure))
                     await asyncio.sleep(0.2)
                 label, _stance, evidence = summarize_detail_interpretation(analyses)
+                source_text = ", ".join(sorted(target.sources))
+                reason_text = " / ".join(target.reasons[:3])
                 lines = [f"📋 <b>{escape(name)} ({ticker})</b> 공시 {len(disclosures)}건"]
+                lines.append(f"  • 대상: {escape(source_text)}")
+                if reason_text:
+                    lines.append(f"  • 사유: {escape(reason_text)}")
                 lines.append(f"  • 해석: {escape(label)}")
                 if evidence:
                     lines.append(f"  • 근거: {escape(evidence[:450])}")
@@ -504,17 +715,25 @@ async def main() -> None:
                 analyses_by_ticker[ticker] = analyses
                 analyses_by_name[display_name] = analyses
             else:
-                print(f"[{name}] 신규 공시 없음")
+                print(f"[{name}] 신규 공시 없음 (sources={','.join(sorted(target.sources))})")
             await asyncio.sleep(0.3)
 
     updated_notes = update_observation_notes(disclosures_by_ticker, analyses_by_ticker)
     append_markdown_notes(today, disclosures_by_name, analyses_by_name)
     print(f"observation_disclosure_notes_updated={updated_notes}")
 
+    summary = escape(format_target_summary(targets, source_counts, missing_corp_count))
     if found:
-        msg = f"🔔 <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n\n" + "\n\n".join(found)
+        shown = found[:MAX_TELEGRAM_DISCLOSURE_BLOCKS]
+        suffix = "" if len(found) <= len(shown) else f"\n\n외 {len(found) - len(shown)}개 종목 공시 추가 발견"
+        msg = (
+            f"🔔 <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n{summary}\n"
+            f"공시 발견: {len(found):,}개 종목\n\n"
+            + "\n\n".join(shown)
+            + suffix
+        )
     else:
-        msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n관찰 종목 신규 공시 없음"
+        msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n{summary}\n신규 공시 없음"
 
     await send_telegram(msg)
     safe_print(msg)
