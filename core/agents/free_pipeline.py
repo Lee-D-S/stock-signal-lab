@@ -787,6 +787,8 @@ class FreeAgentPipeline:
 
     def run(self, context: AgentContext) -> list[AgentResult]:
         context.run_dir.mkdir(parents=True, exist_ok=True)
+        context.config.setdefault("agent_feedback", [])
+        context.config.setdefault("agent_revision_counts", {})
 
         results: list[AgentResult] = []
         quant_result = self._run_step(context, "quant_signal.json", self.quant.run, context)
@@ -808,6 +810,30 @@ class FreeAgentPipeline:
             analyst_result,
         )
         results.append(research_result)
+
+        feedback_history: list[dict[str, Any]] = []
+        pre_trade_feedback = collect_pre_trade_feedback(research_result)
+        if pre_trade_feedback:
+            feedback_history.extend(pre_trade_feedback)
+            apply_feedback_requests(context, pre_trade_feedback)
+            if has_feedback_for(pre_trade_feedback, "EquityResearchAnalystAgent"):
+                analyst_result = self._run_step(
+                    context,
+                    "equity_research_analyst.json",
+                    self.analyst.run,
+                    context,
+                    revision_reason="research_feedback",
+                )
+                replace_result(results, analyst_result)
+            research_result = self._run_step(
+                context,
+                "research_file.json",
+                self.research.run,
+                context,
+                analyst_result,
+                revision_reason="pre_trade_feedback",
+            )
+            replace_result(results, research_result)
 
         portfolio_result = self._run_step(
             context,
@@ -839,6 +865,44 @@ class FreeAgentPipeline:
         )
         results.append(compliance_result)
 
+        gate_feedback = collect_gate_feedback(portfolio_result, risk_result, compliance_result)
+        if gate_feedback:
+            feedback_history.extend(gate_feedback)
+            apply_feedback_requests(context, gate_feedback)
+            if has_feedback_for(gate_feedback, "PortfolioManagerAgent"):
+                portfolio_result = self._run_step(
+                    context,
+                    "portfolio_manager.json",
+                    self.portfolio.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="risk_or_compliance_feedback",
+                )
+                replace_result(results, portfolio_result)
+            if has_feedback_for(gate_feedback, "RiskManagerAgent"):
+                risk_result = self._run_step(
+                    context,
+                    "risk_manager.json",
+                    self.risk.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="gate_feedback",
+                )
+                replace_result(results, risk_result)
+            if has_feedback_for(gate_feedback, "ComplianceOfficerAgent"):
+                compliance_result = self._run_step(
+                    context,
+                    "compliance_officer.json",
+                    self.compliance.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="gate_feedback",
+                )
+                replace_result(results, compliance_result)
+
         trader_result = self._run_step(
             context,
             "trader_order_proposal.json",
@@ -849,6 +913,57 @@ class FreeAgentPipeline:
             compliance_result,
         )
         results.append(trader_result)
+
+        trader_feedback = collect_trader_feedback(trader_result)
+        if trader_feedback:
+            feedback_history.extend(trader_feedback)
+            apply_feedback_requests(context, trader_feedback)
+            if has_feedback_for(trader_feedback, "PortfolioManagerAgent"):
+                portfolio_result = self._run_step(
+                    context,
+                    "portfolio_manager.json",
+                    self.portfolio.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="trader_feedback",
+                )
+                replace_result(results, portfolio_result)
+            if has_feedback_for(trader_feedback, "RiskManagerAgent"):
+                risk_result = self._run_step(
+                    context,
+                    "risk_manager.json",
+                    self.risk.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="trader_feedback",
+                )
+                replace_result(results, risk_result)
+            if has_feedback_for(trader_feedback, "ComplianceOfficerAgent"):
+                compliance_result = self._run_step(
+                    context,
+                    "compliance_officer.json",
+                    self.compliance.run,
+                    context,
+                    analyst_result,
+                    research_result,
+                    revision_reason="trader_feedback",
+                )
+                replace_result(results, compliance_result)
+            trader_result = self._run_step(
+                context,
+                "trader_order_proposal.json",
+                self.trader.run,
+                context,
+                portfolio_result,
+                risk_result,
+                compliance_result,
+                revision_reason="feedback_revalidated",
+            )
+            replace_result(results, trader_result)
+
+        write_feedback_history(context, feedback_history, results)
 
         operations_result = self._run_step(
             context,
@@ -868,11 +983,19 @@ class FreeAgentPipeline:
             operations_result.write_json(context.run_dir / "operations_report.json")
         return results
 
-    def _run_step(self, context: AgentContext, filename: str, func: Any, *args: Any) -> AgentResult:
+    def _run_step(
+        self,
+        context: AgentContext,
+        filename: str,
+        func: Any,
+        *args: Any,
+        revision_reason: str = "",
+    ) -> AgentResult:
+        agent_name = infer_agent_name(func)
+        revision = increment_revision_count(context, agent_name) if revision_reason else get_revision_count(context, agent_name)
         try:
             result = func(*args)
         except Exception as exc:  # noqa: BLE001
-            agent_name = infer_agent_name(func)
             result = AgentResult(
                 agent=agent_name,
                 status="block",
@@ -883,12 +1006,231 @@ class FreeAgentPipeline:
                 ],
                 artifacts={"failed_step_file": filename},
             )
+        received_feedback = feedback_for_agent(context, result.agent)
+        result.artifacts["revision"] = revision
+        if revision_reason:
+            result.artifacts["revision_reason"] = revision_reason
+        if received_feedback:
+            result.artifacts["received_feedback"] = received_feedback
+            result.warnings.extend(
+                f"feedback from {item['from_agent']}: {item['reason']}"
+                for item in received_feedback
+            )
         try:
             result.write_json(context.run_dir / filename)
         except Exception as exc:  # noqa: BLE001
             result.warnings.append(f"failed to write {filename}: {type(exc).__name__}: {exc}")
             result.status = combine_statuses([result.status, "block"])
         return result
+
+
+def make_feedback(
+    from_agent: str,
+    to_agent: str,
+    ticker: str,
+    issue_type: str,
+    reason: str,
+    required_fix: str,
+    severity: str = "needs_review",
+) -> dict[str, Any]:
+    return {
+        "from_agent": from_agent,
+        "to_agent": to_agent,
+        "ticker": ticker,
+        "issue_type": issue_type,
+        "reason": reason,
+        "required_fix": required_fix,
+        "severity": severity,
+        "status": "requested",
+    }
+
+
+def collect_pre_trade_feedback(research_result: AgentResult) -> list[dict[str, Any]]:
+    feedback: list[dict[str, Any]] = []
+    for signal in research_result.signals:
+        ticker = str(signal.get("ticker", ""))
+        if signal.get("analyst_source_file_mismatch"):
+            feedback.append(make_feedback(
+                "ResearchFileAgent",
+                "EquityResearchAnalystAgent",
+                ticker,
+                "source_file_mismatch",
+                "Analyst source files do not match files found by ResearchFileAgent.",
+                "Rebuild analyst evidence from the research files actually present in the workspace.",
+            ))
+        if signal.get("analyst_research_missing_item_mismatch"):
+            feedback.append(make_feedback(
+                "ResearchFileAgent",
+                "EquityResearchAnalystAgent",
+                ticker,
+                "missing_item_mismatch",
+                "Analyst missing sections differ from ResearchFileAgent missing sections.",
+                "Re-evaluate missing research sections using the same required-section policy.",
+            ))
+        if signal.get("analyst_complete_research_incomplete"):
+            feedback.append(make_feedback(
+                "ResearchFileAgent",
+                "EquityResearchAnalystAgent",
+                ticker,
+                "overstated_completeness",
+                "Analyst marked the record complete, but ResearchFileAgent found incomplete evidence.",
+                "Downgrade completeness or identify the missing evidence explicitly.",
+            ))
+    return feedback
+
+
+def collect_gate_feedback(
+    portfolio_result: AgentResult,
+    risk_result: AgentResult,
+    compliance_result: AgentResult,
+) -> list[dict[str, Any]]:
+    feedback: list[dict[str, Any]] = []
+    portfolio_by_ticker = result_by_ticker(portfolio_result)
+    for signal in risk_result.signals:
+        status = str(signal.get("status", ""))
+        ticker = str(signal.get("ticker", ""))
+        if status in {"block", "needs_review"}:
+            feedback.append(make_feedback(
+                "RiskManagerAgent",
+                "PortfolioManagerAgent",
+                ticker,
+                f"risk_{status}",
+                "; ".join(str(item) for item in signal.get("warnings", [])) or f"Risk status is {status}.",
+                "Revise allocation side or suggested amount so the proposal respects risk constraints.",
+                severity=status,
+            ))
+    for signal in compliance_result.signals:
+        status = str(signal.get("status", ""))
+        ticker = str(signal.get("ticker", ""))
+        if signal.get("source_file_mismatch") or signal.get("missing_item_mismatch"):
+            feedback.append(make_feedback(
+                "ComplianceOfficerAgent",
+                "ResearchFileAgent",
+                ticker,
+                "evidence_chain_mismatch",
+                "Compliance found analyst/research evidence-chain mismatch.",
+                "Reconcile analyst and research evidence before order proposal.",
+            ))
+        if status in {"block", "needs_review"} and portfolio_by_ticker.get(ticker, {}).get("side") != "hold":
+            feedback.append(make_feedback(
+                "ComplianceOfficerAgent",
+                "PortfolioManagerAgent",
+                ticker,
+                f"compliance_{status}",
+                "; ".join(str(item) for item in signal.get("warnings", [])) or f"Compliance status is {status}.",
+                "Revise the proposal to hold or add missing compliance evidence.",
+                severity=status,
+            ))
+    return feedback
+
+
+def collect_trader_feedback(trader_result: AgentResult) -> list[dict[str, Any]]:
+    feedback: list[dict[str, Any]] = []
+    for proposal in trader_result.signals:
+        ticker = str(proposal.get("ticker", ""))
+        portfolio_side = str(proposal.get("portfolio_side", "hold"))
+        side = str(proposal.get("side", "hold"))
+        risk_status = str(proposal.get("risk_status", "needs_review"))
+        compliance_status = str(proposal.get("compliance_status", "needs_review"))
+        if portfolio_side != "hold" and side == "hold":
+            feedback.append(make_feedback(
+                "TraderAgent",
+                "PortfolioManagerAgent",
+                ticker,
+                "order_downgraded_to_hold",
+                str(proposal.get("final_side_reason", "Trader downgraded the order to hold.")),
+                "Rebuild the order proposal after risk/compliance constraints are addressed.",
+            ))
+        if risk_status != "approve":
+            feedback.append(make_feedback(
+                "TraderAgent",
+                "RiskManagerAgent",
+                ticker,
+                f"risk_not_approved_{risk_status}",
+                "Trader cannot create an executable order while Risk is not approve.",
+                "Revalidate risk inputs and emit approve only if all constraints pass.",
+                severity=risk_status,
+            ))
+        if compliance_status != "approve":
+            feedback.append(make_feedback(
+                "TraderAgent",
+                "ComplianceOfficerAgent",
+                ticker,
+                f"compliance_not_approved_{compliance_status}",
+                "Trader cannot create an executable order while Compliance is not approve.",
+                "Revalidate evidence chain and emit approve only if compliance checks pass.",
+                severity=compliance_status,
+            ))
+    return feedback
+
+
+def apply_feedback_requests(context: AgentContext, requests: list[dict[str, Any]]) -> None:
+    existing = context.config.setdefault("agent_feedback", [])
+    existing.extend(requests)
+
+
+def feedback_for_agent(context: AgentContext, agent_name: str) -> list[dict[str, Any]]:
+    return [
+        item
+        for item in context.config.get("agent_feedback", [])
+        if item.get("to_agent") == agent_name
+    ]
+
+
+def has_feedback_for(requests: list[dict[str, Any]], agent_name: str) -> bool:
+    return any(item.get("to_agent") == agent_name for item in requests)
+
+
+def get_revision_count(context: AgentContext, agent_name: str) -> int:
+    return int(context.config.setdefault("agent_revision_counts", {}).get(agent_name, 0))
+
+
+def increment_revision_count(context: AgentContext, agent_name: str) -> int:
+    counts = context.config.setdefault("agent_revision_counts", {})
+    counts[agent_name] = int(counts.get(agent_name, 0)) + 1
+    return int(counts[agent_name])
+
+
+def replace_result(results: list[AgentResult], new_result: AgentResult) -> None:
+    for index, result in enumerate(results):
+        if result.agent == new_result.agent:
+            results[index] = new_result
+            return
+    results.append(new_result)
+
+
+def write_feedback_history(
+    context: AgentContext,
+    feedback_history: list[dict[str, Any]],
+    results: list[AgentResult],
+) -> None:
+    by_agent = {result.agent: result for result in results}
+    records = []
+    for item in feedback_history:
+        target = by_agent.get(str(item.get("to_agent", "")))
+        target_warnings = target.warnings if target else []
+        resolved = False
+        ticker = str(item.get("ticker", ""))
+        reason = str(item.get("reason", ""))
+        if target and target.status == "approve":
+            resolved = not any(ticker and ticker in warning for warning in target_warnings)
+        records.append({**item, "status": "resolved" if resolved else "unresolved"})
+        if not resolved and target:
+            target.artifacts.setdefault("unresolved_feedback", []).append(item)
+
+    path = context.run_dir / "agent_feedback.json"
+    path.write_text(
+        json.dumps(
+            {
+                "feedback_count": len(records),
+                "revision_counts": context.config.get("agent_revision_counts", {}),
+                "feedback": records,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def combine_statuses(statuses: list[str]) -> str:
