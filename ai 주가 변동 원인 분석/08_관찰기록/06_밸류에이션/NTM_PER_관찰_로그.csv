@@ -1,31 +1,61 @@
-﻿signal_date,ticker,name,current_price,trailing_per,trailing_eps,ntm_eps,ntm_per,eps_year_1,eps_year_2,eps_source,estimate_status,ntm_per_status,peg_growth_5y_pct,peg,peg_status,review_note
-2026-05-13,000660,SK하이닉스,1976000.0,33.52,58955.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,005930,삼성전자,284000.0,43.27,6564.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,005380,현대차,710000.0,20.1,35331.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,402340,SK스퀘어,1190000.0,17.9,66468.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,009150,삼성전기,1029000.0,113.09,9099.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,012330,현대모비스,649000.0,16.36,39682.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,010170,대한광통신,24750.0,-102.27,-242.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,066570,LG전자,191400.0,35.97,5321.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,307950,현대오토에버,699000.0,105.05,6654.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,034020,두산에너빌리티,120000.0,909.09,132.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,034220,LG디스플레이,14170.0,31.28,453.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,012200,계양전기,12380.0,-9.53,-1299.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,196170,알테오젠,354000.0,134.45,2633.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,006400,삼성SDI,634000.0,-76.16,-8325.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,000270,기아,179500.0,9.39,19111.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,001440,대한전선,65400.0,144.69,452.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,038500,삼표시멘트,15560.0,41.16,378.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,439960,코스모로보틱스,40550.0,-48.1,-843.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,042700,한미반도체,400500.0,179.36,2233.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,329180,HD현대중공업,733000.0,46.68,15702.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,332570,PS일렉트로닉스,14180.0,40.4,351.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,028260,삼성물산,428500.0,30.25,14165.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,319400,현대무벡스,43650.0,440.91,99.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,011070,LG이노텍,753000.0,52.22,14419.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,005490,POSCO홀딩스,478500.0,59.18,8085.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,086280,현대글로비스,284000.0,12.29,23117.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,010120,LS ELECTRIC,285000.0,149.14,1911.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,277810,레인보우로보틱스,878000.0,12027.4,73.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,012860,모베이스전자,5730.0,21.07,272.0,,,,,,missing,estimate_missing,,,,
-2026-05-13,010140,삼성중공업,31050.0,50.08,620.0,,,,,,missing,estimate_missing,,,,
+﻿signal_date,ticker,name,current_price,trailing_per,trailing_eps,ntm_eps,ntm_per,eps_year_1,eps_year_2,eps_source,estimate_status,estimate_detail,estimate_error,ntm_per_status,growth_pct,growth_method,peg_proxy,peg_proxy_status,review_note
+2026-05-13,000660,SK하이닉스,1976000.0,33.52,58955.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,005930,삼성전자,284000.0,43.27,6564.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,005380,현대차,710000.0,20.1,35331.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,402340,SK스퀘어,1190000.0,17.9,66468.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,009150,삼성전기,1029000.0,113.09,9099.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,012330,현대모비스,649000.0,16.36,39682.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,010170,대한광통신,24750.0,-102.27,-242.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,066570,LG전자,191400.0,35.97,5321.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,307950,현대오토에버,699000.0,105.05,6654.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,034020,두산에너빌리티,120000.0,909.09,132.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,034220,LG디스플레이,14170.0,31.28,453.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,012200,계양전기,12380.0,-9.53,-1299.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,196170,알테오젠,354000.0,134.45,2633.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,006400,삼성SDI,634000.0,-76.16,-8325.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,000270,기아,179500.0,9.39,19111.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,001440,대한전선,65400.0,144.69,452.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,038500,삼표시멘트,15560.0,41.16,378.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,439960,코스모로보틱스,40550.0,-48.1,-843.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,042700,한미반도체,400500.0,179.36,2233.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,329180,HD현대중공업,733000.0,46.68,15702.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,332570,PS일렉트로닉스,14180.0,40.4,351.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,028260,삼성물산,428500.0,30.25,14165.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,319400,현대무벡스,43650.0,440.91,99.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,011070,LG이노텍,753000.0,52.22,14419.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,005490,POSCO홀딩스,478500.0,59.18,8085.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,086280,현대글로비스,284000.0,12.29,23117.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,010120,LS ELECTRIC,285000.0,149.14,1911.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,277810,레인보우로보틱스,878000.0,12027.4,73.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,012860,모베이스전자,5730.0,21.07,272.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,010140,삼성중공업,31050.0,50.08,620.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-14,000660,SK하이닉스,1970000.0,33.42,58955.0,357321.611,5.51,309662.4,439480.4,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[3],output4:list[5]",,normal,41.92,eps_cagr_proxy:2026.12E-2027.12E,0.13,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,005930,삼성전자,296000.0,45.09,6564.0,40603.1058,7.29,35048.2,50179.1,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,43.17,eps_cagr_proxy:2026.12E-2027.12E,0.17,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,005380,현대차,712000.0,20.15,35331.0,35951.8041,19.8,35238.3,37181.8,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,5.52,eps_cagr_proxy:2026.12E-2027.12E,3.59,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,402340,SK스퀘어,1171000.0,17.62,66468.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,066570,LG전자,217000.0,40.78,5321.0,7686.1501,28.23,6860.6,9109.3,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,elevated,32.78,eps_cagr_proxy:2026.12E-2027.12E,0.86,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,064400,LG씨엔에스,86100.0,18.93,4548.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,012330,현대모비스,650000.0,16.38,39682.0,41151.8633,15.8,40347.9,42537.8,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,5.43,eps_cagr_proxy:2026.12E-2027.12E,2.91,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,080220,제주반도체,75600.0,65.91,1147.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,010170,대한광통신,24750.0,-102.27,-242.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,009150,삼성전기,1024000.0,112.54,9099.0,16945.8529,60.43,14791.5,20659.7,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,extreme,39.67,eps_cagr_proxy:2026.12E-2027.12E,1.52,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,322000,HD현대에너지솔루션,244000.0,65.57,3721.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,001440,대한전선,65500.0,144.91,452.0,681.3392,96.13,615.0,795.7,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,extreme,29.38,eps_cagr_proxy:2026.12E-2027.12E,3.27,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,034020,두산에너빌리티,117100.0,887.12,132.0,368.8647,317.46,314.2,463.1,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,extreme,47.39,eps_cagr_proxy:2026.12E-2027.12E,6.7,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,047040,대우건설,32600.0,-14.85,-2195.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,100790,미래에셋벤처투자,59900.0,102.92,582.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,329180,HD현대중공업,671000.0,42.73,15702.0,27938.3274,24.02,26562.9,30309.4,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,elevated,14.1,eps_cagr_proxy:2026.12E-2027.12E,1.7,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,006400,삼성SDI,636000.0,-76.4,-8325.0,5444.9003,116.81,792.2,13465.6,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,extreme,1599.77,eps_cagr_proxy:2026.12E-2027.12E,0.07,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,034220,LG디스플레이,15340.0,33.86,453.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,042700,한미반도체,409500.0,183.39,2233.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,196170,알테오젠,385000.0,146.22,2633.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,000270,기아,178100.0,9.32,19111.0,21150.6268,8.42,20625.2,22056.4,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,6.94,eps_cagr_proxy:2026.12E-2027.12E,1.21,peg_proxy_1_0_to_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,028260,삼성물산,442000.0,31.2,14165.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,035420,NAVER,213000.0,17.21,12376.0,11268.9512,18.9,10847.2,11996.0,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,10.59,eps_cagr_proxy:2026.12E-2027.12E,1.78,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,010120,LS ELECTRIC,280000.0,146.52,1911.0,17297.5581,16.19,15007.7,21245.0,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,41.56,eps_cagr_proxy:2026.12E-2027.12E,0.39,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,452260,한화갤러리아,3340.0,196.47,17.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,439960,코스모로보틱스,52700.0,-62.51,-843.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,005490,POSCO홀딩스,486500.0,60.17,8085.0,35742.349,13.61,32087.6,42042.7,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,31.02,eps_cagr_proxy:2026.12E-2027.12E,0.44,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,000720,현대건설,169300.0,50.99,3320.0,6073.5068,27.88,5036.2,7861.7,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,elevated,56.1,eps_cagr_proxy:2026.12E-2027.12E,0.5,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-14,009830,한화솔루션,47800.0,-12.82,-3728.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-14,003230,삼양식품,1439000.0,27.84,51697.0,85398.6532,16.85,75563.2,102353.8,output3[1].data4/10:2026.12E 0.63 + output3[1].data5/10:2027.12E 0.37,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,35.45,eps_cagr_proxy:2026.12E-2027.12E,0.48,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E

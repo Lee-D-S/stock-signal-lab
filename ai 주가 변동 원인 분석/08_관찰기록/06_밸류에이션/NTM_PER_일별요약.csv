@@ -1,2 +1,3 @@
-﻿run_date,pool_size,rows_written,ntm_per_available,peg_available,estimate_missing,eps_nonpositive,peg_over_1_5
-2026-05-13,30,30,0,0,30,0,0
+﻿run_date,pool_size,rows_written,ntm_per_available,peg_proxy_available,estimate_missing,estimate_api_error,estimate_empty,estimate_unparsed,eps_nonpositive,peg_proxy_over_1_5
+2026-05-13,30,30,0,,30,,,,0,
+2026-05-14,30,30,16,16.0,14,0.0,0.0,14.0,0,7.0
