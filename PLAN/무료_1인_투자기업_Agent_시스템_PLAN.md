@@ -118,6 +118,9 @@ data/agent_runs/
 scripts/run_free_agent_pipeline.py
   무료 Agent 파이프라인 실행 CLI
 
+scripts/run_agent_committee.py
+  agent 회의/토론 전체 실행 표준 CLI. 후보 미지정 시 최근 전략 신호 CSV에서 자동 발견
+
 docs/
   투자 정책, 리스크 정책, Agent별 상세 PLAN
 ```

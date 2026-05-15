@@ -21,7 +21,7 @@
 
 이 문서는 `PLAN/무료_1인_투자기업_Agent_시스템_PLAN.md`를 바탕으로, 무료 버전 Agent를 각각 어떻게 발전시킬지 정리한 상세 계획이다.
 
-현재 구현은 OpenAI API 없이 동작하는 v1 골격이다. 각 Agent는 `core/agents/free_pipeline.py` 안에 Python 클래스로 구현되어 있으며, `FreeAgentPipeline`이 전체 실행 순서를 조율한다. 실제 주문은 하지 않고, 날짜별 JSON 결과와 최종 Markdown 보고서를 생성한다.
+현재 구현은 OpenAI API 없이 동작하는 v1 골격이다. 각 Agent는 `core/agents/free_pipeline.py` 안에 Python 클래스로 구현되어 있으며, `FreeAgentPipeline`이 전체 실행 순서를 조율한다. 실제 주문은 하지 않고, 날짜별 JSON 결과와 최종 Markdown 보고서를 생성한다. 전체 agent 회의/토론은 `scripts/run_agent_committee.py` 한 명령으로 실행하고, 후보를 직접 지정하지 않으면 최근 전략 신호 CSV에서 자동 발견한다. 세부 옵션 검증이나 개별 실행은 기존 `scripts/run_free_agent_pipeline.py`를 그대로 사용한다.
 
 초기 원칙:
 
@@ -67,6 +67,12 @@ data/agent_runs/YYYY-MM-DD/
   trader_order_proposal.json
   operations_report.json
   final_committee_report.md
+```
+
+표준 실행 명령:
+
+```powershell
+rtk python scripts/run_agent_committee.py --discover-limit 10 --test-portfolio balanced
 ```
 
 ## 3. QuantSignalAgent PLAN

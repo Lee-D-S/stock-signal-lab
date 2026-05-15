@@ -1,6 +1,7 @@
 {
   "default_docs": [
     "PLAN/PLAN.md",
+    "ai 주가 변동 원인 분석/프로젝트_현황_총정리.md",
     "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
     "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md"
   ],
@@ -22,13 +23,17 @@
       "id": "agent_plans",
       "patterns": [
         "PLAN/**/*.md",
-        "scripts/run_agent_feedback_loop.py"
+        "core/agents/free_pipeline.py",
+        "scripts/run_free_agent_pipeline.py",
+        "scripts/run_agent_committee.py"
       ],
       "docs": [
         "PLAN/1인_투자기업_AI_Agent_시스템_PLAN.md",
         "PLAN/무료_1인_투자기업_Agent_시스템_PLAN.md",
         "PLAN/무료_Agent별_상세_PLAN.md",
-        "PLAN/free_agent_plans/**"
+        "PLAN/free_agent_plans/**",
+        "ai 주가 변동 원인 분석/프로젝트_현황_총정리.md",
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md"
       ],
       "reason": "Agent responsibilities or interaction flow changed."
     },

@@ -287,6 +287,14 @@ v1에서 하지 않는 구현:
 
 ## 10. CLI 운영 계획
 
+Agent 회의/토론 전체 실행 표준 명령:
+
+```powershell
+rtk python scripts/run_agent_committee.py --discover-limit 10 --test-portfolio balanced
+```
+
+`run_agent_committee.py`는 후보 입력을 명시하지 않으면 기본으로 `--discover`를 적용한다. 실행 단계와 옵션은 기존 `run_free_agent_pipeline.py`와 동일하며, 개별 단계 검증이나 세부 옵션 테스트가 필요하면 아래 기존 명령을 그대로 사용한다.
+
 기본 실행:
 
 ```powershell
@@ -371,6 +379,12 @@ rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 5
 - 최근 전략 신호 CSV에서 후보 생성
 - 후보별 source_file과 source_type 기록
 - 읽을 수 없는 CSV는 경고 또는 건너뛰기
+
+동일한 전체 회의 실행은 다음처럼 실행할 수 있다.
+
+```powershell
+rtk python scripts/run_agent_committee.py --discover-limit 5 --test-portfolio balanced
+```
 
 ### 11.4 포트폴리오 없음
 

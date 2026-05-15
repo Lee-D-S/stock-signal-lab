@@ -555,6 +555,14 @@ broker_api_called=false
 
 ## 8. 운영 권장 명령
 
+agent 회의/토론 전체 실행:
+
+```powershell
+rtk python scripts/run_agent_committee.py --discover-limit 10 --test-portfolio balanced
+```
+
+이 명령은 후보를 직접 넣지 않으면 최근 전략 신호 CSV에서 후보를 자동 발견한다. 내부 단계는 기존 `run_free_agent_pipeline.py`와 같고, 개별 옵션을 세밀하게 조정해야 할 때만 아래 명령을 직접 사용한다.
+
 수동 테스트:
 
 ```powershell

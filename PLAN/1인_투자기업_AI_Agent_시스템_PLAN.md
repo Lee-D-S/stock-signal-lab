@@ -27,6 +27,12 @@
 - 투자 판단, 주문 제안, 승인, 기록은 서로 분리한다.
 - Codex subagent는 개발 보조용으로 쓰고, 투자 운영 Agent는 앱 내부 런타임으로 만든다.
 
+현재 무료 v1 구현에서는 전체 회의/토론 진입점을 `scripts/run_agent_committee.py`로 둔다. 이 명령은 후보가 직접 지정되지 않으면 최근 전략 신호 CSV에서 후보를 자동 발견하고, 기존 `scripts/run_free_agent_pipeline.py`의 개별 agent 실행, 상호 피드백, 보고서 생성을 한 번에 수행한다.
+
+```powershell
+rtk python scripts/run_agent_committee.py --discover-limit 10 --test-portfolio balanced
+```
+
 ## 2. 전체 Agent 구조
 
 초기 버전은 9개 Agent로 구성한다.
