@@ -1,9 +1,9 @@
 ﻿signal_date,ticker,name,current_price,trailing_per,trailing_eps,ntm_eps,ntm_per,eps_year_1,eps_year_2,eps_source,estimate_status,estimate_detail,estimate_error,ntm_per_status,growth_pct,growth_method,peg_proxy,peg_proxy_status,review_note
-2026-05-13,000660,SK하이닉스,1976000.0,33.52,58955.0,,,,,,missing,,,estimate_missing,,,,,
-2026-05-13,005930,삼성전자,284000.0,43.27,6564.0,,,,,,missing,,,estimate_missing,,,,,
-2026-05-13,005380,현대차,710000.0,20.1,35331.0,,,,,,missing,,,estimate_missing,,,,,
-2026-05-13,402340,SK스퀘어,1190000.0,17.9,66468.0,,,,,,missing,,,estimate_missing,,,,,
-2026-05-13,009150,삼성전기,1029000.0,113.09,9099.0,,,,,,missing,,,estimate_missing,,,,,
+2026-05-13,000660,SK하이닉스,1976000.0,33.52,58955.0,356965.9452,5.54,309662.4,439480.4,output3[1].data4/10:2026.12E 0.64 + output3[1].data5/10:2027.12E 0.36,ok,"output1:dict[8],output2:list[6],output3:list[3],output4:list[5]",,normal,41.92,eps_cagr_proxy:2026.12E-2027.12E,0.13,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-13,005930,삼성전자,284000.0,43.27,6564.0,40561.6512,7.0,35048.2,50179.1,output3[1].data4/10:2026.12E 0.64 + output3[1].data5/10:2027.12E 0.36,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,43.17,eps_cagr_proxy:2026.12E-2027.12E,0.16,peg_proxy_below_1_0,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-13,005380,현대차,710000.0,20.1,35331.0,35946.4795,19.75,35238.3,37181.8,output3[1].data4/10:2026.12E 0.64 + output3[1].data5/10:2027.12E 0.36,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,normal,5.52,eps_cagr_proxy:2026.12E-2027.12E,3.58,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
+2026-05-13,402340,SK스퀘어,1190000.0,17.9,66468.0,,,,,,unparsed_response,"output1:dict[8],output2:list[0],output3:list[0],output4:list[0]",,estimate_missing,,,,,
+2026-05-13,009150,삼성전기,1029000.0,113.09,9099.0,16929.7756,60.78,14791.5,20659.7,output3[1].data4/10:2026.12E 0.64 + output3[1].data5/10:2027.12E 0.36,ok,"output1:dict[8],output2:list[6],output3:list[8],output4:list[5]",,extreme,39.67,eps_cagr_proxy:2026.12E-2027.12E,1.53,peg_proxy_over_1_5,growth_source=eps_cagr_proxy:2026.12E-2027.12E
 2026-05-13,012330,현대모비스,649000.0,16.36,39682.0,,,,,,missing,,,estimate_missing,,,,,
 2026-05-13,010170,대한광통신,24750.0,-102.27,-242.0,,,,,,missing,,,estimate_missing,,,,,
 2026-05-13,066570,LG전자,191400.0,35.97,5321.0,,,,,,missing,,,estimate_missing,,,,,
