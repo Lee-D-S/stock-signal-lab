@@ -92,6 +92,17 @@
         "PLAN/PLAN.md"
       ],
       "reason": "Portfolio test/live/mock data behavior changed."
+    },
+    {
+      "id": "doc_sync_tooling",
+      "patterns": [
+        "scripts/check_docs_sync.py",
+        "PLAN/doc_sync_map.json"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md"
+      ],
+      "reason": "Documentation sync workflow or candidate selection behavior changed."
     }
   ]
 }
