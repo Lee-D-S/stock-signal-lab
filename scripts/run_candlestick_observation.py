@@ -18,7 +18,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from candlestick_patterns import detect_all  # noqa: E402
-from quarterly_stock_analysis import fetch_ohlcv  # noqa: E402
+from discovery.data_loader import get_ohlcv_range  # noqa: E402
 
 from analysis_paths import (  # noqa: E402
     CANDLE_FINAL_OBS_CSV as CANDLE_FINAL_OBS_CSV_PATH,
@@ -289,8 +289,14 @@ async def fetch_company_patterns(
     start: pd.Timestamp,
     end: pd.Timestamp,
     target_date: pd.Timestamp | None,
+    force_refresh: bool,
 ) -> list[dict[str, Any]]:
-    ohlcv = await fetch_ohlcv(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+    ohlcv = await get_ohlcv_range(
+        ticker,
+        start.strftime("%Y-%m-%d"),
+        end.strftime("%Y-%m-%d"),
+        force_refresh=force_refresh,
+    )
     if ohlcv.empty:
         return []
     patterns = detect_all(ohlcv)
@@ -310,9 +316,12 @@ async def load_ohlcv_cache(
     rows: list[dict[str, str]],
     as_of: pd.Timestamp,
     delay: float,
+    force_refresh: bool,
 ) -> dict[str, pd.DataFrame]:
     grouped_dates: dict[str, list[pd.Timestamp]] = {}
     for row in rows:
+        if row.get("d_plus_20_close") and row.get("d_plus_20_return_pct"):
+            continue
         ticker = as_text(row.get("ticker")).zfill(6)
         signal_date_text = row.get("signal_date", "")
         if not ticker.strip("0") or not signal_date_text:
@@ -325,7 +334,12 @@ async def load_ohlcv_cache(
         start = min(dates)
         end = max(as_of, max(dates) + pd.Timedelta(days=45))
         try:
-            ohlcv = await fetch_ohlcv(ticker, start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"))
+            ohlcv = await get_ohlcv_range(
+                ticker,
+                start.strftime("%Y-%m-%d"),
+                end.strftime("%Y-%m-%d"),
+                force_refresh=force_refresh,
+            )
         except Exception as exc:
             print(f"update_skip ticker={ticker} error={type(exc).__name__}: {exc}")
             await asyncio.sleep(delay)
@@ -345,7 +359,7 @@ async def scan(args: argparse.Namespace) -> pd.DataFrame:
     errors = 0
     for ticker, name in companies:
         try:
-            rows.extend(await fetch_company_patterns(ticker, name, start, end, target_date))
+            rows.extend(await fetch_company_patterns(ticker, name, start, end, target_date, args.force_refresh))
         except Exception as exc:
             errors += 1
             print(f"scan_skip ticker={ticker} name={name} error={type(exc).__name__}: {exc}")
@@ -437,11 +451,13 @@ def canonicalize_observations(df: pd.DataFrame) -> pd.DataFrame:
 async def update_observations(args: argparse.Namespace) -> tuple[int, int]:
     as_of = pd.Timestamp(args.as_of).normalize() if args.as_of else pd.Timestamp.today().normalize()
     fieldnames, rows = read_rows(args.obs_csv)
-    ohlcv_cache = await load_ohlcv_cache(rows, as_of, args.delay)
+    ohlcv_cache = await load_ohlcv_cache(rows, as_of, args.delay, args.force_refresh)
     changed = 0
     updated_rows = 0
     for row in rows:
         if not row.get("signal_date") or not row.get("ticker"):
+            continue
+        if row.get("d_plus_20_close") and row.get("d_plus_20_return_pct"):
             continue
         ticker = as_text(row.get("ticker")).zfill(6)
         signal_date = pd.Timestamp(row["signal_date"])
@@ -667,10 +683,11 @@ async def main() -> None:
     )
     parser.add_argument("--date", help="스캔 기준일 YYYY-MM-DD. 생략하면 오늘")
     parser.add_argument("--as-of", help="관찰 업데이트 기준일 YYYY-MM-DD. 생략하면 오늘")
-    parser.add_argument("--lookback-days", type=int, default=220)
+    parser.add_argument("--lookback-days", type=int)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--delay", type=float, default=0.35)
     parser.add_argument("--backfill", action="store_true", help="기준일 하루가 아니라 조회 기간 전체 패턴을 관찰 로그에 추가")
+    parser.add_argument("--force-refresh", action="store_true", help="OHLCV 캐시를 무시하고 KIS API에서 다시 조회")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--universe-csv", type=Path, default=UNIVERSE_CSV)
     parser.add_argument("--scan-csv", type=Path, default=SCAN_CSV)
@@ -681,6 +698,8 @@ async def main() -> None:
     parser.add_argument("--summary-md", type=Path, default=SUMMARY_MD)
     args = parser.parse_args()
     resolve_output_paths(args)
+    if args.lookback_days is None:
+        args.lookback_days = 220 if args.mode == "history" else 60
 
     if args.mode in {"scan", "daily", "history"}:
         signals = await scan(args)

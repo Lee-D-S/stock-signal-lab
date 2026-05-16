@@ -27,14 +27,22 @@ def _cache_paths(ticker: str) -> tuple[Path, Path]:
 
 
 def _read_cached_frame(parquet_path: Path, pickle_path: Path) -> pd.DataFrame | None:
+    def _normalize(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        if "date" in df.columns:
+            df["date"] = pd.to_datetime(df["date"])
+        if "trade_amount" not in df.columns:
+            df["trade_amount"] = 0.0
+        return df
+
     if parquet_path.exists():
         try:
-            return pd.read_parquet(parquet_path)
+            return _normalize(pd.read_parquet(parquet_path))
         except Exception:
             pass
     if pickle_path.exists():
         try:
-            return pd.read_pickle(pickle_path)
+            return _normalize(pd.read_pickle(pickle_path))
         except Exception:
             pass
     return None
@@ -62,7 +70,7 @@ async def get_ohlcv_range(
         force_refresh: True 이면 캐시 무시하고 API 재조회
 
     Returns:
-        DataFrame (columns: date, open, high, low, close, volume) — 오래된 순 정렬
+        DataFrame (columns: date, open, high, low, close, volume, trade_amount) — 오래된 순 정렬
         빈 DataFrame 반환 시 해당 종목 건너뜀
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,6 +160,7 @@ async def _fetch_chunk(ticker: str, date_from: str, date_to: str) -> pd.DataFram
                 "low":    float(r.get("stck_lwpr") or 0),
                 "close":  float(r.get("stck_clpr") or 0),
                 "volume": float(r.get("acml_vol")  or 0),
+                "trade_amount": float(r.get("acml_tr_pbmn") or 0),
             }
             for r in rows
             if r.get("stck_clpr")

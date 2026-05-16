@@ -68,6 +68,21 @@
       "reason": "Foreign buy/sell streak detection or logging changed."
     },
     {
+      "id": "candlestick_observation",
+      "patterns": [
+        "scripts/run_candlestick_observation.py",
+        "scripts/candlestick_patterns.py",
+        "scripts/discovery/data_loader.py"
+      ],
+      "docs": [
+        "ai 주가 변동 원인 분석/01_기획/운영_루틴.md",
+        "ai 주가 변동 원인 분석/01_기획/일일_운영_자동화_정리.md",
+        "ai 주가 변동 원인 분석/01_기획/현재_실행가능_기능과_자동화_정리.md",
+        "ai 주가 변동 원인 분석/프로젝트_현황_총정리.md"
+      ],
+      "reason": "Candlestick scan, OHLCV cache usage, or observation update behavior changed."
+    },
+    {
       "id": "new_company_reports",
       "patterns": [
         "scripts/run_new_company_reports.py",
