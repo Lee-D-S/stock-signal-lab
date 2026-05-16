@@ -209,6 +209,22 @@ async def fetch_price_snapshot(ticker: str) -> dict[str, Any]:
     return data.get("output", {}) or {}
 
 
+async def fetch_other_major_ratios(ticker: str) -> dict[str, Any]:
+    data = await get_marketdata(
+        "/uapi/domestic-stock/v1/finance/other-major-ratios",
+        params={
+            "fid_input_iscd": ticker,
+            "fid_div_cls_code": "0",
+            "fid_cond_mrkt_div_code": "J",
+        },
+        tr_id="FHKST66430500",
+    )
+    rows = data.get("output", []) or []
+    if isinstance(rows, dict):
+        rows = [rows]
+    return rows[0] if rows else {}
+
+
 async def fetch_stock_info(ticker: str) -> dict[str, Any]:
     data = await get_marketdata(
         "/uapi/domestic-stock/v1/quotations/search-stock-info",
@@ -1016,6 +1032,7 @@ async def make_report(
     investor: pd.DataFrame,
     short_df: pd.DataFrame,
     snapshot: dict[str, Any],
+    major_ratios: dict[str, Any],
     disclosures: list[dict[str, Any]],
     financials: dict[str, dict[str, Any]],
     structured: dict[str, list[dict[str, Any]]],
@@ -1207,6 +1224,16 @@ async def make_report(
         f"| EPS | {snapshot.get('eps') or 'N/A'} |",
         f"| BPS | {snapshot.get('bps') or 'N/A'} |",
         "",
+        "## KIS 기타 주요 비율",
+        "",
+        "| 항목 | 수치 |",
+        "|---|---:|",
+        f"| 기준년월 | {major_ratios.get('stac_yymm') or 'N/A'} |",
+        f"| EBITDA | {major_ratios.get('ebitda') or 'N/A'} |",
+        f"| EV/EBITDA | {major_ratios.get('ev_ebitda') or 'N/A'} |",
+        f"| EVA | {major_ratios.get('eva') or 'N/A'} |",
+        f"| 배당성향 | {major_ratios.get('payout_rate') or 'N/A'} |",
+        "",
     ])
     if not short_df.empty:
         lines.extend(["## KIS 공매도 요약", "", "| 항목 | 수치 |", "|---|---:|", f"| 공매도 거래대금 합계 | {fmt_won(short_df['short_amount'].sum(min_count=1))} |", f"| 일평균 공매도 거래대금 | {fmt_won(short_df['short_amount'].mean())} |", f"| 최대 공매도 거래대금 | {fmt_won(short_df['short_amount'].max())} |", ""])
@@ -1269,6 +1296,7 @@ async def build_period(
     corp_code: str,
     financials: dict[str, dict[str, Any]],
     snapshot: dict[str, Any],
+    major_ratios: dict[str, Any],
     listing_date: pd.Timestamp | None = None,
 ) -> Path | None:
     print(f"{name} {title} 수집 중: {start}~{end}")
@@ -1286,7 +1314,7 @@ async def build_period(
     if ohlcv.empty:
         print(f"  skip: {name} {code} OHLCV 없음(listing_unverified_or_data_unavailable)")
         return None
-    md, event_records = await make_report(ticker, name, code, title, start, end, ohlcv, investor, short_df, snapshot, disclosures, financials, structured)
+    md, event_records = await make_report(ticker, name, code, title, start, end, ohlcv, investor, short_df, snapshot, major_ratios, disclosures, financials, structured)
     company_dir = OUT_DIR / name
     company_dir.mkdir(parents=True, exist_ok=True)
     path = company_dir / f"{name}_{code}_원인후보_실제분석.md"
@@ -1310,12 +1338,17 @@ async def main() -> None:
     corp_map = await get_corp_code_map()
     corp_code = corp_map[args.ticker]
     print(f"{args.name} corp_code={corp_code}")
-    financials, snapshot, stock_info = await asyncio.gather(fetch_financials(corp_code), fetch_price_snapshot(args.ticker), fetch_stock_info(args.ticker))
+    financials, snapshot, major_ratios, stock_info = await asyncio.gather(
+        fetch_financials(corp_code),
+        fetch_price_snapshot(args.ticker),
+        fetch_other_major_ratios(args.ticker),
+        fetch_stock_info(args.ticker),
+    )
     listing_date = listing_date_from_stock_info(stock_info)
     print(f"listing_date={listing_date.date() if listing_date is not None else 'N/A'}")
     paths = []
     for code, title, start, end in PERIODS:
-        path = await build_period(args.ticker, args.name, code, title, start, end, corp_code, financials, snapshot, listing_date)
+        path = await build_period(args.ticker, args.name, code, title, start, end, corp_code, financials, snapshot, major_ratios, listing_date)
         if path is not None:
             paths.append(path)
         await asyncio.sleep(0.5)

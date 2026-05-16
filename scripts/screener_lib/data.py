@@ -68,6 +68,30 @@ async def get_kis_quote_snapshot(ticker: str) -> dict | None:
         return None
 
 
+async def get_kis_other_major_ratios(ticker: str, div_cls_code: str = "0") -> dict | None:
+    """KIS 기타주요비율 조회.
+
+    div_cls_code: "0"=년, "1"=분기. Returns latest row fields including
+    EBITDA and EV/EBITDA when KIS provides them.
+    """
+    try:
+        data = await get_marketdata(
+            "/uapi/domestic-stock/v1/finance/other-major-ratios",
+            params={
+                "fid_input_iscd": ticker,
+                "fid_div_cls_code": div_cls_code,
+                "fid_cond_mrkt_div_code": "J",
+            },
+            tr_id="FHKST66430500",
+        )
+        rows = data.get("output") or []
+        if isinstance(rows, dict):
+            rows = [rows]
+        return rows[0] if rows else {}
+    except Exception:
+        return None
+
+
 async def get_kis_estimate_performance(ticker: str) -> dict | None:
     """KIS 국내주식 종목추정실적 원본 응답 조회."""
     try:

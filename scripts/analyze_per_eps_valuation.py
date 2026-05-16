@@ -1,19 +1,23 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from analysis_paths import (  # noqa: E402
     COMPANY_DIR,
     DATA_DIR,
     PATTERN_DIR,
 )
+from screener_lib.data import get_kis_other_major_ratios  # noqa: E402
 
 OUT_CSV = DATA_DIR / "기업별_PER_EPS_현재스냅샷.csv"
 OUT_MD = PATTERN_DIR / "PER_EPS_밸류에이션_요약.md"
@@ -27,6 +31,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--company-dir", type=Path, default=COMPANY_DIR)
     parser.add_argument("--csv", type=Path, default=OUT_CSV)
     parser.add_argument("--md", type=Path, default=OUT_MD)
+    parser.add_argument("--refresh-kis-major-ratios", action="store_true", help="Fetch KIS EBITDA/EV/EBITDA when reports do not have the table.")
+    parser.add_argument("--delay", type=float, default=0.35)
     return parser.parse_args()
 
 
@@ -140,6 +146,23 @@ def parse_kis_snapshot(text: str) -> dict[str, float | None]:
     return values
 
 
+def parse_kis_major_ratios(text: str) -> dict[str, float | None]:
+    rows = table_after_heading(text, "## KIS 기타 주요 비율")
+    values: dict[str, float | None] = {
+        "EBITDA": None,
+        "EV/EBITDA": None,
+        "EVA": None,
+        "배당성향": None,
+    }
+    for row in rows[1:]:
+        if len(row) < 2:
+            continue
+        key = row[0]
+        if key in values:
+            values[key] = parse_number(row[1])
+    return values
+
+
 def parse_financial_rows(text: str) -> list[dict[str, Any]]:
     rows = table_after_heading(text, "## DART 주요 재무 수치")
     financials: list[dict[str, Any]] = []
@@ -176,6 +199,30 @@ def per_bucket(per: float | None, eps: float | None) -> str:
     if per <= 50:
         return "고PER"
     return "초고PER"
+
+
+def pbr_bucket(pbr: float | None) -> str:
+    if pbr is None or pbr <= 0:
+        return "PBR무효"
+    if pbr < 0.8:
+        return "저PBR"
+    if pbr <= 1.5:
+        return "보통PBR"
+    if pbr <= 3:
+        return "고PBR"
+    return "초고PBR"
+
+
+def ev_ebitda_bucket(ev_ebitda: float | None) -> str:
+    if ev_ebitda is None or ev_ebitda <= 0:
+        return "EV/EBITDA결측"
+    if ev_ebitda < 5:
+        return "낮은EV/EBITDA"
+    if ev_ebitda <= 10:
+        return "보통EV/EBITDA"
+    if ev_ebitda <= 15:
+        return "높은EV/EBITDA"
+    return "초고EV/EBITDA"
 
 
 def eps_status(eps: float | None) -> str:
@@ -242,6 +289,18 @@ def valuation_class(per_group: str, eps_group: str, profit_trend: str) -> str:
     return "중립"
 
 
+def ev_ebitda_note(ev_ebitda_group: str, ebitda: float | None) -> str:
+    if ebitda is None or ebitda <= 0:
+        return "EBITDA 결측 또는 비양수로 EV/EBITDA 비교 제한"
+    if ev_ebitda_group == "낮은EV/EBITDA":
+        return "영업현금창출력 대비 기업가치 부담 낮음"
+    if ev_ebitda_group == "보통EV/EBITDA":
+        return "영업현금창출력 대비 기업가치 보통"
+    if ev_ebitda_group in {"높은EV/EBITDA", "초고EV/EBITDA"}:
+        return "영업현금창출력 대비 기업가치 부담 높음"
+    return "EV/EBITDA 비교 제한"
+
+
 def value_trap_check(valuation: str, profit_trend: str, debt_ratio: float | None, latest_net: float | None) -> str:
     risks = []
     if valuation == "저평가함정가능":
@@ -257,22 +316,33 @@ def value_trap_check(valuation: str, profit_trend: str, debt_ratio: float | None
 
 def memo_for(row: dict[str, Any]) -> str:
     return (
-        f"{row['EPS상태']}, {row['PER구간']}. "
+        f"{row['EPS상태']}, {row['PER구간']}, {row['PBR구간']}, {row['EV/EBITDA구간']}. "
         f"최근 순이익 방향은 {row['3년순이익방향']}이며 "
         f"분류는 {row['밸류에이션분류']}."
     )
 
 
-def analyze_report(path: Path) -> dict[str, Any]:
+def analyze_report(path: Path, major_ratio_overrides: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     snapshot = parse_kis_snapshot(text)
+    major_ratios = parse_kis_major_ratios(text)
     financials = parse_financial_rows(text)
     ticker = extract_ticker(text)
     company = path.parent.name
+    if major_ratio_overrides and ticker in major_ratio_overrides and major_ratios["EV/EBITDA"] is None:
+        override = major_ratio_overrides[ticker]
+        major_ratios = {
+            "EBITDA": parse_number(override.get("ebitda")),
+            "EV/EBITDA": parse_number(override.get("ev_ebitda")),
+            "EVA": parse_number(override.get("eva")),
+            "배당성향": parse_number(override.get("payout_rate")),
+        }
 
     trend, latest_net, earliest_net = net_income_direction(financials)
     latest_fin = next((row for row in reversed(financials) if row.get("순이익") is not None), {})
     per_group = per_bucket(snapshot["PER"], snapshot["EPS"])
+    pbr_group = pbr_bucket(snapshot["PBR"])
+    ev_ebitda_group = ev_ebitda_bucket(major_ratios["EV/EBITDA"])
     eps_group = eps_status(snapshot["EPS"])
     quality = profit_quality(trend, latest_net, latest_fin.get("ROE"), latest_fin.get("영업이익률"))
     valuation = valuation_class(per_group, eps_group, trend)
@@ -286,7 +356,14 @@ def analyze_report(path: Path) -> dict[str, Any]:
         "PBR": snapshot["PBR"],
         "EPS": snapshot["EPS"],
         "BPS": snapshot["BPS"],
+        "EBITDA": major_ratios["EBITDA"],
+        "EV/EBITDA": major_ratios["EV/EBITDA"],
+        "EVA": major_ratios["EVA"],
+        "배당성향": major_ratios["배당성향"],
         "PER구간": per_group,
+        "PBR구간": pbr_group,
+        "EV/EBITDA구간": ev_ebitda_group,
+        "EV/EBITDA해석": ev_ebitda_note(ev_ebitda_group, major_ratios["EBITDA"]),
         "EPS상태": eps_group,
         "최근순이익": latest_net,
         "3년전순이익": earliest_net,
@@ -306,22 +383,27 @@ def build_markdown(df: pd.DataFrame) -> str:
     total = len(df)
     class_counts = df["밸류에이션분류"].value_counts().to_dict() if not df.empty else {}
     per_counts = df["PER구간"].value_counts().to_dict() if not df.empty else {}
+    pbr_counts = df["PBR구간"].value_counts().to_dict() if not df.empty else {}
+    ev_ebitda_counts = df["EV/EBITDA구간"].value_counts().to_dict() if not df.empty else {}
 
     lines = [
-        "# PER/EPS 밸류에이션 요약",
+        "# 밸류에이션 요약",
         "",
         "## 전제",
         "",
-        "- 이 요약은 각 기업의 최신 보고서에 있는 KIS 현재 참고 지표와 DART 주요 재무 수치를 결합한 현재 단면 분석이다.",
-        "- 기존 분기별 보고서의 PER/EPS는 보고서 생성 시점의 현재 스냅샷이므로 과거 분기별 PER/EPS 시계열로 해석하지 않는다.",
+        "- 이 요약은 각 기업의 최신 보고서에 있는 KIS 현재 참고 지표, KIS 기타 주요 비율, DART 주요 재무 수치를 결합한 현재 단면 분석이다.",
+        "- 기존 분기별 보고서의 PER/PBR/EV/EBITDA는 보고서 생성 시점의 현재 스냅샷이므로 과거 분기별 시계열로 해석하지 않는다.",
         "- 과거 이익 추세는 DART 순이익, ROE, 영업이익률로 대체해 판단한다.",
-        "- 업종 평균 PER, 경쟁사 PER, Forward PER, 예상 EPS 기반 목표가는 별도 데이터 확보 후 확장한다.",
+        "- EV/EBITDA는 KIS 기타주요비율 API가 제공한 값을 우선 사용한다. 기존 보고서에 해당 표가 없으면 결측으로 남긴다.",
+        "- 업종 평균, 경쟁사 밸류에이션, Forward PER, 예상 EPS 기반 목표가는 별도 데이터 확보 후 확장한다.",
         "",
         "## 전체 요약",
         "",
         f"- 분석 기업 수: {total}개",
         f"- 밸류에이션 분류: {', '.join(f'{k} {v}개' for k, v in class_counts.items()) or 'N/A'}",
         f"- PER 구간: {', '.join(f'{k} {v}개' for k, v in per_counts.items()) or 'N/A'}",
+        f"- PBR 구간: {', '.join(f'{k} {v}개' for k, v in pbr_counts.items()) or 'N/A'}",
+        f"- EV/EBITDA 구간: {', '.join(f'{k} {v}개' for k, v in ev_ebitda_counts.items()) or 'N/A'}",
         "",
         "## 분류별 주요 종목",
         "",
@@ -335,12 +417,13 @@ def build_markdown(df: pd.DataFrame) -> str:
             continue
         subset = subset.sort_values(["PER", "EPS"], ascending=[True, False], na_position="last").head(15)
         lines.extend([
-            "| 종목 | 코드 | PER | EPS | 최근순이익 | 3년순이익방향 | ROE | 영업이익률 | 저평가함정체크 |",
-            "|---|---|---:|---:|---:|---|---:|---:|---|",
+            "| 종목 | 코드 | PER | PBR | EV/EBITDA | EPS | 최근순이익 | 3년순이익방향 | ROE | 영업이익률 | 저평가함정체크 |",
+            "|---|---|---:|---:|---:|---:|---:|---|---:|---:|---|",
         ])
         for _, row in subset.iterrows():
             lines.append(
-                f"| {row['종목명']} | {row['코드']} | {fmt_num(row['PER'])} | {fmt_num(row['EPS'], 0)} | "
+                f"| {row['종목명']} | {row['코드']} | {fmt_num(row['PER'])} | {fmt_num(row['PBR'])} | "
+                f"{fmt_num(row['EV/EBITDA'])} | {fmt_num(row['EPS'], 0)} | "
                 f"{fmt_won(row['최근순이익'])} | {row['3년순이익방향']} | {fmt_num(row['ROE'])}% | "
                 f"{fmt_num(row['영업이익률'])}% | {row['저평가함정체크']} |"
             )
@@ -355,16 +438,33 @@ def build_markdown(df: pd.DataFrame) -> str:
         "| EPS > 0 + PER 낮음 + 순이익 감소 | 저PER이나 저평가 함정 가능성 |",
         "| EPS > 0 + PER 높음 + 순이익 증가 | 성장 기대 반영 후보 |",
         "| EPS > 0 + PER 높음 + 순이익 정체/감소 | 기대 과열 가능성 |",
+        "| PBR 낮음 | 장부가치 대비 가격 부담 낮음. 단, 자산 부실/ROE 저하 여부 확인 필요 |",
+        "| EV/EBITDA 낮음 | 부채 포함 기업가치가 영업현금창출력 대비 낮음. 단, CAPEX와 업종 평균 확인 필요 |",
         "| EPS <= 0 또는 PER <= 0 | PER 비교 부적합 또는 적자 리스크 후보 |",
         "",
     ])
     return "\n".join(lines)
 
 
+async def fetch_major_ratio_overrides(tickers: list[str], delay: float) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for ticker in tickers:
+        row = await get_kis_other_major_ratios(ticker)
+        if row:
+            out[ticker] = row
+        await asyncio.sleep(delay)
+    return out
+
+
 def main() -> None:
     args = parse_args()
     reports = latest_reports(args.company_dir)
-    rows = [analyze_report(path) for path in reports]
+    overrides: dict[str, dict[str, Any]] = {}
+    if args.refresh_kis_major_ratios:
+        tickers = [extract_ticker(path.read_text(encoding="utf-8", errors="replace")) for path in reports]
+        overrides = asyncio.run(fetch_major_ratio_overrides([ticker for ticker in tickers if ticker], args.delay))
+        print(f"major_ratio_overrides={len(overrides)}")
+    rows = [analyze_report(path, overrides) for path in reports]
     df = pd.DataFrame(rows)
 
     args.csv.parent.mkdir(parents=True, exist_ok=True)

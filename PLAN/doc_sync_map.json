@@ -42,6 +42,8 @@
       "patterns": [
         "scripts/run_ntm_per_observation.py",
         "scripts/run_daily_research_summary.py",
+        "scripts/analyze_per_eps_valuation.py",
+        "scripts/valuation_context.py",
         "scripts/screener_lib/data.py",
         "core/api/client.py",
         "core/api/auth.py"
