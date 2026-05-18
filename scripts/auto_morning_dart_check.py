@@ -9,9 +9,10 @@ import sqlite3
 import sys
 import zipfile
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from html import escape, unescape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import aiohttp
 import pandas as pd
@@ -22,8 +23,11 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from config import settings  # noqa: E402
 from analysis_paths import (  # noqa: E402
+    DISCLOSURE_EVENT_CALENDAR_CSV,
+    DISCLOSURE_EVENT_CALENDAR_MD,
     FOREIGN_FLOW_WATCHLIST_CSV,
     FOREIGN_SELL_FLOW_WATCHLIST_CSV,
+    MORNING_DART_STATE_JSON,
     NEW_CONDITION_CONFIRMED_CSV,
     OBS_FOREIGN_FLOW_ERROR_CSV,
     OBS_FOREIGN_SELL_FLOW_ERROR_CSV,
@@ -49,6 +53,8 @@ MAX_UNIVERSE_TARGETS = 50
 MAX_REPORT_NEEDED_TARGETS = 30
 MAX_TELEGRAM_DISCLOSURE_BLOCKS = 20
 TELEGRAM_MESSAGE_LIMIT = 3600
+KST = ZoneInfo("Asia/Seoul")
+EVENT_LOOKAHEAD_BUSINESS_DAYS = 3
 
 POSITIVE_DISCLOSURE_KEYWORDS = [
     "단일판매",
@@ -99,6 +105,25 @@ NEUTRAL_DISCLOSURE_KEYWORDS = [
     "주식등의대량보유",
 ]
 
+EVENT_TITLE_KEYWORDS = {
+    "기업설명회(IR)": ["기업설명회", "IR"],
+    "결산실적공시예고": ["결산실적공시예고"],
+    "주주총회": ["주주총회소집공고", "주주총회소집결의"],
+    "배당/기준일": ["현금ㆍ현물배당", "현금·현물배당", "주주명부폐쇄", "기준일"],
+}
+
+EVENT_COLUMNS = [
+    "event_date",
+    "ticker",
+    "name",
+    "event_type",
+    "report_nm",
+    "rcept_dt",
+    "rcept_no",
+    "source",
+    "status",
+]
+
 EVIDENCE_KEYWORDS = [
     "매출액",
     "영업이익",
@@ -139,6 +164,19 @@ class MorningTarget:
     reasons: list[str] = field(default_factory=list)
 
 
+@dataclass
+class MorningEvent:
+    event_date: str
+    ticker: str
+    name: str
+    event_type: str
+    report_nm: str
+    rcept_dt: str
+    rcept_no: str
+    source: str = "DART"
+    status: str = "scheduled"
+
+
 def normalize_title(text: str) -> str:
     return text.replace(" ", "")
 
@@ -146,6 +184,139 @@ def normalize_title(text: str) -> str:
 def safe_print(message: str) -> None:
     encoding = sys.stdout.encoding or "utf-8"
     print(message.encode(encoding, errors="replace").decode(encoding, errors="replace"))
+
+
+def markdown_cell(value: object) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ").strip()
+
+
+def parse_yyyymmdd(value: object) -> date | None:
+    text = "" if value is None else str(value).strip()
+    if not re.fullmatch(r"\d{8}", text):
+        return None
+    try:
+        return datetime.strptime(text, "%Y%m%d").date()
+    except ValueError:
+        return None
+
+
+def business_days_from(start: date, count: int) -> date:
+    current = start
+    remaining = count
+    while remaining:
+        current += timedelta(days=1)
+        if current.weekday() < 5:
+            remaining -= 1
+    return current
+
+
+def previous_business_day(value: date) -> date:
+    current = value - timedelta(days=1)
+    while current.weekday() >= 5:
+        current -= timedelta(days=1)
+    return current
+
+
+def load_morning_state() -> dict:
+    if not MORNING_DART_STATE_JSON.exists():
+        return {}
+    try:
+        return json.loads(MORNING_DART_STATE_JSON.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        safe_print(f"[morning] 상태 파일 로드 실패: {type(exc).__name__}")
+        return {}
+
+
+def save_morning_state(state: dict) -> None:
+    MORNING_DART_STATE_JSON.parent.mkdir(parents=True, exist_ok=True)
+    MORNING_DART_STATE_JSON.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+
+def seen_rcept_numbers(state: dict) -> set[str]:
+    values = state.get("seen_rcept_no", [])
+    if not isinstance(values, list):
+        return set()
+    return {str(value).strip() for value in values if str(value).strip()}
+
+
+def disclosure_lookup_start(today: datetime, state: dict) -> tuple[date, str]:
+    raw = str(state.get("last_successful_check_at", "")).strip()
+    if raw:
+        try:
+            parsed = datetime.fromisoformat(raw)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=KST)
+            return parsed.astimezone(KST).date(), f"마지막 성공 조회 이후 ({parsed.astimezone(KST).strftime('%Y-%m-%d %H:%M KST')})"
+        except ValueError:
+            pass
+    fallback = previous_business_day(today.date())
+    return fallback, f"초기 기준: 직전 거래일 15:30 KST 이후 ({fallback.isoformat()})"
+
+
+def is_event_disclosure(title: str) -> tuple[bool, str]:
+    normalized = normalize_title(title)
+    for event_type, keywords in EVENT_TITLE_KEYWORDS.items():
+        if any(keyword.replace(" ", "") in normalized for keyword in keywords):
+            return True, event_type
+    return False, ""
+
+
+def extract_event_dates(text: str, rcept_dt: str) -> list[date]:
+    base_date = parse_yyyymmdd(rcept_dt)
+    if not base_date:
+        return []
+
+    candidates: set[date] = set()
+    for year, month, day in re.findall(r"(\d{4})[.\-/년]\s*(\d{1,2})[.\-/월]\s*(\d{1,2})", text):
+        try:
+            candidates.add(date(int(year), int(month), int(day)))
+        except ValueError:
+            continue
+
+    for month, day in re.findall(r"(?<!\d)(\d{1,2})\s*월\s*(\d{1,2})\s*일", text):
+        try:
+            candidates.add(date(base_date.year, int(month), int(day)))
+        except ValueError:
+            continue
+
+    max_date = base_date + timedelta(days=370)
+    return sorted(item for item in candidates if base_date <= item <= max_date)
+
+
+async def event_from_disclosure(
+    session: aiohttp.ClientSession,
+    target: MorningTarget,
+    disclosure: dict,
+) -> MorningEvent | None:
+    report_nm = str(disclosure.get("report_nm", "")).strip()
+    is_event, event_type = is_event_disclosure(report_nm)
+    if not is_event:
+        return None
+
+    rcept_no = str(disclosure.get("rcept_no", "")).strip()
+    rcept_dt = str(disclosure.get("rcept_dt", "")).strip()
+    try:
+        document_text = await fetch_document_text(session, rcept_no)
+    except (asyncio.TimeoutError, aiohttp.ClientError, zipfile.BadZipFile) as exc:
+        safe_print(f"[{target.name}] 이벤트 원문 조회 실패: {type(exc).__name__}")
+        return None
+
+    dates = extract_event_dates(f"{report_nm} {document_text}", rcept_dt)
+    if not dates:
+        return None
+    event_date = dates[0].isoformat()
+    return MorningEvent(
+        event_date=event_date,
+        ticker=target.ticker,
+        name=target.name,
+        event_type=event_type,
+        report_nm=report_nm,
+        rcept_dt=rcept_dt,
+        rcept_no=rcept_no,
+    )
 
 
 def read_csv_safely(path: Path, encoding: str = "utf-8-sig") -> pd.DataFrame:
@@ -156,6 +327,69 @@ def read_csv_safely(path: Path, encoding: str = "utf-8-sig") -> pd.DataFrame:
     except Exception as exc:
         safe_print(f"[morning] CSV 로드 실패: {path.name} ({type(exc).__name__})")
         return pd.DataFrame()
+
+
+def load_event_calendar() -> pd.DataFrame:
+    if not DISCLOSURE_EVENT_CALENDAR_CSV.exists():
+        return pd.DataFrame(columns=EVENT_COLUMNS)
+    df = read_csv_safely(DISCLOSURE_EVENT_CALENDAR_CSV)
+    for column in EVENT_COLUMNS:
+        if column not in df.columns:
+            df[column] = ""
+    return df[EVENT_COLUMNS]
+
+
+def save_event_calendar(df: pd.DataFrame) -> None:
+    DISCLOSURE_EVENT_CALENDAR_CSV.parent.mkdir(parents=True, exist_ok=True)
+    if df.empty:
+        df = pd.DataFrame(columns=EVENT_COLUMNS)
+    df = df[EVENT_COLUMNS].drop_duplicates(subset=["rcept_no", "event_type", "event_date"])
+    df = df.sort_values(["event_date", "ticker", "event_type"], na_position="last")
+    df.to_csv(DISCLOSURE_EVENT_CALENDAR_CSV, index=False, encoding="utf-8-sig")
+    write_event_calendar_markdown(df)
+
+
+def write_event_calendar_markdown(df: pd.DataFrame) -> None:
+    lines = ["# 공시 이벤트 캘린더", ""]
+    if df.empty:
+        lines.append("- 이벤트 없음")
+    else:
+        lines.append("| event_date | ticker | name | event_type | report_nm | rcept_dt | status |")
+        lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+        for _, row in df.iterrows():
+            lines.append(
+                "| "
+                + " | ".join(
+                    markdown_cell(row.get(column, ""))
+                    for column in ["event_date", "ticker", "name", "event_type", "report_nm", "rcept_dt", "status"]
+                )
+                + " |"
+            )
+    DISCLOSURE_EVENT_CALENDAR_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def merge_event_calendar(new_events: list[MorningEvent]) -> pd.DataFrame:
+    df = load_event_calendar()
+    if new_events:
+        new_df = pd.DataFrame([event.__dict__ for event in new_events], columns=EVENT_COLUMNS)
+        df = pd.concat([df, new_df], ignore_index=True)
+    save_event_calendar(df)
+    return load_event_calendar()
+
+
+def upcoming_events(df: pd.DataFrame, today: date, business_days: int = EVENT_LOOKAHEAD_BUSINESS_DAYS) -> list[dict]:
+    if df.empty:
+        return []
+    end_date = business_days_from(today, business_days)
+    events: list[dict] = []
+    for _, row in df.iterrows():
+        try:
+            event_date = datetime.strptime(str(row.get("event_date", "")), "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if today <= event_date <= end_date:
+            events.append({column: str(row.get(column, "")) for column in EVENT_COLUMNS})
+    return events
 
 
 def active_observation_rows(path: Path) -> pd.DataFrame:
@@ -630,7 +864,7 @@ async def fetch_disclosures(session: aiohttp.ClientSession, corp_code: str, bgn_
         "sort": "date",
         "sort_mth": "desc",
         "page_no": "1",
-        "page_count": "10",
+        "page_count": "100",
     }
     async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
         data = await resp.json(content_type=None)
@@ -662,18 +896,45 @@ def truncate_for_telegram(text: str, limit: int) -> str:
     return text[: max(0, limit - len(suffix))].rstrip() + suffix
 
 
-def build_morning_telegram_messages(today: datetime, summary: str, found: list[str]) -> list[str]:
-    date_text = today.strftime("%Y-%m-%d")
+def format_upcoming_event(event: dict) -> str:
+    return (
+        f"• {escape(event.get('event_date', ''))} "
+        f"{escape(event.get('name', ''))} ({escape(event.get('ticker', ''))}) "
+        f"{escape(event.get('event_type', ''))}: {escape(event.get('report_nm', ''))}"
+    )
+
+
+def build_morning_telegram_messages(
+    today: datetime,
+    summary: str,
+    found: list[str],
+    events: list[dict],
+    disclosure_window_text: str,
+) -> list[str]:
+    date_text = today.strftime("%Y-%m-%d %H:%M KST")
+    event_text = "\n".join(format_upcoming_event(event) for event in events[:20]) or "근일 이벤트 없음"
+    if len(events) > 20:
+        event_text += f"\n외 {len(events) - 20}개 이벤트 추가"
+
     if not found:
-        return [f"✅ <b>오전 공시 확인 ({date_text})</b>\n{summary}\n신규 공시 없음"]
+        header = (
+            f"✅ <b>오전 공시/이벤트 확인 ({date_text})</b>\n{summary}\n"
+            f"신규 공시 기준: {escape(disclosure_window_text)}\n"
+            f"미래 이벤트 기준: 오늘~{EVENT_LOOKAHEAD_BUSINESS_DAYS}거래일 이내\n"
+            "신규 공시 없음\n\n"
+            f"<b>[근일 이벤트]</b>\n{event_text}"
+        )
+        return [truncate_for_telegram(header, TELEGRAM_MESSAGE_LIMIT)]
 
     shown = found[:MAX_TELEGRAM_DISCLOSURE_BLOCKS]
     remaining = len(found) - len(shown)
     first_header = (
-        f"🔔 <b>오전 공시 확인 ({date_text})</b>\n{summary}\n"
-        f"공시 발견: {len(found):,}개 종목"
+        f"🔔 <b>오전 공시/이벤트 확인 ({date_text})</b>\n{summary}\n"
+        f"신규 공시 기준: {escape(disclosure_window_text)}\n"
+        f"미래 이벤트 기준: 오늘~{EVENT_LOOKAHEAD_BUSINESS_DAYS}거래일 이내\n"
+        f"신규 공시 발견: {len(found):,}개 종목"
     )
-    next_header = f"🔔 <b>오전 공시 확인 ({date_text}) 계속</b>"
+    next_header = f"🔔 <b>오전 공시/이벤트 확인 ({date_text}) 계속</b>"
     messages: list[str] = []
     current = first_header
 
@@ -696,6 +957,17 @@ def build_morning_telegram_messages(today: datetime, summary: str, found: list[s
             messages.append(current)
             current = next_header + "\n\n" + suffix
 
+    event_section = f"<b>[근일 이벤트]</b>\n{event_text}"
+    candidate = current + "\n\n" + event_section
+    if len(candidate) <= TELEGRAM_MESSAGE_LIMIT:
+        current = candidate
+    else:
+        messages.append(current)
+        current = next_header + "\n\n" + truncate_for_telegram(
+            event_section,
+            TELEGRAM_MESSAGE_LIMIT - len(next_header) - 2,
+        )
+
     messages.append(current)
     return messages
 
@@ -710,28 +982,39 @@ async def send_telegram_messages(messages: list[str]) -> None:
 
 
 async def main() -> None:
-    today = datetime.now()
-    # 오늘 포함 최근 2 거래일 범위
-    bgn = (today - timedelta(days=3)).strftime("%Y%m%d")
+    today = datetime.now(KST)
+    state = load_morning_state()
+    known_rcepts = seen_rcept_numbers(state)
+    lookup_start, lookup_reason = disclosure_lookup_start(today, state)
+    bgn = lookup_start.strftime("%Y%m%d")
     end = today.strftime("%Y%m%d")
 
     targets, source_counts = load_morning_targets()
     if not targets:
+        calendar = merge_event_calendar([])
+        events = upcoming_events(calendar, today.date())
+        summary = escape(format_target_summary(targets, source_counts))
+        messages = build_morning_telegram_messages(today, summary, [], events, lookup_reason)
         msg = (
             f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n"
             + escape(format_target_summary(targets, source_counts))
         )
-        await send_telegram(msg)
-        safe_print(msg)
+        await send_telegram_messages(messages or [msg])
+        state["last_successful_check_at"] = today.isoformat()
+        state["seen_rcept_no"] = sorted(known_rcepts)[-5000:]
+        save_morning_state(state)
+        safe_print("\n\n".join(messages or [msg]))
         return
 
     corp_codes = load_corp_codes()
     found: list[str] = []
+    all_seen_rcepts = set(known_rcepts)
     missing_corp_count = 0
     disclosures_by_ticker: dict[str, list[dict]] = {}
     disclosures_by_name: dict[str, list[dict]] = {}
     analyses_by_ticker: dict[str, list[dict[str, str]]] = {}
     analyses_by_name: dict[str, list[dict[str, str]]] = {}
+    new_events: list[MorningEvent] = []
 
     async with aiohttp.ClientSession() as session:
         for target in targets:
@@ -748,28 +1031,42 @@ async def main() -> None:
                 print(f"[{name}] DART 조회 실패: {type(exc).__name__}: {exc}")
                 continue
             if disclosures:
+                new_disclosures = []
+                for disclosure in disclosures:
+                    rcept_no = str(disclosure.get("rcept_no", "")).strip()
+                    if rcept_no:
+                        all_seen_rcepts.add(rcept_no)
+                    event = await event_from_disclosure(session, target, disclosure)
+                    if event:
+                        new_events.append(event)
+                        await asyncio.sleep(0.2)
+                    if rcept_no and rcept_no not in known_rcepts:
+                        new_disclosures.append(disclosure)
                 analyses = []
-                for disclosure in disclosures[:3]:
+                for disclosure in new_disclosures[:3]:
                     analyses.append(await analyze_disclosure_detail(session, disclosure))
                     await asyncio.sleep(0.2)
-                label, _stance, evidence = summarize_detail_interpretation(analyses)
-                source_text = ", ".join(sorted(target.sources))
-                reason_text = " / ".join(target.reasons[:3])
-                lines = [f"📋 <b>{escape(name)} ({ticker})</b> 공시 {len(disclosures)}건"]
-                lines.append(f"  • 대상: {escape(source_text)}")
-                if reason_text:
-                    lines.append(f"  • 사유: {escape(reason_text)}")
-                lines.append(f"  • 해석: {escape(label)}")
-                if evidence:
-                    lines.append(f"  • 근거: {escape(evidence[:450])}")
-                for d in disclosures[:3]:
-                    lines.append(f"  • [{escape(str(d.get('rcept_dt','')))}] {escape(str(d.get('report_nm','')))}")
-                found.append("\n".join(lines))
-                disclosures_by_ticker[ticker] = disclosures
-                display_name = f"{name} ({ticker})"
-                disclosures_by_name[display_name] = disclosures
-                analyses_by_ticker[ticker] = analyses
-                analyses_by_name[display_name] = analyses
+                if new_disclosures:
+                    label, _stance, evidence = summarize_detail_interpretation(analyses)
+                    source_text = ", ".join(sorted(target.sources))
+                    reason_text = " / ".join(target.reasons[:3])
+                    lines = [f"📋 <b>{escape(name)} ({ticker})</b> 신규 공시 {len(new_disclosures)}건"]
+                    lines.append(f"  • 대상: {escape(source_text)}")
+                    if reason_text:
+                        lines.append(f"  • 사유: {escape(reason_text)}")
+                    lines.append(f"  • 해석: {escape(label)}")
+                    if evidence:
+                        lines.append(f"  • 근거: {escape(evidence[:450])}")
+                    for d in new_disclosures[:3]:
+                        lines.append(f"  • [{escape(str(d.get('rcept_dt','')))}] {escape(str(d.get('report_nm','')))}")
+                    found.append("\n".join(lines))
+                    disclosures_by_ticker[ticker] = new_disclosures
+                    display_name = f"{name} ({ticker})"
+                    disclosures_by_name[display_name] = new_disclosures
+                    analyses_by_ticker[ticker] = analyses
+                    analyses_by_name[display_name] = analyses
+                else:
+                    print(f"[{name}] 신규 공시 없음 (조회 공시 {len(disclosures)}건, sources={','.join(sorted(target.sources))})")
             else:
                 print(f"[{name}] 신규 공시 없음 (sources={','.join(sorted(target.sources))})")
             await asyncio.sleep(0.3)
@@ -778,10 +1075,15 @@ async def main() -> None:
     append_markdown_notes(today, disclosures_by_name, analyses_by_name)
     print(f"observation_disclosure_notes_updated={updated_notes}")
 
+    calendar = merge_event_calendar(new_events)
+    events = upcoming_events(calendar, today.date())
     summary = escape(format_target_summary(targets, source_counts, missing_corp_count))
-    messages = build_morning_telegram_messages(today, summary, found)
+    messages = build_morning_telegram_messages(today, summary, found, events, lookup_reason)
 
     await send_telegram_messages(messages)
+    state["last_successful_check_at"] = today.isoformat()
+    state["seen_rcept_no"] = sorted(all_seen_rcepts)[-5000:]
+    save_morning_state(state)
     safe_print("\n\n".join(messages))
 
 
