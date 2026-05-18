@@ -48,6 +48,7 @@ POSITION_DB = ROOT / "auto_invest.db"
 MAX_UNIVERSE_TARGETS = 50
 MAX_REPORT_NEEDED_TARGETS = 30
 MAX_TELEGRAM_DISCLOSURE_BLOCKS = 20
+TELEGRAM_MESSAGE_LIMIT = 3600
 
 POSITIVE_DISCLOSURE_KEYWORDS = [
     "단일판매",
@@ -650,7 +651,62 @@ async def send_telegram(message: str) -> None:
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as resp:
             if resp.status != 200:
-                print(f"[telegram] 전송 실패: {resp.status}")
+                body = await resp.text()
+                raise RuntimeError(f"telegram send failed: status={resp.status} body={body[:200]}")
+
+
+def truncate_for_telegram(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+    suffix = "\n...내용 일부 생략"
+    return text[: max(0, limit - len(suffix))].rstrip() + suffix
+
+
+def build_morning_telegram_messages(today: datetime, summary: str, found: list[str]) -> list[str]:
+    date_text = today.strftime("%Y-%m-%d")
+    if not found:
+        return [f"✅ <b>오전 공시 확인 ({date_text})</b>\n{summary}\n신규 공시 없음"]
+
+    shown = found[:MAX_TELEGRAM_DISCLOSURE_BLOCKS]
+    remaining = len(found) - len(shown)
+    first_header = (
+        f"🔔 <b>오전 공시 확인 ({date_text})</b>\n{summary}\n"
+        f"공시 발견: {len(found):,}개 종목"
+    )
+    next_header = f"🔔 <b>오전 공시 확인 ({date_text}) 계속</b>"
+    messages: list[str] = []
+    current = first_header
+
+    for block in shown:
+        separator = "\n\n"
+        candidate = current + separator + block
+        if len(candidate) <= TELEGRAM_MESSAGE_LIMIT:
+            current = candidate
+            continue
+        messages.append(current)
+        block_limit = TELEGRAM_MESSAGE_LIMIT - len(next_header) - len(separator)
+        current = next_header + separator + truncate_for_telegram(block, block_limit)
+
+    suffix = "" if remaining <= 0 else f"외 {remaining}개 종목 공시 추가 발견"
+    if suffix:
+        candidate = current + "\n\n" + suffix
+        if len(candidate) <= TELEGRAM_MESSAGE_LIMIT:
+            current = candidate
+        else:
+            messages.append(current)
+            current = next_header + "\n\n" + suffix
+
+    messages.append(current)
+    return messages
+
+
+async def send_telegram_messages(messages: list[str]) -> None:
+    for idx, message in enumerate(messages, start=1):
+        total = len(messages)
+        if total > 1:
+            message = f"{message}\n\n({idx}/{total})"
+        await send_telegram(message)
+        await asyncio.sleep(0.2)
 
 
 async def main() -> None:
@@ -723,20 +779,10 @@ async def main() -> None:
     print(f"observation_disclosure_notes_updated={updated_notes}")
 
     summary = escape(format_target_summary(targets, source_counts, missing_corp_count))
-    if found:
-        shown = found[:MAX_TELEGRAM_DISCLOSURE_BLOCKS]
-        suffix = "" if len(found) <= len(shown) else f"\n\n외 {len(found) - len(shown)}개 종목 공시 추가 발견"
-        msg = (
-            f"🔔 <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n{summary}\n"
-            f"공시 발견: {len(found):,}개 종목\n\n"
-            + "\n\n".join(shown)
-            + suffix
-        )
-    else:
-        msg = f"✅ <b>오전 공시 확인 ({today.strftime('%Y-%m-%d')})</b>\n{summary}\n신규 공시 없음"
+    messages = build_morning_telegram_messages(today, summary, found)
 
-    await send_telegram(msg)
-    safe_print(msg)
+    await send_telegram_messages(messages)
+    safe_print("\n\n".join(messages))
 
 
 if __name__ == "__main__":
