@@ -290,7 +290,7 @@ scripts/
 - 로컬 LLM이 응답하면 Secretary 요약 1회를 생성한다.
 - 로컬 LLM이 응답하면 `QuantSignalAgent`, `EquityResearchAnalystAgent`, `ResearchFileAgent`, `RiskManagerAgent`, `ComplianceOfficerAgent`, `TraderAgent` 결과에 대한 역할별 LLM 리뷰를 생성한다.
 - 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
-- 역할별 기본 LLM 리뷰 프롬프트는 구현됐다. JSON 응답 모드, 파싱 안정화, 역할별 세부 스키마는 다음 구현 단계로 남아 있다.
+- 역할별 기본 LLM 리뷰 프롬프트와 JSON 응답 파싱 fallback은 구현됐다. 역할별 세부 스키마와 실제 모델별 출력 품질 튜닝은 다음 구현 단계로 남아 있다.
 
 기본 실행 흐름:
 

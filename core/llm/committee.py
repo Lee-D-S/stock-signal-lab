@@ -114,15 +114,19 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
             else None
         )
         if response and response.ok:
+            parsed_review = parse_agent_review_response(agent_key, response.text)
             agent_reviews[agent_key] = AgentReview(
                 agent=agent_key,
                 source_agent="LocalLLM",
                 status="needs_review",
-                summary=response.text,
-                human_questions=[
+                summary=parsed_review["summary"],
+                objections=parsed_review["objections"],
+                red_flags=parsed_review["red_flags"],
+                human_questions=parsed_review["human_questions"] + [
                     f"{AGENT_FILES[agent_key][0]} 원본 JSON과 LLM 리뷰가 일치하는지 확인하세요.",
                     "LLM 리뷰가 Python hard gate를 완화하거나 승인으로 바꾸지 않았는지 확인하세요.",
                 ],
+                raw_text=response.text,
             )
         else:
             reason = response.skipped_reason if response else stop_reason
@@ -325,6 +329,7 @@ def build_agent_review_messages(
                 "투자 지시, 매수/매도 권고, 주문 실행 승인을 하지 않습니다. "
                 "Python hard gate와 execution_allowed=false를 절대 완화하지 마세요. "
                 "Trader 역할에서도 주문 제안의 전제와 보류 조건만 설명하고, 실행 가능하다고 표현하지 마세요."
+                "가능하면 JSON 객체만 반환하세요."
             ),
         },
         {
@@ -332,12 +337,60 @@ def build_agent_review_messages(
             "content": (
                 f"아래 {source_agent} JSON을 검토하고 한국어로 작성하세요. "
                 f"{agent_review_focus(agent_key)} "
-                "형식은 1) 핵심 상태, 2) 주요 red flag 또는 보류 조건, 3) 사람 확인 질문, 4) Final Gate 영향 순서로 짧게 작성하세요. "
+                "가능하면 다음 JSON 형식으로만 답하세요: "
+                '{"summary":"...", "red_flags":["..."], "objections":["..."], "human_questions":["..."]}. '
+                "JSON이 어렵다면 1) 핵심 상태, 2) 주요 red flag 또는 보류 조건, 3) 사람 확인 질문, 4) Final Gate 영향 순서로 짧게 작성하세요. "
                 "Python 결과가 block 또는 needs_review라면 그 상태를 완화하지 마세요.\n\n"
                 + json.dumps(compact_result, ensure_ascii=False, indent=2)
             ),
         },
     ]
+
+
+def parse_agent_review_response(agent_key: str, text: str) -> dict[str, Any]:
+    parsed = parse_json_object(text)
+    if parsed:
+        summary = str(parsed.get("summary") or "").strip()
+        return {
+            "summary": summary or text.strip(),
+            "red_flags": coerce_str_list(parsed.get("red_flags")),
+            "objections": coerce_str_list(parsed.get("objections")),
+            "human_questions": coerce_str_list(parsed.get("human_questions")),
+        }
+    return {
+        "summary": text.strip(),
+        "red_flags": [],
+        "objections": [],
+        "human_questions": [],
+    }
+
+
+def parse_json_object(text: str) -> dict[str, Any]:
+    stripped = text.strip()
+    if not stripped:
+        return {}
+    candidates = [stripped]
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start >= 0 and end > start:
+        candidates.append(stripped[start:end + 1])
+    for candidate in candidates:
+        try:
+            data = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(data, dict):
+            return data
+    return {}
+
+
+def coerce_str_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    return [text] if text else []
 
 
 def agent_review_focus(agent_key: str) -> str:
@@ -379,6 +432,12 @@ def render_minutes(review: LLMReview) -> str:
         lines.append(f"- 원천 Agent: {item.source_agent}")
         lines.append(f"- 상태: {item.status}")
         lines.append(f"- 요약: {item.summary}")
+        if item.red_flags:
+            lines.append("- Red flags:")
+            lines.extend(f"  - {red_flag}" for red_flag in item.red_flags)
+        if item.objections:
+            lines.append("- 반론/이견:")
+            lines.extend(f"  - {objection}" for objection in item.objections)
         if item.human_questions:
             lines.append("- 사람 확인사항:")
             lines.extend(f"  - {question}" for question in item.human_questions)

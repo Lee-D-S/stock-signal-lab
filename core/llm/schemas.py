@@ -13,8 +13,10 @@ class AgentReview:
     status: ReviewStatus
     summary: str
     objections: list[str] = field(default_factory=list)
+    red_flags: list[str] = field(default_factory=list)
     human_questions: list[str] = field(default_factory=list)
     source_agent: str = ""
+    raw_text: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -53,4 +55,3 @@ class LLMReview:
         }
         data["final_gate"] = self.final_gate.to_dict()
         return data
-
