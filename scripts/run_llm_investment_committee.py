@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT))
 
 from config import settings  # noqa: E402
 from core.llm.committee import (  # noqa: E402
+    DEFAULT_LLM_ROLES,
     build_local_llm_review,
     build_skipped_review,
     find_latest_run,
@@ -36,6 +37,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--backend", default=settings.local_llm_backend, help="로컬 LLM 백엔드입니다. 현재 ollama만 지원합니다.")
     parser.add_argument("--base-url", default=settings.local_llm_base_url, help="로컬 LLM base URL입니다.")
     parser.add_argument("--timeout-sec", type=int, default=settings.local_llm_timeout_sec)
+    parser.add_argument(
+        "--roles",
+        default=",".join(DEFAULT_LLM_ROLES),
+        help="LLM 호출 역할입니다. 예: secretary, risk,compliance,trader, all",
+    )
     parser.add_argument("--no-llm", action="store_true", help="로컬 LLM 호출 없이 skipped 산출물만 생성합니다.")
     return parser.parse_args()
 
@@ -44,6 +50,7 @@ def main() -> None:
     args = parse_args()
     run_date = date.fromisoformat(args.run_date) if args.run_date else None
     run_dir = args.run_dir or find_latest_run(args.output_dir, run_date)
+    roles = parse_roles(args.roles)
     if args.no_llm or not settings.local_llm_enabled or not str(args.model).strip():
         reason = "local LLM disabled or model is empty"
         review = build_skipped_review(run_dir, reason)
@@ -56,6 +63,7 @@ def main() -> None:
                 model=args.model,
                 timeout_sec=args.timeout_sec,
             ),
+            roles=roles,
         )
     write_review_artifacts(review, run_dir)
     print(f"run_dir={run_dir}")
@@ -65,6 +73,15 @@ def main() -> None:
     if review.skipped_reason:
         print(f"skipped_reason={review.skipped_reason}")
     print(f"effective_status={review.final_gate.effective_status}")
+
+
+def parse_roles(raw: str) -> tuple[str, ...]:
+    roles = tuple(part.strip().lower() for part in raw.split(",") if part.strip())
+    allowed = {"quant", "analyst", "research", "risk", "compliance", "trader", "secretary", "all"}
+    unknown = sorted(set(roles).difference(allowed))
+    if unknown:
+        raise SystemExit(f"unsupported --roles value(s): {', '.join(unknown)}")
+    return roles
 
 
 if __name__ == "__main__":

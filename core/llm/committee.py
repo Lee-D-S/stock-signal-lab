@@ -20,6 +20,9 @@ AGENT_FILES = {
     "secretary": ("OperationsReportAgent", "operations_report.json"),
 }
 
+LLM_REVIEW_AGENT_KEYS = ("quant", "analyst", "research", "risk", "compliance", "trader")
+DEFAULT_LLM_ROLES = ("secretary",)
+ALL_LLM_ROLES = (*LLM_REVIEW_AGENT_KEYS, "secretary")
 STATUS_PRIORITY = {"block": 3, "needs_review": 2, "approve": 1, "info": 0, "skipped": 0}
 
 
@@ -95,7 +98,11 @@ def build_skipped_review(run_dir: Path, reason: str = "local LLM is not configur
     )
 
 
-def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
+def build_local_llm_review(
+    run_dir: Path,
+    config: LocalLLMConfig,
+    roles: tuple[str, ...] = DEFAULT_LLM_ROLES,
+) -> LLMReview:
     payload = load_run(run_dir)
     manifest = payload["manifest"]
     agents = payload["agents"]
@@ -104,9 +111,19 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
 
     client = LocalLLMClient(config)
     stop_reason = ""
-    for agent_key in ("quant", "analyst", "research", "risk", "compliance", "trader"):
+    selected_roles = normalize_roles(roles)
+    for agent_key in LLM_REVIEW_AGENT_KEYS:
         result = agents.get(agent_key)
         if result is None:
+            continue
+        if agent_key not in selected_roles:
+            agent_reviews[agent_key] = AgentReview(
+                agent=agent_key,
+                source_agent=AGENT_FILES[agent_key][0],
+                status="skipped",
+                summary=f"{AGENT_FILES[agent_key][0]} LLM 리뷰는 요청되지 않았습니다.",
+                human_questions=build_human_questions(result),
+            )
             continue
         response = (
             client.chat(build_agent_review_messages(agent_key, result, final_gate))
@@ -139,6 +156,25 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
                 summary=f"{AGENT_FILES[agent_key][0]} LLM 리뷰를 건너뛰었습니다: {reason}",
                 human_questions=build_human_questions(result),
             )
+
+    if "secretary" not in selected_roles:
+        agent_reviews["secretary"] = AgentReview(
+            agent="secretary",
+            source_agent="OperationsReportAgent",
+            status="skipped",
+            summary="Secretary LLM 요약은 요청되지 않았습니다.",
+            human_questions=build_human_questions(agents.get("secretary", {})),
+        )
+        return LLMReview(
+            engine=config.backend,
+            status=combine_review_statuses(agent_reviews),
+            model=config.model,
+            run_id=str(manifest.get("run_id", run_dir.name)),
+            run_date=str(manifest.get("run_date", run_dir.parent.name)),
+            run_dir=str(run_dir),
+            agents=agent_reviews,
+            final_gate=final_gate,
+        )
 
     response = client.chat(build_secretary_messages(payload, final_gate)) if not stop_reason else None
     if not response or not response.ok:
@@ -183,6 +219,18 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
         agents=agent_reviews,
         final_gate=final_gate,
     )
+
+
+def normalize_roles(roles: tuple[str, ...]) -> set[str]:
+    if not roles:
+        roles = DEFAULT_LLM_ROLES
+    normalized = {role.strip().lower() for role in roles if role.strip()}
+    if "all" in normalized:
+        return set(ALL_LLM_ROLES)
+    unknown = sorted(normalized.difference(ALL_LLM_ROLES))
+    if unknown:
+        raise ValueError(f"unsupported LLM role(s): {', '.join(unknown)}")
+    return normalized or set(DEFAULT_LLM_ROLES)
 
 
 def build_base_agent_reviews(agents: dict[str, dict[str, Any]]) -> dict[str, AgentReview]:
