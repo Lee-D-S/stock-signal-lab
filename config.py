@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
 
+    # Local LLM
+    local_llm_enabled: bool = True
+    local_llm_backend: str = "ollama"
+    local_llm_base_url: str = "http://127.0.0.1:11434"
+    local_llm_model: str = ""
+    local_llm_timeout_sec: int = 300
+
     # DART
     dart_api_key: str = ""
 

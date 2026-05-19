@@ -284,10 +284,12 @@ scripts/
 현재 구현 상태:
 
 - `core/llm/schemas.py`, `core/llm/committee.py`, `scripts/run_llm_investment_committee.py` skeleton은 구현됐다.
+- `core/llm/local_client.py` Ollama HTTP 클라이언트와 CLI `--model`, `--base-url`, `--timeout-sec`, `--no-llm` 옵션은 구현됐다.
 - 최신 `data/agent_runs/YYYY-MM-DD/<run_id>` 탐색과 `pipeline_manifest.json` fallback 없는 run 탐색을 지원한다.
-- 로컬 LLM이 아직 설정되지 않은 상태에서는 `skipped` 리뷰를 생성한다.
+- 로컬 LLM이 설정되지 않았거나 서버 호출에 실패하면 `skipped` 리뷰를 생성한다.
+- 로컬 LLM이 응답하면 Secretary 요약 1회를 생성한다.
 - 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
-- `core/llm/local_client.py`와 역할별 실제 LLM 프롬프트는 다음 구현 단계로 남아 있다.
+- 역할별 Quant/Risk/Compliance/Trader LLM 프롬프트는 다음 구현 단계로 남아 있다.
 
 기본 실행 흐름:
 
@@ -325,6 +327,8 @@ LOCAL_LLM_TIMEOUT_SEC=300
 - Ollama `/api/chat`와 LM Studio `/v1/chat/completions`를 지원한다.
 - 호출 실패, 모델 없음, 서버 꺼짐은 예외로 종료하지 않고 `skipped` 상태로 반환한다.
 - JSON 모드가 가능한 백엔드는 JSON 출력을 우선 요청하되, 실패하면 텍스트 파싱 fallback을 둔다.
+
+현재는 Ollama `/api/chat`만 구현되어 있다. LM Studio와 JSON 모드 파싱은 후속 단계로 남긴다.
 
 ### Phase 3: 회의형 요약
 

@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from .local_client import LocalLLMClient, LocalLLMConfig
 from .schemas import AgentReview, FinalGate, LLMReview, ReviewStatus
 
 
@@ -94,6 +95,53 @@ def build_skipped_review(run_dir: Path, reason: str = "local LLM is not configur
     )
 
 
+def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
+    payload = load_run(run_dir)
+    manifest = payload["manifest"]
+    agents = payload["agents"]
+    agent_reviews = build_base_agent_reviews(agents)
+    final_gate = calculate_final_gate(agents, llm_recommendation="info")
+
+    response = LocalLLMClient(config).chat(build_secretary_messages(payload, final_gate))
+    if not response.ok:
+        return build_skipped_review(run_dir, response.skipped_reason)
+
+    agent_reviews["secretary"] = AgentReview(
+        agent="secretary",
+        source_agent="LocalLLM",
+        status="info",
+        summary=response.text,
+        human_questions=[
+            "LLM 요약이 Python Agent 결과와 Final Gate를 왜곡하지 않았는지 확인하세요.",
+            "Risk/Compliance/Trader의 hard gate 결과가 사람 검토 전에 완화되어 표현되지 않았는지 확인하세요.",
+        ],
+    )
+    return LLMReview(
+        engine=config.backend,
+        status="info",
+        model=config.model,
+        run_id=str(manifest.get("run_id", run_dir.name)),
+        run_date=str(manifest.get("run_date", run_dir.parent.name)),
+        run_dir=str(run_dir),
+        agents=agent_reviews,
+        final_gate=final_gate,
+    )
+
+
+def build_base_agent_reviews(agents: dict[str, dict[str, Any]]) -> dict[str, AgentReview]:
+    return {
+        key: AgentReview(
+            agent=key,
+            source_agent=source_agent,
+            status="skipped",
+            summary=f"{source_agent} 결과는 로드했지만 역할별 LLM 리뷰는 아직 생성하지 않았습니다.",
+            human_questions=build_human_questions(result),
+        )
+        for key, (source_agent, _) in AGENT_FILES.items()
+        if (result := agents.get(key)) is not None
+    }
+
+
 def write_review_artifacts(review: LLMReview, run_dir: Path) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "local_llm_review.json").write_text(
@@ -151,6 +199,45 @@ def calculate_final_gate(
     )
 
 
+def build_secretary_messages(payload: dict[str, Any], final_gate: FinalGate) -> list[dict[str, str]]:
+    manifest = payload["manifest"]
+    agents = payload["agents"]
+    report = str(payload.get("final_report", ""))[:6000]
+    agent_statuses = {
+        key: {
+            "status": value.get("status", "info"),
+            "summary": value.get("summary", ""),
+            "warning_count": len(value.get("warnings", [])),
+            "human_check_count": len(value.get("required_human_checks", [])),
+        }
+        for key, value in agents.items()
+    }
+    user_payload = {
+        "manifest": manifest,
+        "agent_statuses": agent_statuses,
+        "final_gate": final_gate.to_dict(),
+        "final_committee_report_excerpt": report,
+    }
+    return [
+        {
+            "role": "system",
+            "content": (
+                "당신은 auto-invest의 로컬 LLM Secretary입니다. "
+                "Python Agent 산출물을 사람이 검토하기 쉽게 요약하되, 투자 지시나 매수/매도 권고를 하지 않습니다. "
+                "Risk/Compliance/Trader hard gate를 완화해서 표현하지 말고, 사람 승인 전 주문 실행 금지를 명확히 유지하세요."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                "아래 JSON을 바탕으로 한국어로 짧은 투자위원회 브리프를 작성하세요. "
+                "형식은 1) 최종 상태, 2) 주요 차단/검토 사유, 3) 사람이 확인할 항목, 4) 주문 실행 관련 주의사항 순서로 작성하세요.\n\n"
+                + json.dumps(user_payload, ensure_ascii=False, indent=2)
+            ),
+        },
+    ]
+
+
 def render_minutes(review: LLMReview) -> str:
     lines = [
         "# 로컬 LLM 투자위원회 회의록",
@@ -159,6 +246,7 @@ def render_minutes(review: LLMReview) -> str:
         f"- run_id: {review.run_id}",
         f"- 엔진: {review.engine or 'none'}",
         f"- 상태: {review.status}",
+        f"- 모델: {review.model or '-'}",
         f"- skipped_reason: {review.skipped_reason or '-'}",
         "",
         "## Final Gate",
@@ -197,11 +285,22 @@ def render_human_brief(review: LLMReview) -> str:
         f"- 최종 상태: {gate.effective_status}",
         f"- Python 상태: {gate.python_status}",
         f"- LLM 상태: {review.status}",
+        f"- LLM 모델: {review.model or '-'}",
         f"- execution_allowed: {gate.python_execution_allowed}",
         "",
         "## 확인할 사항",
         "",
     ]
+    secretary = review.agents.get("secretary")
+    if secretary and secretary.source_agent == "LocalLLM" and secretary.summary:
+        lines[-2:] = [
+            "## LLM Secretary 요약",
+            "",
+            secretary.summary,
+            "",
+            "## 확인할 사항",
+            "",
+        ]
     questions = sorted({
         question
         for agent in review.agents.values()
