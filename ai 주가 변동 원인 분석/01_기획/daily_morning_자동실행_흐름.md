@@ -6,8 +6,8 @@
 
 - 워크플로 이름: `일별 자동 루틴`
 - 자동 실행:
-  - `morning`: 평일 08:50 KST
-  - `daily`: 평일 16:10 KST
+  - `morning`: 평일 07:05 KST, 08:35 KST
+  - `daily`: 평일 15:55 KST
 - 수동 실행:
   - GitHub Actions `workflow_dispatch`
   - `job`: `morning`, `daily`, `both`, `telegram-test`
@@ -24,7 +24,7 @@
 
 ### 실행 시각
 
-- 자동: 평일 08:50 KST
+- 자동: 평일 07:05 KST, 08:35 KST
 - 수동: `job=morning` 또는 `job=both`
 
 ### 실행 스크립트
@@ -97,7 +97,7 @@ rtk git pull --rebase origin main
 
 ### 실행 시각
 
-- 자동: 평일 16:10 KST
+- 자동: 평일 15:55 KST
 - 수동: `job=daily` 또는 `job=both`
 
 ### 전체 흐름
