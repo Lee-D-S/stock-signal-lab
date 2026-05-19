@@ -102,9 +102,62 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
     agent_reviews = build_base_agent_reviews(agents)
     final_gate = calculate_final_gate(agents, llm_recommendation="info")
 
-    response = LocalLLMClient(config).chat(build_secretary_messages(payload, final_gate))
-    if not response.ok:
-        return build_skipped_review(run_dir, response.skipped_reason)
+    client = LocalLLMClient(config)
+    stop_reason = ""
+    for agent_key in ("risk", "compliance", "trader"):
+        result = agents.get(agent_key)
+        if result is None:
+            continue
+        response = (
+            client.chat(build_agent_review_messages(agent_key, result, final_gate))
+            if not stop_reason
+            else None
+        )
+        if response and response.ok:
+            agent_reviews[agent_key] = AgentReview(
+                agent=agent_key,
+                source_agent="LocalLLM",
+                status="needs_review",
+                summary=response.text,
+                human_questions=[
+                    f"{AGENT_FILES[agent_key][0]} 원본 JSON과 LLM 리뷰가 일치하는지 확인하세요.",
+                    "LLM 리뷰가 Python hard gate를 완화하거나 승인으로 바꾸지 않았는지 확인하세요.",
+                ],
+            )
+        else:
+            reason = response.skipped_reason if response else stop_reason
+            if response and should_stop_llm_attempts(response.skipped_reason):
+                stop_reason = response.skipped_reason
+            agent_reviews[agent_key] = AgentReview(
+                agent=agent_key,
+                source_agent=AGENT_FILES[agent_key][0],
+                status="skipped",
+                summary=f"{AGENT_FILES[agent_key][0]} LLM 리뷰를 건너뛰었습니다: {reason}",
+                human_questions=build_human_questions(result),
+            )
+
+    response = client.chat(build_secretary_messages(payload, final_gate)) if not stop_reason else None
+    if not response or not response.ok:
+        reason = response.skipped_reason if response else stop_reason
+        agent_reviews["secretary"] = AgentReview(
+            agent="secretary",
+            source_agent="OperationsReportAgent",
+            status="skipped",
+            summary=f"Secretary LLM 요약을 건너뛰었습니다: {reason}",
+            human_questions=build_human_questions(agents.get("secretary", {})),
+        )
+        review_status: ReviewStatus = combine_review_statuses(agent_reviews)
+        return LLMReview(
+            engine=config.backend,
+            status=review_status,
+            model=config.model,
+            run_id=str(manifest.get("run_id", run_dir.name)),
+            run_date=str(manifest.get("run_date", run_dir.parent.name)),
+            run_dir=str(run_dir),
+            agents=agent_reviews,
+            final_gate=final_gate,
+            skipped_reason=reason,
+        )
 
     agent_reviews["secretary"] = AgentReview(
         agent="secretary",
@@ -118,7 +171,7 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
     )
     return LLMReview(
         engine=config.backend,
-        status="info",
+        status=combine_review_statuses(agent_reviews),
         model=config.model,
         run_id=str(manifest.get("run_id", run_dir.name)),
         run_date=str(manifest.get("run_date", run_dir.parent.name)),
@@ -238,6 +291,51 @@ def build_secretary_messages(payload: dict[str, Any], final_gate: FinalGate) -> 
     ]
 
 
+def build_agent_review_messages(
+    agent_key: str,
+    result: dict[str, Any],
+    final_gate: FinalGate,
+) -> list[dict[str, str]]:
+    role_names = {
+        "risk": "Risk Manager",
+        "compliance": "Compliance Officer",
+        "trader": "Trader",
+    }
+    role_name = role_names.get(agent_key, agent_key)
+    source_agent = AGENT_FILES[agent_key][0]
+    compact_result = {
+        "source_agent": source_agent,
+        "status": result.get("status", "info"),
+        "summary": result.get("summary", ""),
+        "warnings": result.get("warnings", [])[:20],
+        "required_human_checks": result.get("required_human_checks", [])[:20],
+        "artifacts": result.get("artifacts", {}),
+        "signals": result.get("signals", [])[:10],
+        "final_gate": final_gate.to_dict(),
+    }
+    return [
+        {
+            "role": "system",
+            "content": (
+                f"당신은 auto-invest의 로컬 LLM {role_name}입니다. "
+                "Python Agent 결과를 사람이 이해하기 쉽게 설명하는 보조 역할만 합니다. "
+                "투자 지시, 매수/매도 권고, 주문 실행 승인을 하지 않습니다. "
+                "Python hard gate와 execution_allowed=false를 절대 완화하지 마세요. "
+                "Trader 역할에서도 주문 제안의 전제와 보류 조건만 설명하고, 실행 가능하다고 표현하지 마세요."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"아래 {source_agent} JSON을 검토하고 한국어로 작성하세요. "
+                "형식은 1) 핵심 상태, 2) 주요 red flag 또는 보류 조건, 3) 사람 확인 질문, 4) Final Gate 영향 순서로 짧게 작성하세요. "
+                "Python 결과가 block 또는 needs_review라면 그 상태를 완화하지 마세요.\n\n"
+                + json.dumps(compact_result, ensure_ascii=False, indent=2)
+            ),
+        },
+    ]
+
+
 def render_minutes(review: LLMReview) -> str:
     lines = [
         "# 로컬 LLM 투자위원회 회의록",
@@ -340,6 +438,23 @@ def combine_statuses(statuses: list[str]) -> str:
     if not statuses:
         return "info"
     return max(statuses, key=lambda status: STATUS_PRIORITY.get(status, 0))
+
+
+def combine_review_statuses(reviews: dict[str, AgentReview]) -> ReviewStatus:
+    statuses = [review.status for review in reviews.values() if review.status != "skipped"]
+    if not statuses:
+        return "skipped"
+    combined = combine_statuses(statuses)
+    return combined if combined in {"approve", "block", "needs_review", "info"} else "info"
+
+
+def should_stop_llm_attempts(reason: str) -> bool:
+    return (
+        "not reachable" in reason
+        or "timed out" in reason
+        or "HTTP error: 404" in reason
+        or "LOCAL_LLM_MODEL is empty" in reason
+    )
 
 
 def read_json(path: Path) -> dict[str, Any]:

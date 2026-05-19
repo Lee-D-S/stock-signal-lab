@@ -288,8 +288,9 @@ scripts/
 - 최신 `data/agent_runs/YYYY-MM-DD/<run_id>` 탐색과 `pipeline_manifest.json` fallback 없는 run 탐색을 지원한다.
 - 로컬 LLM이 설정되지 않았거나 서버 호출에 실패하면 `skipped` 리뷰를 생성한다.
 - 로컬 LLM이 응답하면 Secretary 요약 1회를 생성한다.
+- 로컬 LLM이 응답하면 `RiskManagerAgent`, `ComplianceOfficerAgent`, `TraderAgent` 결과에 대한 역할별 LLM 리뷰를 생성한다.
 - 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
-- 역할별 Quant/Risk/Compliance/Trader LLM 프롬프트는 다음 구현 단계로 남아 있다.
+- 역할별 Quant/Analyst LLM 프롬프트는 다음 구현 단계로 남아 있다.
 
 기본 실행 흐름:
 
