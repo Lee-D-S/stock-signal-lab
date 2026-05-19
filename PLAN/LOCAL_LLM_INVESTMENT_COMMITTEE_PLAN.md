@@ -100,6 +100,44 @@ LLM 의견은 승인 상태를 더 보수적으로 낮출 수만 있음
 
 따라서 기본값은 로컬 LLM 무료 운영으로 둔다. Gemini 같은 외부 API는 최신 외부 정보 검색이 꼭 필요한 경우에만 선택적으로 사용하며, API 키가 없으면 해당 보강 단계만 건너뛰고 나머지 Agent 운영은 계속한다.
 
+## 3.2 노트북 하드웨어 운영 기준
+
+초기 운영 기준은 16GB 시스템 RAM과 Intel Arc 내장/공유 GPU 메모리 환경을 기준으로 둔다. 이 환경에서도 로컬 LLM은 가능하지만, GPU 가속을 전제로 설계하지 않는다. 기본 설계는 CPU 또는 제한적인 GPU 가속에서도 실패하지 않는 작은 모델 중심 운영이다.
+
+현재 확인된 기준 장비:
+
+| 항목 | 기준 |
+|---|---|
+| 시스템 RAM | 16GB |
+| GPU | Intel(R) Arc(TM) Graphics |
+| GPU 메모리 | 공유 GPU 메모리 약 8.9GB |
+| DirectX | DirectX 12, Feature Level 12.2 |
+
+모델 선택 원칙:
+
+- 1차 기본 모델은 3B급 또는 4B급 quantized 모델로 둔다.
+- 한국어 설명과 요약 품질을 고려해 Qwen 계열 3B 모델을 우선 후보로 둔다.
+- 7B/8B Q4 모델은 선택적으로 지원하되, 속도 저하와 메모리 압박을 감안한다.
+- 14B 이상 모델은 16GB RAM 노트북의 기본 운영 범위에서 제외한다.
+- 긴 리서치 원문 전체를 한 번에 넣지 않고, Python Agent 결과와 필요한 요약 컨텍스트만 입력한다.
+
+실행 엔진 원칙:
+
+- 1차 구현은 Ollama HTTP API를 기본 대상으로 둔다.
+- Intel Arc GPU 가속은 필수 요구사항이 아니라 후속 최적화로 둔다.
+- Ollama가 Intel GPU를 사용하지 못하고 CPU로 fallback되어도 파이프라인은 정상 동작해야 한다.
+- LM Studio, llama.cpp Vulkan, IPEX-LLM은 성능 개선이 필요할 때 후속으로 검토한다.
+- 로컬 LLM 서버가 꺼져 있거나 모델이 없으면 `skipped` 상태로 기록하고 Python Agent 결과만 저장한다.
+
+권장 초기 모델 후보:
+
+```text
+qwen2.5:3b
+gemma3:4b
+```
+
+이 모델 기준은 성능 최적화보다 안정적인 무료 운영을 우선한다. 더 큰 모델을 쓰는 경우에도 Final Gate와 Python guardrail 우선 원칙은 바뀌지 않는다.
+
 ## 4. 투자기업 LLM Agent 매핑
 
 auto-invest 내부에 투자기업 전용 LLM Agent 정의를 추가한다. 이 정의는 Connect AI의 `src/agents.ts`를 가져오지 않고, auto-invest 도메인에 맞는 Python 설정/프롬프트로 새로 작성한다.
