@@ -281,6 +281,14 @@ scripts/
   run_llm_investment_committee.py
 ```
 
+현재 구현 상태:
+
+- `core/llm/schemas.py`, `core/llm/committee.py`, `scripts/run_llm_investment_committee.py` skeleton은 구현됐다.
+- 최신 `data/agent_runs/YYYY-MM-DD/<run_id>` 탐색과 `pipeline_manifest.json` fallback 없는 run 탐색을 지원한다.
+- 로컬 LLM이 아직 설정되지 않은 상태에서는 `skipped` 리뷰를 생성한다.
+- 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
+- `core/llm/local_client.py`와 역할별 실제 LLM 프롬프트는 다음 구현 단계로 남아 있다.
+
 기본 실행 흐름:
 
 ```text
