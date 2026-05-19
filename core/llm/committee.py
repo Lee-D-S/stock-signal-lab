@@ -104,7 +104,7 @@ def build_local_llm_review(run_dir: Path, config: LocalLLMConfig) -> LLMReview:
 
     client = LocalLLMClient(config)
     stop_reason = ""
-    for agent_key in ("risk", "compliance", "trader"):
+    for agent_key in ("quant", "analyst", "research", "risk", "compliance", "trader"):
         result = agents.get(agent_key)
         if result is None:
             continue
@@ -297,6 +297,9 @@ def build_agent_review_messages(
     final_gate: FinalGate,
 ) -> list[dict[str, str]]:
     role_names = {
+        "quant": "Quant",
+        "analyst": "Analyst",
+        "research": "Evidence",
         "risk": "Risk Manager",
         "compliance": "Compliance Officer",
         "trader": "Trader",
@@ -328,12 +331,25 @@ def build_agent_review_messages(
             "role": "user",
             "content": (
                 f"아래 {source_agent} JSON을 검토하고 한국어로 작성하세요. "
+                f"{agent_review_focus(agent_key)} "
                 "형식은 1) 핵심 상태, 2) 주요 red flag 또는 보류 조건, 3) 사람 확인 질문, 4) Final Gate 영향 순서로 짧게 작성하세요. "
                 "Python 결과가 block 또는 needs_review라면 그 상태를 완화하지 마세요.\n\n"
                 + json.dumps(compact_result, ensure_ascii=False, indent=2)
             ),
         },
     ]
+
+
+def agent_review_focus(agent_key: str) -> str:
+    focus = {
+        "quant": "후보가 어떤 신호로 올라왔는지, 신호 품질과 누락 데이터, 과최적화 위험을 설명하세요.",
+        "analyst": "기업 리서치의 thesis, catalyst, risk, disconfirmation 누락과 보강 질문을 설명하세요.",
+        "research": "리서치 파일 누락, 오래된 근거, Analyst 결과와 ResearchFile 결과의 불일치를 설명하세요.",
+        "risk": "손실 시나리오, 유동성, 변동성, 포지션 리스크와 hard block 사유를 설명하세요.",
+        "compliance": "준법/기록/증거 체인 누락과 사람이 확인해야 할 필수 항목을 설명하세요.",
+        "trader": "주문 제안의 전제, 보류 조건, 체결 전 체크리스트를 설명하세요.",
+    }
+    return focus.get(agent_key, "Python Agent 결과의 핵심 검토 포인트를 설명하세요.")
 
 
 def render_minutes(review: LLMReview) -> str:
