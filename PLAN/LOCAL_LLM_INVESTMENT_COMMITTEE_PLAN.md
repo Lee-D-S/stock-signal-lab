@@ -295,6 +295,7 @@ scripts/
 - CLI `--roles` 옵션으로 호출할 LLM 역할을 제한할 수 있다. 기본값은 노트북 부하를 줄이기 위해 `secretary`만 호출한다.
 - `--roles`를 나눠 여러 번 실행해도 기존 `local_llm_review.json`을 읽어 이전 역할별 LLM 리뷰를 보존하고 새로 요청한 역할만 갱신한다.
 - 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
+- CLI는 실행 후 `LLM role summary` 블록으로 생성된 역할별 상태와 짧은 요약을 바로 출력한다.
 - 역할별 기본 LLM 리뷰 프롬프트와 JSON 응답 파싱 fallback은 구현됐다. 역할별 세부 스키마와 실제 모델별 출력 품질 튜닝은 다음 구현 단계로 남아 있다.
 - 역할별 프롬프트는 원본 Python Agent JSON, Final Gate, 실행 금지 원칙을 중심으로 짧게 유지한다. LLM은 투자 조언이나 주문 실행 가능 표현을 하지 않는다.
 - Trader LLM 리뷰는 `execution_allowed=false` 또는 Final Gate `block`일 때 코드에서 보수적으로 보정해 주문 실행 금지와 사람 검토용 초안임을 명시한다.

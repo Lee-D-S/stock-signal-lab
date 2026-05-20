@@ -73,6 +73,7 @@ def main() -> None:
     if review.skipped_reason:
         print(f"skipped_reason={review.skipped_reason}")
     print(f"effective_status={review.final_gate.effective_status}")
+    print_role_summary(review)
 
 
 def parse_roles(raw: str) -> tuple[str, ...]:
@@ -82,6 +83,26 @@ def parse_roles(raw: str) -> tuple[str, ...]:
     if unknown:
         raise SystemExit(f"unsupported --roles value(s): {', '.join(unknown)}")
     return roles
+
+
+def print_role_summary(review) -> None:
+    print("LLM role summary:")
+    printed = False
+    for role, agent_review in review.agents.items():
+        if agent_review.status == "skipped" and agent_review.source_agent != "LocalLLM":
+            continue
+        printed = True
+        summary = compact_summary(agent_review.summary)
+        print(f"- {role}: {agent_review.status} ({agent_review.source_agent or '-'}) - {summary}")
+    if not printed:
+        print("- no local LLM role review was generated")
+
+
+def compact_summary(text: str, limit: int = 160) -> str:
+    summary = " ".join(str(text).split())
+    if len(summary) <= limit:
+        return summary
+    return summary[: limit - 3].rstrip() + "..."
 
 
 if __name__ == "__main__":
