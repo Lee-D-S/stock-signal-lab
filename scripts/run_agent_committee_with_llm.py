@@ -18,13 +18,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default="http://127.0.0.1:11434")
     parser.add_argument("--timeout-sec", type=int, default=300)
     parser.add_argument("--no-llm", action="store_true", help="LLM 호출 없이 skipped 산출물만 생성합니다.")
-    parser.add_argument(
-        "committee_args",
-        nargs=argparse.REMAINDER,
-        help="scripts/run_agent_committee.py에 전달할 인자입니다. -- 뒤에 적을 수 있습니다.",
-    )
     known, unknown = parser.parse_known_args()
-    known.committee_args = [*unknown, *strip_separator(known.committee_args)]
+    known.committee_args = strip_separator(unknown)
     return known
 
 

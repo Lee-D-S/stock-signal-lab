@@ -316,6 +316,8 @@ scripts/
 rtk python scripts/run_agent_committee_with_llm.py --discover-limit 10 --test-portfolio balanced --model qwen2.5:3b --roles secretary
 ```
 
+통합 wrapper 옵션(`--model`, `--roles`, `--backend`, `--base-url`, `--timeout-sec`, `--no-llm`)은 기존 Python 투자위원회 옵션 앞뒤 어디에 둬도 wrapper가 분리해서 처리한다.
+
 통합 wrapper는 기존 Python Agent 실행 결과를 우선 보존하고, LLM 단계가 실패해도 Python Agent 산출물은 삭제하거나 변경하지 않는다.
 
 ## 6. 후속 구현 단계
