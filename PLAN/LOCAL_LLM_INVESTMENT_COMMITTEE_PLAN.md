@@ -120,6 +120,7 @@ LLM 의견은 승인 상태를 더 보수적으로 낮출 수만 있음
 - 7B/8B Q4 모델은 선택적으로 지원하되, 속도 저하와 메모리 압박을 감안한다.
 - 14B 이상 모델은 16GB RAM 노트북의 기본 운영 범위에서 제외한다.
 - 긴 리서치 원문 전체를 한 번에 넣지 않고, Python Agent 결과와 필요한 요약 컨텍스트만 입력한다.
+- 3B급 모델의 응답 속도와 품질을 위해 Secretary 입력은 짧은 보고서 발췌와 Agent 상태 요약 중심으로 제한한다.
 
 실행 엔진 원칙:
 
@@ -293,6 +294,8 @@ scripts/
 - `--roles`를 나눠 여러 번 실행해도 기존 `local_llm_review.json`을 읽어 이전 역할별 LLM 리뷰를 보존하고 새로 요청한 역할만 갱신한다.
 - 생성 산출물은 `local_llm_review.json`, `investment_committee_minutes.md`, `human_approval_brief.md`이다.
 - 역할별 기본 LLM 리뷰 프롬프트와 JSON 응답 파싱 fallback은 구현됐다. 역할별 세부 스키마와 실제 모델별 출력 품질 튜닝은 다음 구현 단계로 남아 있다.
+- 역할별 프롬프트는 원본 Python Agent JSON, Final Gate, 실행 금지 원칙을 중심으로 짧게 유지한다. LLM은 투자 조언이나 주문 실행 가능 표현을 하지 않는다.
+- Trader LLM 리뷰는 `execution_allowed=false` 또는 Final Gate `block`일 때 코드에서 보수적으로 보정해 주문 실행 금지와 사람 검토용 초안임을 명시한다.
 
 기본 실행 흐름:
 

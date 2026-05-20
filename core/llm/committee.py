@@ -23,6 +23,10 @@ AGENT_FILES = {
 LLM_REVIEW_AGENT_KEYS = ("quant", "analyst", "research", "risk", "compliance", "trader")
 DEFAULT_LLM_ROLES = ("secretary",)
 ALL_LLM_ROLES = (*LLM_REVIEW_AGENT_KEYS, "secretary")
+SECRETARY_REPORT_EXCERPT_CHARS = 2800
+MAX_AGENT_WARNINGS = 12
+MAX_AGENT_HUMAN_CHECKS = 8
+MAX_AGENT_SIGNALS = 6
 STATUS_PRIORITY = {"block": 3, "needs_review": 2, "approve": 1, "info": 0, "skipped": 0}
 
 
@@ -126,6 +130,11 @@ def build_local_llm_review(
         )
         if response and response.ok:
             parsed_review = parse_agent_review_response(agent_key, response.text)
+            parsed_review = apply_agent_review_guardrails(
+                agent_key,
+                parsed_review,
+                final_gate,
+            )
             agent_reviews[agent_key] = AgentReview(
                 agent=agent_key,
                 source_agent="LocalLLM",
@@ -333,7 +342,7 @@ def calculate_final_gate(
 def build_secretary_messages(payload: dict[str, Any], final_gate: FinalGate) -> list[dict[str, str]]:
     manifest = payload["manifest"]
     agents = payload["agents"]
-    report = str(payload.get("final_report", ""))[:6000]
+    report = str(payload.get("final_report", ""))[:SECRETARY_REPORT_EXCERPT_CHARS]
     agent_statuses = {
         key: {
             "status": value.get("status", "info"),
@@ -354,15 +363,18 @@ def build_secretary_messages(payload: dict[str, Any], final_gate: FinalGate) -> 
             "role": "system",
             "content": (
                 "당신은 auto-invest의 로컬 LLM Secretary입니다. "
-                "Python Agent 산출물을 사람이 검토하기 쉽게 요약하되, 투자 지시나 매수/매도 권고를 하지 않습니다. "
-                "Risk/Compliance/Trader hard gate를 완화해서 표현하지 말고, 사람 승인 전 주문 실행 금지를 명확히 유지하세요."
+                "Python Agent 산출물을 사람이 검토하기 쉽게 요약하는 보조자입니다. "
+                "투자 조언, 매수/매도 권고, 주문 실행 승인을 하지 마세요. "
+                "Risk/Compliance/Trader hard gate를 완화하지 말고, Final Gate를 그대로 따르세요. "
+                "한국어로 8줄 이내로만 답하세요."
             ),
         },
         {
             "role": "user",
             "content": (
                 "아래 JSON을 바탕으로 한국어로 짧은 투자위원회 브리프를 작성하세요. "
-                "형식은 1) 최종 상태, 2) 주요 차단/검토 사유, 3) 사람이 확인할 항목, 4) 주문 실행 관련 주의사항 순서로 작성하세요.\n\n"
+                "형식은 1) 최종 상태, 2) 주요 차단/검토 사유, 3) 사람이 확인할 항목, 4) 주문 실행 관련 주의사항 순서로 작성하세요. "
+                "새로운 투자 판단을 만들지 말고 입력 JSON에 있는 사실만 쓰세요.\n\n"
                 + json.dumps(user_payload, ensure_ascii=False, indent=2)
             ),
         },
@@ -388,22 +400,22 @@ def build_agent_review_messages(
         "source_agent": source_agent,
         "status": result.get("status", "info"),
         "summary": result.get("summary", ""),
-        "warnings": result.get("warnings", [])[:20],
-        "required_human_checks": result.get("required_human_checks", [])[:20],
+        "warnings": result.get("warnings", [])[:MAX_AGENT_WARNINGS],
+        "required_human_checks": result.get("required_human_checks", [])[:MAX_AGENT_HUMAN_CHECKS],
         "artifacts": result.get("artifacts", {}),
-        "signals": result.get("signals", [])[:10],
+        "signals": result.get("signals", [])[:MAX_AGENT_SIGNALS],
         "final_gate": final_gate.to_dict(),
     }
+    output_contract = agent_output_contract(agent_key)
     return [
         {
             "role": "system",
             "content": (
                 f"당신은 auto-invest의 로컬 LLM {role_name}입니다. "
-                "Python Agent 결과를 사람이 이해하기 쉽게 설명하는 보조 역할만 합니다. "
-                "투자 지시, 매수/매도 권고, 주문 실행 승인을 하지 않습니다. "
-                "Python hard gate와 execution_allowed=false를 절대 완화하지 마세요. "
-                "Trader 역할에서도 주문 제안의 전제와 보류 조건만 설명하고, 실행 가능하다고 표현하지 마세요."
-                "가능하면 JSON 객체만 반환하세요."
+                "Python Agent JSON을 사람이 검토하기 쉽게 설명하는 보조자입니다. "
+                "투자 조언, 매수/매도 권고, 주문 실행 승인, hard gate 완화를 하지 마세요. "
+                "입력 JSON에 없는 사실을 만들지 마세요. "
+                "반드시 JSON 객체 하나만 반환하세요."
             ),
         },
         {
@@ -411,9 +423,8 @@ def build_agent_review_messages(
             "content": (
                 f"아래 {source_agent} JSON을 검토하고 한국어로 작성하세요. "
                 f"{agent_review_focus(agent_key)} "
-                "가능하면 다음 JSON 형식으로만 답하세요: "
-                '{"summary":"...", "red_flags":["..."], "objections":["..."], "human_questions":["..."]}. '
-                "JSON이 어렵다면 1) 핵심 상태, 2) 주요 red flag 또는 보류 조건, 3) 사람 확인 질문, 4) Final Gate 영향 순서로 짧게 작성하세요. "
+                f"{output_contract} "
+                "각 배열은 최대 3개, 각 문장은 80자 이내로 제한하세요. "
                 "Python 결과가 block 또는 needs_review라면 그 상태를 완화하지 마세요.\n\n"
                 + json.dumps(compact_result, ensure_ascii=False, indent=2)
             ),
@@ -436,6 +447,31 @@ def parse_agent_review_response(agent_key: str, text: str) -> dict[str, Any]:
         "red_flags": [],
         "objections": [],
         "human_questions": [],
+    }
+
+
+def apply_agent_review_guardrails(
+    agent_key: str,
+    review: dict[str, Any],
+    final_gate: FinalGate,
+) -> dict[str, Any]:
+    if agent_key != "trader":
+        return review
+    if final_gate.python_execution_allowed and final_gate.effective_status != "block":
+        return review
+    red_flags = list(review["red_flags"])
+    questions = list(review["human_questions"])
+    no_execution_flag = "execution_allowed=false이므로 주문 실행 금지 상태입니다."
+    if no_execution_flag not in red_flags:
+        red_flags.insert(0, no_execution_flag)
+    check = "Trader 제안은 사람 검토용 초안이며 실행 지시가 아닌지 확인하세요."
+    if check not in questions:
+        questions.append(check)
+    return {
+        **review,
+        "summary": "주문 실행 금지. Trader 제안은 사람 검토용 초안입니다.",
+        "red_flags": red_flags[:3],
+        "human_questions": questions[:3],
     }
 
 
@@ -477,6 +513,31 @@ def agent_review_focus(agent_key: str) -> str:
         "trader": "주문 제안의 전제, 보류 조건, 체결 전 체크리스트를 설명하세요.",
     }
     return focus.get(agent_key, "Python Agent 결과의 핵심 검토 포인트를 설명하세요.")
+
+
+def agent_output_contract(agent_key: str) -> str:
+    if agent_key == "trader":
+        return (
+            'JSON 형식: {"summary":"주문 제안은 사람 검토용이며 실행 금지",'
+            '"red_flags":["..."],"objections":["..."],"human_questions":["..."]}. '
+            "execution_allowed=false이면 실행 가능하다고 쓰지 마세요."
+        )
+    if agent_key == "compliance":
+        return (
+            'JSON 형식: {"summary":"준법/기록/증거 체인 상태 요약",'
+            '"red_flags":["..."],"objections":["..."],"human_questions":["..."]}. '
+            "승인 가능성이나 주문 가능성을 새로 판단하지 마세요."
+        )
+    if agent_key == "risk":
+        return (
+            'JSON 형식: {"summary":"리스크 차단/검토 상태 요약",'
+            '"red_flags":["..."],"objections":["..."],"human_questions":["..."]}. '
+            "Final Gate가 block이면 block 유지 사유만 설명하세요."
+        )
+    return (
+        'JSON 형식: {"summary":"핵심 검토 상태 요약",'
+        '"red_flags":["..."],"objections":["..."],"human_questions":["..."]}.'
+    )
 
 
 def render_minutes(review: LLMReview) -> str:
