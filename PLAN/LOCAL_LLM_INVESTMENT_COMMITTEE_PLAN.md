@@ -280,12 +280,14 @@ core/llm/
 
 scripts/
   run_llm_investment_committee.py
+  run_agent_committee_with_llm.py
 ```
 
 현재 구현 상태:
 
 - `core/llm/schemas.py`, `core/llm/committee.py`, `scripts/run_llm_investment_committee.py` skeleton은 구현됐다.
 - `core/llm/local_client.py` Ollama HTTP 클라이언트와 CLI `--model`, `--base-url`, `--timeout-sec`, `--no-llm` 옵션은 구현됐다.
+- `scripts/run_agent_committee_with_llm.py`는 Python 투자위원회 실행 후 같은 run 디렉터리에 LLM 리뷰를 이어서 생성하는 통합 wrapper로 구현한다.
 - 최신 `data/agent_runs/YYYY-MM-DD/<run_id>` 탐색과 `pipeline_manifest.json` fallback 없는 run 탐색을 지원한다.
 - 로컬 LLM이 설정되지 않았거나 서버 호출에 실패하면 `skipped` 리뷰를 생성한다.
 - 로컬 LLM이 응답하면 Secretary 요약 1회를 생성한다.
@@ -307,6 +309,14 @@ scripts/
 5. Final Gate 적용
 6. local_llm_review.json / investment_committee_minutes.md / human_approval_brief.md 저장
 ```
+
+통합 실행 흐름:
+
+```powershell
+rtk python scripts/run_agent_committee_with_llm.py --discover-limit 10 --test-portfolio balanced --model qwen2.5:3b --roles secretary
+```
+
+통합 wrapper는 기존 Python Agent 실행 결과를 우선 보존하고, LLM 단계가 실패해도 Python Agent 산출물은 삭제하거나 변경하지 않는다.
 
 ## 6. 후속 구현 단계
 
