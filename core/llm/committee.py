@@ -112,18 +112,12 @@ def build_local_llm_review(
     client = LocalLLMClient(config)
     stop_reason = ""
     selected_roles = normalize_roles(roles)
+    merge_existing_agent_reviews(run_dir, agent_reviews, selected_roles)
     for agent_key in LLM_REVIEW_AGENT_KEYS:
         result = agents.get(agent_key)
         if result is None:
             continue
         if agent_key not in selected_roles:
-            agent_reviews[agent_key] = AgentReview(
-                agent=agent_key,
-                source_agent=AGENT_FILES[agent_key][0],
-                status="skipped",
-                summary=f"{AGENT_FILES[agent_key][0]} LLM 리뷰는 요청되지 않았습니다.",
-                human_questions=build_human_questions(result),
-            )
             continue
         response = (
             client.chat(build_agent_review_messages(agent_key, result, final_gate))
@@ -158,13 +152,6 @@ def build_local_llm_review(
             )
 
     if "secretary" not in selected_roles:
-        agent_reviews["secretary"] = AgentReview(
-            agent="secretary",
-            source_agent="OperationsReportAgent",
-            status="skipped",
-            summary="Secretary LLM 요약은 요청되지 않았습니다.",
-            human_questions=build_human_questions(agents.get("secretary", {})),
-        )
         return LLMReview(
             engine=config.backend,
             status=combine_review_statuses(agent_reviews),
@@ -231,6 +218,45 @@ def normalize_roles(roles: tuple[str, ...]) -> set[str]:
     if unknown:
         raise ValueError(f"unsupported LLM role(s): {', '.join(unknown)}")
     return normalized or set(DEFAULT_LLM_ROLES)
+
+
+def merge_existing_agent_reviews(
+    run_dir: Path,
+    agent_reviews: dict[str, AgentReview],
+    selected_roles: set[str],
+) -> None:
+    existing_path = run_dir / "local_llm_review.json"
+    if not existing_path.exists():
+        return
+    try:
+        existing = read_json(existing_path)
+    except (OSError, json.JSONDecodeError):
+        return
+    existing_agents = existing.get("agents", {})
+    if not isinstance(existing_agents, dict):
+        return
+    for agent_key, raw_review in existing_agents.items():
+        if agent_key in selected_roles or agent_key not in agent_reviews:
+            continue
+        if not isinstance(raw_review, dict):
+            continue
+        agent_reviews[agent_key] = agent_review_from_dict(agent_key, raw_review)
+
+
+def agent_review_from_dict(agent_key: str, data: dict[str, Any]) -> AgentReview:
+    status = str(data.get("status", "skipped"))
+    if status not in STATUS_PRIORITY:
+        status = "skipped"
+    return AgentReview(
+        agent=str(data.get("agent") or agent_key),
+        source_agent=str(data.get("source_agent", "")),
+        status=status,  # type: ignore[arg-type]
+        summary=str(data.get("summary", "")),
+        objections=coerce_str_list(data.get("objections")),
+        red_flags=coerce_str_list(data.get("red_flags")),
+        human_questions=coerce_str_list(data.get("human_questions")),
+        raw_text=str(data.get("raw_text", "")),
+    )
 
 
 def build_base_agent_reviews(agents: dict[str, dict[str, Any]]) -> dict[str, AgentReview]:
