@@ -364,25 +364,25 @@ def build_telegram_message(target_date: str) -> str:
     confirmed_today = pd.DataFrame()
     if not confirmed.empty and "signal_date" in confirmed.columns:
         confirmed_today = confirmed[confirmed["signal_date"].astype(str) == signal_date]
+    foreign_flow_today = filter_signal_date(foreign_flow_watchlist, signal_date)
+    foreign_sell_flow_today = filter_signal_date(foreign_sell_flow_watchlist, signal_date)
+    new_confirmed_today = filter_signal_date(new_confirmed, signal_date)
 
-    confirmed_lines: list[str] = []
+    upside_signal_lines: list[str] = []
+    downside_signal_lines: list[str] = []
     for _, row in confirmed_today.iterrows():
-        name = row.get("name", row.get("ticker", "?"))
-        hid = row.get("hypothesis_id", "?")
-        use_type = row.get("use_type", "")
-        valuation = str(row.get("valuation_class", "") or "").strip()
-        trap = str(row.get("valuation_trap_check", "") or "").strip()
-        valuation_note = f" / {valuation}" if valuation else ""
-        if trap and trap != "특이 리스크 제한적":
-            valuation_note += f" / {trap}"
-        confirmed_lines.append(f"  · {name} ({hid} {use_type}{valuation_note})")
+        line = format_signal_line(row)
+        if is_downside_signal(row):
+            downside_signal_lines.append(line)
+        else:
+            upside_signal_lines.append(line)
 
     new_conf_count = 0
-    if not new_confirmed.empty:
-        if "flow_recheck_status" in new_confirmed.columns:
-            new_conf_count = int((new_confirmed["flow_recheck_status"] == "confirmed").sum())
+    if not new_confirmed_today.empty:
+        if "flow_recheck_status" in new_confirmed_today.columns:
+            new_conf_count = int((new_confirmed_today["flow_recheck_status"] == "confirmed").sum())
         else:
-            new_conf_count = len(new_confirmed)
+            new_conf_count = len(new_confirmed_today)
 
     obs_today_count = 0
     if not observations.empty and "signal_date" in observations.columns:
@@ -400,12 +400,16 @@ def build_telegram_message(target_date: str) -> str:
         )
 
     perf_lines: list[str] = []
+    good_perf_lines: list[str] = []
+    weak_perf_lines: list[str] = []
     if not performance.empty:
         for _, row in performance.iterrows():
-            hid = row.get("hypothesis_id", "?")
-            cnt = int(row.get("sample_count", 0))
-            status = str(row.get("result_status", "표본 부족"))
-            perf_lines.append(f"  {hid}: {cnt}건 ({status})")
+            line = format_performance_line(row)
+            perf_lines.append(line)
+            if is_good_condition(row):
+                good_perf_lines.append(line)
+            if is_weak_condition(row):
+                weak_perf_lines.append(line)
 
     ntm_line = "NTM PER 관찰: 0건"
     if not ntm_per.empty and "signal_date" in ntm_per.columns:
@@ -446,16 +450,35 @@ def build_telegram_message(target_date: str) -> str:
     lines = [
         f"[auto-invest] 일일 요약 {signal_date}",
         "",
-        "■ 전략 신호",
-        f"확정 후보: {len(confirmed_lines)}건",
-        *(confirmed_lines or ["  (없음)"]),
+        "■ 오늘 발견된 상승 가능 신호",
+        f"확정 후보: {len(upside_signal_lines)}건",
+        *(upside_signal_lines or ["  (없음)"]),
+        "",
+        "■ 오늘 발견된 하락/회피 신호",
+        f"확정 후보: {len(downside_signal_lines)}건",
+        *(downside_signal_lines or ["  (없음)"]),
+        f"외국인 연속 순매도 후보: {len(foreign_sell_flow_today)}건",
+        "",
+        "■ 전략 신호 보조 지표",
         f"신규 조건 확정: {new_conf_count}건",
-        f"외국인 연속 순매수 후보: {len(foreign_flow_watchlist)}건",
-        f"외국인 연속 순매도 후보: {len(foreign_sell_flow_watchlist)}건",
+        f"외국인 연속 순매수 후보: {len(foreign_flow_today)}건",
         ntm_line,
         "",
         "■ 관찰 로그",
         f"누적: {len(observations)}건 | 오늘 신규: {obs_today_count}건",
+    ]
+
+    lines += [
+        "",
+        "■ 최근 D+1/D+5 성과가 좋은 조건",
+        *(good_perf_lines or ["  (없음)"]),
+        "",
+        "■ 최근 성과가 나빠진 조건",
+        *(weak_perf_lines or ["  (없음)"]),
+        "",
+        "■ 새로 관찰할 공통 패턴 후보",
+        f"신규 조건 확정: {new_conf_count}건",
+        "  신규 조건은 active 승격 전 별도 관찰로 성과를 누적합니다.",
     ]
 
     if new_universe_count or not report_needed.empty:
@@ -477,6 +500,115 @@ def build_telegram_message(target_date: str) -> str:
         lines.extend(perf_lines)
 
     return "\n".join(lines)
+
+
+def format_signal_line(row: pd.Series) -> str:
+    name = row.get("name", row.get("ticker", "?"))
+    hid = row.get("hypothesis_id", "?")
+    use_type = row.get("use_type", "")
+    valuation = str(row.get("valuation_class", "") or "").strip()
+    trap = str(row.get("valuation_trap_check", "") or "").strip()
+    valuation_note = f" / {valuation}" if valuation else ""
+    if trap and trap != "특이 리스크 제한적":
+        valuation_note += f" / {trap}"
+    return f"  · {name} ({hid} {use_type}{valuation_note})"
+
+
+def filter_signal_date(df: pd.DataFrame, signal_date: str) -> pd.DataFrame:
+    if df.empty or "signal_date" not in df.columns:
+        return df
+    return df[df["signal_date"].astype(str) == signal_date]
+
+
+def is_downside_signal(row: pd.Series) -> bool:
+    text = " ".join(str(row.get(key, "")) for key in ["use_type", "suggested_response", "direction"])
+    if "반등" in text:
+        return False
+    return any(keyword in text for keyword in ["회피", "하락", "매도", "trim", "sell"])
+
+
+def format_performance_line(row: pd.Series) -> str:
+    hid = row.get("hypothesis_id", "?")
+    use_type = row.get("use_type", "")
+    cnt = int(row.get("sample_count", 0) or 0)
+    status = str(row.get("result_status", "표본 부족"))
+    d1_avg = fmt_pct_value(row.get("next_close_avg_return_pct"))
+    d1_rate = fmt_pct_value(row.get("next_close_positive_rate_pct"), signed=False)
+    d5_avg = fmt_pct_value(row.get("d_plus_5_avg_return_pct"))
+    d5_rate = fmt_pct_value(row.get("d_plus_5_positive_rate_pct"), signed=False)
+    verdict = condition_verdict(row)
+    return (
+        f"  {hid} {use_type}: {cnt}건 ({status}) | "
+        f"D+1 {d1_avg}/양수 {d1_rate}, D+5 {d5_avg}/양수 {d5_rate} | {verdict}"
+    )
+
+
+def fmt_pct_value(value: Any, signed: bool = True) -> str:
+    number = pd.to_numeric(value, errors="coerce")
+    if pd.isna(number):
+        return "-"
+    if signed:
+        return f"{float(number):+.2f}%"
+    return f"{float(number):.2f}%"
+
+
+def condition_verdict(row: pd.Series) -> str:
+    if str(row.get("result_status", "")) != "검토 가능":
+        return "표본 부족"
+    if is_good_condition(row):
+        return "관찰 강화"
+    if is_weak_condition(row):
+        return "단기 신호 약함"
+    return "관찰 유지"
+
+
+def is_good_condition(row: pd.Series) -> bool:
+    if str(row.get("result_status", "")) != "검토 가능":
+        return False
+    return (
+        condition_window_good(row, "next_close", min_count=10, min_avg=0.0, min_positive_rate=50.0)
+        or condition_window_good(row, "d_plus_5", min_count=5, min_avg=0.0, min_positive_rate=50.0)
+    )
+
+
+def is_weak_condition(row: pd.Series) -> bool:
+    if str(row.get("result_status", "")) != "검토 가능":
+        return False
+    return (
+        condition_window_weak(row, "next_close", min_count=10, max_avg=0.0, max_positive_rate=45.0)
+        or condition_window_weak(row, "d_plus_5", min_count=5, max_avg=0.0, max_positive_rate=45.0)
+    )
+
+
+def condition_window_good(
+    row: pd.Series,
+    prefix: str,
+    min_count: int,
+    min_avg: float,
+    min_positive_rate: float,
+) -> bool:
+    count = numeric(row.get(f"{prefix}_count"))
+    avg = numeric(row.get(f"{prefix}_avg_return_pct"))
+    rate = numeric(row.get(f"{prefix}_positive_rate_pct"))
+    return count >= min_count and avg > min_avg and rate >= min_positive_rate
+
+
+def condition_window_weak(
+    row: pd.Series,
+    prefix: str,
+    min_count: int,
+    max_avg: float,
+    max_positive_rate: float,
+) -> bool:
+    count = numeric(row.get(f"{prefix}_count"))
+    avg = numeric(row.get(f"{prefix}_avg_return_pct"))
+    rate = numeric(row.get(f"{prefix}_positive_rate_pct"))
+    return count >= min_count and (avg < max_avg or rate <= max_positive_rate)
+
+
+def numeric(value: Any) -> float:
+    number = pd.to_numeric(value, errors="coerce")
+    return float(number) if not pd.isna(number) else 0.0
 
 
 def send_telegram(text: str) -> None:
