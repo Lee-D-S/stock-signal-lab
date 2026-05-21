@@ -23,6 +23,7 @@ from quarterly_stock_analysis import (  # noqa: E402
     PERIODS,
     build_period,
     fetch_financials,
+    fetch_other_major_ratios,
     fetch_price_snapshot,
     fetch_stock_info,
     get_corp_code_map,
@@ -122,10 +123,26 @@ async def generate_one(ticker: str, name: str, corp_map: dict[str, str], delay: 
 
     try:
         corp_code = corp_map[ticker]
-        financials, snapshot = await asyncio.gather(fetch_financials(corp_code), fetch_price_snapshot(ticker))
+        financials, snapshot, major_ratios = await asyncio.gather(
+            fetch_financials(corp_code),
+            fetch_price_snapshot(ticker),
+            fetch_other_major_ratios(ticker),
+        )
         created = 0
         for code, title, start, end in missing:
-            path = await build_period(ticker, name, code, title, start, end, corp_code, financials, snapshot, listing_date)
+            path = await build_period(
+                ticker,
+                name,
+                code,
+                title,
+                start,
+                end,
+                corp_code,
+                financials,
+                snapshot,
+                major_ratios,
+                listing_date=listing_date,
+            )
             if path is not None:
                 created += 1
             await asyncio.sleep(delay)
