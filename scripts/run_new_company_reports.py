@@ -62,6 +62,36 @@ def load_targets(include_existing_missing: bool) -> pd.DataFrame:
     return universe[universe["universe_status"] == "new"].copy()
 
 
+def update_universe_report_status(results: list[dict[str, Any]]) -> int:
+    if not results or not UNIVERSE_MASTER_CSV.exists():
+        return 0
+    universe = pd.read_csv(UNIVERSE_MASTER_CSV, encoding="utf-8-sig", dtype={"ticker": str})
+    if universe.empty or "ticker" not in universe.columns or "report_status" not in universe.columns:
+        return 0
+
+    completed = {
+        str(row.get("ticker", "")).zfill(6)
+        for row in results
+        if int(row.get("missing_reports_after") or 0) == 0
+        and str(row.get("status", "")) in {"ok", "skip_existing"}
+    }
+    if not completed:
+        return 0
+
+    ticker_series = universe["ticker"].astype(str).str.zfill(6)
+    completed_mask = ticker_series.isin(completed)
+    changed_mask = completed_mask & (universe["report_status"].astype(str) != "exists")
+    changed = int(changed_mask.sum())
+    if changed == 0:
+        return 0
+
+    universe.loc[changed_mask, "report_status"] = "exists"
+    if "company_folder_exists" in universe.columns:
+        universe.loc[changed_mask, "company_folder_exists"] = True
+    universe.to_csv(UNIVERSE_MASTER_CSV, index=False, encoding="utf-8-sig")
+    return changed
+
+
 async def safe_fetch_stock_info(ticker: str) -> tuple[dict[str, Any], str]:
     try:
         return await fetch_stock_info(ticker), ""
@@ -164,6 +194,8 @@ async def main() -> None:
     out = pd.DataFrame(rows)
     out.to_csv(SUMMARY_CSV, index=False, encoding="utf-8-sig")
     print(f"summary_csv={SUMMARY_CSV}")
+    updated_count = update_universe_report_status(rows)
+    print(f"universe_report_status_updated={updated_count}")
     if not out.empty:
         print(out["status"].value_counts().to_string())
     else:

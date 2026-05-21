@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
@@ -387,6 +388,8 @@ def event_context(row: pd.Series, investor: pd.DataFrame, disclosures: list[dict
     win = investor[(investor["date"] >= d - pd.Timedelta(days=5)) & (investor["date"] <= d + pd.Timedelta(days=5))]
     near = []
     for disc in disclosures:
+        if not isinstance(disc, Mapping):
+            continue
         dt = pd.to_datetime(disc.get("rcept_dt"), format="%Y%m%d", errors="coerce")
         if pd.notna(dt) and abs((dt - d).days) <= 5:
             near.append(f"{dt.strftime('%Y-%m-%d')} {disc.get('report_nm')}")
@@ -416,10 +419,24 @@ def filter_disclosures(disclosures: list[dict[str, Any]], start: str | pd.Timest
     start_ts, end_ts = pd.Timestamp(start), pd.Timestamp(end)
     out = []
     for disc in disclosures:
+        if not isinstance(disc, Mapping):
+            continue
         dt = pd.to_datetime(disc.get("rcept_dt"), format="%Y%m%d", errors="coerce")
         if pd.notna(dt) and start_ts <= dt <= end_ts:
-            out.append(disc)
+            out.append(dict(disc))
     return out
+
+
+def disclosure_name(disclosure: Any) -> str:
+    if not isinstance(disclosure, Mapping):
+        return ""
+    return str(disclosure.get("report_nm", ""))
+
+
+def disclosure_date(disclosure: Any) -> pd.Timestamp:
+    if not isinstance(disclosure, Mapping):
+        return pd.NaT
+    return pd.to_datetime(disclosure.get("rcept_dt"), format="%Y%m%d", errors="coerce")
 
 
 def signed(value: Any) -> float | None:
@@ -527,7 +544,9 @@ def window_summary(
     else:
         q = ohlcv.sort_values("date").reset_index(drop=True)
         start_dt, end_dt = q["date"].min(), q["date"].max()
-        ret = None if len(q) < 2 or not q.iloc[0].get("close") else (q.iloc[-1]["close"] / q.iloc[0]["close"] - 1) * 100
+        first_close = q["close"].iloc[0] if "close" in q.columns else None
+        last_close = q["close"].iloc[-1] if "close" in q.columns else None
+        ret = None if len(q) < 2 or not first_close else (last_close / first_close - 1) * 100
         amount_avg = q["trade_amount"].mean()
         amount_max = q["trade_amount"].max()
 
@@ -1047,7 +1066,7 @@ async def make_report(
 
     if ohlcv.empty or "date" not in ohlcv.columns:
         fin = selected_financial(financials, code)
-        disclosure_names = " / ".join([d.get("report_nm", "") for d in disclosures[:5]]) or "해당 분기 주요 공시 제한적"
+        disclosure_names = " / ".join(name for d in disclosures[:5] if (name := disclosure_name(d))) or "해당 분기 주요 공시 제한적"
         lines = [
             f"# {name}({ticker}) {title} 주가 변동 원인 후보 분석",
             "",
@@ -1113,8 +1132,8 @@ async def make_report(
             "|---|---|",
         ]
         for d in disclosures[:25]:
-            dt = pd.to_datetime(d.get("rcept_dt"), format="%Y%m%d", errors="coerce")
-            lines.append(f"| {dt.strftime('%Y-%m-%d') if pd.notna(dt) else d.get('rcept_dt')} | {d.get('report_nm')} |")
+            dt = disclosure_date(d)
+            lines.append(f"| {dt.strftime('%Y-%m-%d') if pd.notna(dt) else ''} | {disclosure_name(d)} |")
         lines.extend([
             "",
             "## DART 주요 재무 수치",
@@ -1158,7 +1177,7 @@ async def make_report(
     up = qdf[qdf["chg_pct"] > 0].sort_values(["chg_pct", "trade_amount"], ascending=[False, False]).head(6)
     down = qdf[qdf["chg_pct"] < 0].sort_values(["chg_pct", "trade_amount"], ascending=[True, False]).head(6)
     fin = selected_financial(financials, code)
-    disclosure_names = " / ".join([d.get("report_nm", "") for d in disclosures[:5]]) or "해당 분기 주요 공시 제한적"
+    disclosure_names = " / ".join(name for d in disclosures[:5] if (name := disclosure_name(d))) or "해당 분기 주요 공시 제한적"
 
     lines = [
         f"# {name}({ticker}) {title} 주가 변동 원인 후보 분석",
@@ -1240,8 +1259,8 @@ async def make_report(
 
     lines.extend(["## DART 공시 요약", "", "| 날짜 | 공시명 |", "|---|---|"])
     for d in disclosures[:25]:
-        dt = pd.to_datetime(d.get("rcept_dt"), format="%Y%m%d", errors="coerce")
-        lines.append(f"| {dt.strftime('%Y-%m-%d') if pd.notna(dt) else d.get('rcept_dt')} | {d.get('report_nm')} |")
+        dt = disclosure_date(d)
+        lines.append(f"| {dt.strftime('%Y-%m-%d') if pd.notna(dt) else ''} | {disclosure_name(d)} |")
 
     lines.extend(["", "## DART 주요 재무 수치", "", "| 기준 | 매출액 | 영업이익 | 순이익 | 영업이익률 | 부채비율 | ROE |", "|---|---:|---:|---:|---:|---:|---:|"])
     for label, f in financials.items():

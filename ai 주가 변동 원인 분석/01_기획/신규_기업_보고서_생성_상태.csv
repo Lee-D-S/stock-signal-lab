@@ -1,5 +1,8 @@
 ﻿ticker,name,status,created_reports,missing_reports_after,listing_date,skipped_pre_listing,events_path,error,stock_info_error
 439960,코스모로보틱스,skip_existing,0,0,2026-05-11,20,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\코스모로보틱스\코스모로보틱스_439960_events.jsonl,,
+001820,삼화콘덴서,error,0,20,1976-06-26,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\삼화콘덴서\삼화콘덴서_001820_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
+069540,빛과전자,error,0,20,2004-02-13,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\빛과전자\빛과전자_069540_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
+034730,SK,error,0,20,2009-11-11,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\SK\SK_034730_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
 027360,아주IB투자,error,0,20,2018-11-21,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\아주IB투자\아주IB투자_027360_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
 274090,켄코아에어로스페이스,error,0,20,2020-03-03,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\켄코아에어로스페이스\켄코아에어로스페이스_274090_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
 066430,아이로보틱스,error,0,20,2002-12-24,0,C:\projects\auto-invest\ai 주가 변동 원인 분석\00_기업별분석\아이로보틱스\아이로보틱스_066430_events.jsonl,"AttributeError(""'Timestamp' object has no attribute 'get'"")",
