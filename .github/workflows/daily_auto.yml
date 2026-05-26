@@ -110,8 +110,17 @@ jobs:
             exit 0
           fi
           git commit -m "auto: 오전 공시 확인 업데이트 $(date '+%Y-%m-%d')"
-          git pull --rebase origin main
-          git push
+          retry_git() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if [ "$attempt" = "3" ]; then
+                return 1
+              fi
+              sleep $((attempt * 10))
+            done
+          }
+          retry_git git pull --rebase origin main
+          retry_git git push
 
       - name: 성공 텔레그램 알림
         if: success() && steps.market-day.outputs.should_run == 'true'
@@ -220,8 +229,17 @@ jobs:
             exit 0
           fi
           git commit -m "auto: 일일 후보 및 관찰 업데이트 $(date '+%Y-%m-%d')"
-          git pull --rebase origin main
-          git push
+          retry_git() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              if [ "$attempt" = "3" ]; then
+                return 1
+              fi
+              sleep $((attempt * 10))
+            done
+          }
+          retry_git git pull --rebase origin main
+          retry_git git push
 
       - name: 성공 텔레그램 알림
         if: success() && steps.market-day.outputs.should_run == 'true'

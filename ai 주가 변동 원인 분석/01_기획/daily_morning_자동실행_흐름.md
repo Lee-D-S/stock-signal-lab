@@ -79,7 +79,7 @@ python -u scripts/auto_morning_dart_check.py
 git add "ai 주가 변동 원인 분석/"
 ```
 
-변경 사항이 있으면 GitHub Actions bot이 커밋하고 `main`에 push한다.
+변경 사항이 있으면 GitHub Actions bot이 커밋하고 `main`에 push한다. 원격 접근이 일시적으로 실패할 수 있으므로 `git pull --rebase origin main`과 `git push`는 각각 최대 3회 재시도한다.
 
 커밋 메시지 형식:
 
