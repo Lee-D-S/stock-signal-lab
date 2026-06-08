@@ -1,3 +1,3 @@
 ﻿hypothesis_id,use_type,sample_count,completed_count,positive_label_count,negative_label_count,neutral_label_count,result_label_distribution,next_close_count,next_close_avg_return_pct,next_close_median_return_pct,next_close_positive_rate_pct,d_plus_5_count,d_plus_5_avg_return_pct,d_plus_5_median_return_pct,d_plus_5_positive_rate_pct,d_plus_10_count,d_plus_10_avg_return_pct,d_plus_10_median_return_pct,d_plus_10_positive_rate_pct,d_plus_20_count,d_plus_20_avg_return_pct,d_plus_20_median_return_pct,d_plus_20_positive_rate_pct,result_status
-H01,매수 후보,26,24,7,15,2,"상승 실패 15, 상승 지속 6, 단기 되돌림 2, 상승 유지 1",24,-1.12,-1.5,25.0,21,-3.26,-0.54,47.6,8,-11.95,-14.28,12.5,2,-21.34,-21.34,0.0,검토 가능
-H02,반등 감시 후보,70,60,9,43,8,"반등 실패 43, 반등 중립 8, 단기 반등 5, 반등 성공 4",60,-1.94,-2.26,33.3,40,-4.07,-4.79,27.5,31,-10.68,-12.62,19.4,2,22.73,22.73,50.0,검토 가능
+H01,매수 후보,26,26,5,19,2,"상승 실패 19, 상승 지속 4, 단기 되돌림 2, 상승 유지 1",26,0.01,-1.5,26.9,22,-3.89,-3.31,45.5,12,-13.8,-14.28,8.3,2,-21.34,-21.34,0.0,검토 가능
+H02,반등 감시 후보,72,70,10,52,8,"반등 실패 52, 반등 중립 8, 단기 반등 6, 반등 성공 4",70,-2.54,-3.29,30.0,44,-5.57,-5.62,25.0,31,-10.68,-12.62,19.4,2,22.73,22.73,50.0,검토 가능
