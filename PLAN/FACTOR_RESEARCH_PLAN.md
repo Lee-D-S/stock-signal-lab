@@ -1,5 +1,8 @@
 # 팩터 리서치 설계 계획 (Factor Research)
 
+> 가격·기술·수급·재무·시장 수치를 결합한 범용 퀀트 조건 상세 구현 계획:
+> `PLAN/INTEGRATED_CONDITION_DISCOVERY_PLAN.md`
+
 ## 목적
 
 백지 상태에서 시작하여 과거 데이터가 스스로 패턴을 알려주게 하는 것.  
