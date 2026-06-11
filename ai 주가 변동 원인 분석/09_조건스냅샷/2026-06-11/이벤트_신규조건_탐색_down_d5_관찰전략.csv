@@ -1,0 +1,6 @@
+﻿priority,hypothesis_id,status,use_type,market_regime,direction,amount_tag,flow_category,dart_tag,window_category,min_chg_pct,max_chg_pct,action_hint,suggested_response,preferred_entry_mode,preferred_hold_days,tested_trades,avg_score_return_pct,hit_rate,risk_note
+1,NEW-20260611-EV01,research_candidate,신규조건 반등 감시 후보,*,down,거래대금약함,외국인기관동반매수,*,*,,,반등 관찰 후보,연구 후보: 다음 거래일 시가 기준 가상 진입 후 성과만 관찰,next_open,5,56,6.83,0.7140000000000001,train/validation 통과 연구 후보. 별도 관찰 20건 전 active 승격 금지
+2,NEW-20260611-EV02,research_candidate,신규조건 반등 감시 후보,*,down,*,외국인기관동반매수,*,*,,-5,반등 관찰 후보,연구 후보: 다음 거래일 시가 기준 가상 진입 후 성과만 관찰,next_open,5,46,7.67,0.804,train/validation 통과 연구 후보. 별도 관찰 20건 전 active 승격 금지
+3,NEW-20260611-EV03,research_candidate,신규조건 반등 감시 후보,*,down,*,*,*,누적배경,,-3,반등 관찰 후보,연구 후보: 다음 거래일 시가 기준 가상 진입 후 성과만 관찰,next_open,5,36,7.24,0.667,train/validation 통과 연구 후보. 별도 관찰 20건 전 active 승격 금지
+4,NEW-20260611-EV04,research_candidate,신규조건 반등 감시 후보,*,down,*,외국인기관동반매수,DART공시동반,*,,,반등 관찰 후보,연구 후보: 다음 거래일 시가 기준 가상 진입 후 성과만 관찰,next_open,5,90,5.61,0.711,train/validation 통과 연구 후보. 별도 관찰 20건 전 active 승격 금지
+5,NEW-20260611-EV05,research_candidate,신규조건 반등 감시 후보,*,down,*,외국인기관동반매수,*,*,,-3,반등 관찰 후보,연구 후보: 다음 거래일 시가 기준 가상 진입 후 성과만 관찰,next_open,5,90,6.42,0.767,train/validation 통과 연구 후보. 별도 관찰 20건 전 active 승격 금지

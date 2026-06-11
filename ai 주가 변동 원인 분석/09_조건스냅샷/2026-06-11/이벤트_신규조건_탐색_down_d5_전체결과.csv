@@ -1,0 +1,223 @@
+﻿condition_count,condition_key,description,train_n,train_ticker_count,train_avg_return_pct,train_median_return_pct,train_win_rate_pct,train_profit_factor,train_worst_return_pct,validation_n,validation_ticker_count,validation_avg_return_pct,validation_median_return_pct,validation_win_rate_pct,validation_profit_factor,validation_worst_return_pct,train_avg_lift_pct,validation_avg_lift_pct,train_win_rate_lift_pct,validation_win_rate_lift_pct,verdict
+2,amount_tag=거래대금약함 & flow_category=외국인기관동반매수,amount_tag=거래대금약함 + flow_category=외국인기관동반매수,78,28,1.5,1.84,61.5,1.8,-25.17,56,23,6.83,4.99,71.4,4.56,-38.13,0.97,5.47,14.3,23.0,KEEP
+2,flow_category=외국인기관동반매수 & chg_pct<=-5,flow_category=외국인기관동반매수 + 당일 하락률 5% 이상,37,17,3.77,3.56,62.2,3.23,-13.26,46,21,7.67,5.49,80.4,4.35,-24.72,3.24,6.31,15.0,32.0,KEEP
+2,window_category=누적배경 & chg_pct<=-3,window_category=누적배경 + 당일 하락률 3% 이상,39,18,1.05,0.03,51.3,1.49,-12.67,36,20,7.24,4.85,66.7,4.27,-18.46,0.52,5.88,4.1,18.3,KEEP
+2,flow_category=외국인기관동반매수 & dart_tag=DART공시동반,flow_category=외국인기관동반매수 + dart_tag=DART공시동반,112,33,2.75,2.03,64.3,2.5,-29.08,90,30,5.61,3.74,71.1,3.98,-42.2,2.22,4.25,17.1,22.7,KEEP
+2,flow_category=외국인기관동반매수 & chg_pct<=-3,flow_category=외국인기관동반매수 + 당일 하락률 3% 이상,107,32,2.2,1.8,61.7,2.02,-29.08,90,30,6.42,4.75,76.7,3.78,-42.2,1.67,5.06,14.5,28.3,KEEP
+1,flow_category=외국인기관동반매수,flow_category=외국인기관동반매수,148,34,2.12,1.48,60.8,2.07,-29.08,109,31,5.6,3.78,71.6,3.64,-42.2,1.59,4.24,13.6,23.2,KEEP
+2,flow_category=외국인기관동반매수 & needs_external_review=True,flow_category=외국인기관동반매수 + needs_external_review=True,141,34,2.06,1.86,63.1,2.04,-29.08,105,31,5.57,3.78,71.4,3.55,-42.2,1.53,4.21,15.9,23.0,KEEP
+2,needs_external_review=False & chg_pct<=-10,needs_external_review=False + 당일 하락률 10% 이상,24,14,3.1,3.49,62.5,2.56,-16.48,32,23,8.16,1.53,56.2,3.52,-33.05,2.57,6.8,15.3,7.8,KEEP
+2,dart_tag=DART공시동반 & chg_pct<=-10,dart_tag=DART공시동반 + 당일 하락률 10% 이상,25,15,3.68,3.46,64.0,3.18,-11.15,40,22,8.12,1.47,55.0,3.27,-33.05,3.15,6.76,16.8,6.6,KEEP
+2,amount_tag=거래대금약함 & chg_pct<=-5,amount_tag=거래대금약함 + 당일 하락률 5% 이상,58,18,1.15,1.3,51.7,1.35,-23.03,91,26,5.66,1.9,57.1,3.18,-23.71,0.62,4.3,4.5,8.7,KEEP
+2,flow_category=외국인기관동반매수 & window_category=직접반응,flow_category=외국인기관동반매수 + window_category=직접반응,119,34,2.54,1.88,63.9,2.3,-29.08,96,30,4.9,3.45,69.8,3.16,-42.2,2.01,3.54,16.7,21.4,KEEP
+2,needs_external_review=True & chg_pct<=-3,needs_external_review=True + 당일 하락률 3% 이상,256,34,1.94,0.99,59.0,1.89,-29.08,202,33,4.57,2.72,67.3,3.1,-42.2,1.41,3.21,11.8,18.9,KEEP
+1,chg_pct<=-10,당일 하락률 10% 이상,30,17,2.52,3.32,60.0,1.99,-16.48,55,26,6.91,2.26,61.8,3.05,-33.05,1.99,5.55,12.8,13.4,KEEP
+2,needs_external_review=True & chg_pct<=-7,needs_external_review=True + 당일 하락률 7% 이상,29,15,2.32,4.5,55.2,1.9,-15.23,55,23,5.88,4.94,70.9,3.05,-24.72,1.79,4.52,8.0,22.5,KEEP
+2,dart_tag=DART공시동반 & needs_external_review=True,dart_tag=DART공시동반 + needs_external_review=True,212,34,2.25,1.54,62.3,2.23,-29.08,176,32,4.1,2.46,65.9,3.03,-42.2,1.72,2.74,15.1,17.5,KEEP
+2,amount_tag=거래대금약함 & needs_external_review=True,amount_tag=거래대금약함 + needs_external_review=True,199,34,1.41,1.12,56.8,1.61,-37.92,123,30,4.19,1.63,60.2,3.01,-38.13,0.88,2.83,9.6,11.8,KEEP
+2,flow_category=수급엇갈림 & chg_pct<=-7,flow_category=수급엇갈림 + 당일 하락률 7% 이상,47,21,1.49,1.53,57.4,1.57,-16.48,73,25,5.69,2.07,57.5,2.87,-33.05,0.96,4.33,10.2,9.1,KEEP
+1,needs_external_review=True,needs_external_review=True,338,34,1.44,0.74,56.5,1.67,-29.08,227,33,4.06,2.34,64.3,2.83,-42.2,0.91,2.7,9.3,15.9,KEEP
+2,window_category=직접반응 & chg_pct<=-10,window_category=직접반응 + 당일 하락률 10% 이상,29,16,2.15,3.19,58.6,1.82,-16.48,51,26,6.53,1.76,58.8,2.8,-33.05,1.62,5.17,11.4,10.4,KEEP
+2,needs_external_review=True & chg_pct<=-5,needs_external_review=True + 당일 하락률 5% 이상,92,25,2.24,1.67,57.6,1.96,-23.03,102,28,4.45,2.74,67.6,2.71,-24.72,1.71,3.09,10.4,19.2,KEEP
+2,window_category=직접반응 & needs_external_review=True,window_category=직접반응 + needs_external_review=True,229,34,1.9,1.09,60.7,1.93,-29.08,189,33,3.68,2.34,65.6,2.66,-42.2,1.37,2.32,13.5,17.2,KEEP
+2,amount_tag=거래대금평균상회 & flow_category=외국인기관동반매수,amount_tag=거래대금평균상회 + flow_category=외국인기관동반매수,66,29,2.89,1.11,62.1,2.48,-29.08,54,25,3.98,3.17,70.4,2.65,-42.2,2.36,2.62,14.9,22.0,KEEP
+2,amount_tag=거래대금평균상회 & chg_pct<=-7,amount_tag=거래대금평균상회 + 당일 하락률 7% 이상,36,16,1.29,0.12,55.6,1.48,-15.23,70,27,4.23,3.6,64.3,2.53,-33.05,0.76,2.87,8.4,15.9,KEEP
+1,chg_pct<=-7,당일 하락률 7% 이상,90,26,1.36,0.39,53.3,1.49,-21.09,131,33,4.14,1.97,59.5,2.37,-33.05,0.83,2.78,6.1,11.1,KEEP
+2,amount_tag=거래대금평균상회 & needs_external_review=True,amount_tag=거래대금평균상회 + needs_external_review=True,148,34,1.82,1.08,62.8,2.0,-29.08,110,32,3.08,3.15,68.2,2.35,-42.2,1.29,1.72,15.6,19.8,KEEP
+2,flow_category=수급엇갈림 & needs_external_review=True,flow_category=수급엇갈림 + needs_external_review=True,229,33,1.05,0.6,55.0,1.46,-37.92,143,30,2.76,1.63,59.4,2.25,-24.02,0.52,1.4,7.8,11.0,KEEP
+2,dart_tag=DART공시동반 & chg_pct<=-7,dart_tag=DART공시동반 + 당일 하락률 7% 이상,65,24,2.19,1.53,55.4,1.93,-12.84,104,30,3.96,1.77,56.7,2.22,-33.05,1.66,2.6,8.2,8.3,KEEP
+2,amount_tag=거래대금약함 & flow_category=수급엇갈림,amount_tag=거래대금약함 + flow_category=수급엇갈림,224,33,1.78,0.59,53.1,1.77,-37.92,165,33,2.93,0.15,51.5,2.3,-15.79,1.25,1.57,5.9,3.1,CHECK
+2,flow_category=수급엇갈림 & chg_pct<=-5,flow_category=수급엇갈림 + 당일 하락률 5% 이상,128,28,1.16,0.48,54.7,1.46,-23.03,152,31,3.15,0.83,52.6,1.99,-33.05,0.63,1.79,7.5,4.2,CHECK
+2,flow_category=수급엇갈림 & chg_pct<=-3,flow_category=수급엇갈림 + 당일 하락률 3% 이상,345,34,1.1,0.08,50.7,1.45,-37.92,288,34,2.55,0.23,51.7,1.96,-33.05,0.57,1.19,3.5,3.3,CHECK
+2,amount_tag=거래대금약함 & chg_pct<=-3,amount_tag=거래대금약함 + 당일 하락률 3% 이상,233,30,1.82,0.22,50.2,1.63,-37.92,235,34,2.5,0.09,51.5,1.93,-31.74,1.29,1.14,3.0,3.1,CHECK
+1,window_category=선반영,window_category=선반영,87,28,0.66,0.16,51.7,1.29,-23.03,22,16,5.26,5.05,72.7,4.46,-11.13,0.13,3.9,4.5,24.3,DROP
+2,window_category=선반영 & chg_pct<=-3,window_category=선반영 + 당일 하락률 3% 이상,71,24,0.39,-0.51,47.9,1.15,-23.03,21,16,5.42,5.49,71.4,4.4,-11.13,-0.14,4.06,0.7,23.0,DROP
+2,window_category=누적배경 & needs_external_review=True,window_category=누적배경 + needs_external_review=True,59,25,0.93,0.73,50.8,1.46,-12.67,32,15,7.71,4.85,65.6,4.24,-18.46,0.4,6.35,3.6,17.2,DROP
+2,amount_tag=거래대금평균상회 & dart_tag=주변공시부재,amount_tag=거래대금평균상회 + dart_tag=주변공시부재,100,31,-1.29,-1.14,45.0,0.58,-19.33,52,23,4.77,3.51,73.1,4.15,-18.46,-1.82,3.41,-2.2,24.7,DROP
+1,window_category=누적배경,window_category=누적배경,66,26,0.75,-0.11,50.0,1.39,-12.67,41,20,6.73,3.08,65.9,3.95,-18.46,0.22,5.37,2.8,17.5,DROP
+2,flow_category=외국인기관동반매수 & dart_tag=주변공시부재,flow_category=외국인기관동반매수 + dart_tag=주변공시부재,41,22,0.68,0.75,53.7,1.3,-13.0,24,15,7.56,6.77,75.0,3.9,-24.72,0.15,6.2,6.5,26.6,DROP
+2,dart_tag=주변공시부재 & needs_external_review=True,dart_tag=주변공시부재 + needs_external_review=True,145,31,0.75,0.46,51.7,1.32,-23.03,63,24,5.16,4.18,65.1,3.18,-24.72,0.22,3.8,4.5,16.7,DROP
+2,amount_tag=거래대금약함 & window_category=누적배경,amount_tag=거래대금약함 + window_category=누적배경,48,25,0.84,0.21,50.0,1.42,-12.67,26,14,5.05,1.24,53.8,3.11,-10.91,0.31,3.69,2.8,5.4,DROP
+2,flow_category=수급엇갈림 & window_category=누적배경,flow_category=수급엇갈림 + window_category=누적배경,50,25,0.68,0.38,52.0,1.35,-12.67,36,18,4.5,1.9,63.9,3.07,-10.91,0.15,3.14,4.8,15.5,DROP
+2,flow_category=수급엇갈림 & dart_tag=주변공시부재,flow_category=수급엇갈림 + dart_tag=주변공시부재,143,33,0.18,-0.24,49.0,1.08,-23.03,71,23,3.25,2.07,63.4,2.62,-10.91,-0.35,1.89,1.8,15.0,DROP
+2,amount_tag=거래대금약함 & dart_tag=주변공시부재,amount_tag=거래대금약함 + dart_tag=주변공시부재,133,30,1.15,-0.3,48.9,1.44,-23.03,55,21,3.44,1.32,56.4,2.53,-12.46,0.62,2.08,1.7,8.0,DROP
+2,dart_tag=주변공시부재 & chg_pct<=-7,dart_tag=주변공시부재 + 당일 하락률 7% 이상,27,15,-0.82,-0.71,48.1,0.78,-21.09,30,18,3.84,3.65,70.0,2.45,-24.72,-1.35,2.48,0.9,21.6,DROP
+2,dart_tag=주변공시부재 & chg_pct<=-3,dart_tag=주변공시부재 + 당일 하락률 3% 이상,173,29,0.18,-1.04,45.1,1.06,-23.03,111,29,3.29,1.8,62.2,2.45,-24.72,-0.35,1.93,-2.1,13.8,DROP
+1,dart_tag=주변공시부재,dart_tag=주변공시부재,221,34,0.22,-0.51,46.2,1.08,-23.03,118,29,3.11,1.66,60.2,2.33,-24.72,-0.31,1.75,-1.0,11.8,DROP
+2,dart_tag=주변공시부재 & chg_pct<=-5,dart_tag=주변공시부재 + 당일 하락률 5% 이상,72,21,0.17,-0.14,50.0,1.05,-23.03,57,21,2.93,1.89,63.2,2.19,-24.72,-0.36,1.57,2.8,14.8,DROP
+2,needs_external_review=False & chg_pct<=-7,needs_external_review=False + 당일 하락률 7% 이상,63,23,0.81,0.03,50.8,1.28,-21.09,85,29,3.48,1.3,54.1,2.12,-33.05,0.28,2.12,3.6,5.7,DROP
+2,amount_tag=거래대금급증 & needs_external_review=True,amount_tag=거래대금급증 + needs_external_review=True,31,19,0.06,-0.71,45.2,1.02,-13.26,30,19,4.05,1.27,60.0,2.1,-24.72,-0.47,2.69,-2.0,11.6,DROP
+2,window_category=직접반응 & chg_pct<=-7,window_category=직접반응 + 당일 하락률 7% 이상,79,26,0.89,-0.18,49.4,1.28,-21.09,122,33,3.34,1.47,56.6,2.03,-33.05,0.36,1.98,2.2,8.2,DROP
+1,chg_pct<=-5,당일 하락률 5% 이상,229,30,0.61,0.02,50.2,1.21,-23.03,253,34,2.64,0.91,53.0,1.85,-33.05,0.08,1.28,3.0,4.6,DROP
+1,amount_tag=거래대금약함,amount_tag=거래대금약함,356,34,1.21,0.12,50.3,1.48,-37.92,286,34,2.23,0.04,50.7,1.84,-38.13,0.68,0.87,3.1,2.3,DROP
+1,flow_category=수급엇갈림,flow_category=수급엇갈림,458,34,0.75,0.05,50.2,1.33,-37.92,336,34,2.1,0.23,51.8,1.81,-33.05,0.22,0.74,3.0,3.4,DROP
+2,flow_category=수급엇갈림 & window_category=직접반응,flow_category=수급엇갈림 + window_category=직접반응,362,34,0.78,0.02,50.0,1.34,-37.92,300,34,2.03,0.17,51.3,1.78,-33.05,0.25,0.67,2.8,2.9,DROP
+2,dart_tag=DART공시동반 & chg_pct<=-5,dart_tag=DART공시동반 + 당일 하락률 5% 이상,168,30,0.68,-0.24,49.4,1.24,-18.22,211,34,2.53,0.23,51.2,1.77,-33.05,0.15,1.17,2.2,2.8,DROP
+2,window_category=직접반응 & chg_pct<=-5,window_category=직접반응 + 당일 하락률 5% 이상,201,30,0.06,-0.3,47.3,1.02,-21.09,234,34,2.37,0.39,52.1,1.74,-33.05,-0.47,1.01,0.1,3.7,DROP
+2,amount_tag=거래대금약함 & dart_tag=DART공시동반,amount_tag=거래대금약함 + dart_tag=DART공시동반,247,34,2.14,0.33,52.6,1.92,-37.92,242,34,1.92,-0.03,50.0,1.72,-38.13,1.61,0.56,5.4,1.6,DROP
+2,flow_category=수급엇갈림 & dart_tag=DART공시동반,flow_category=수급엇갈림 + dart_tag=DART공시동반,343,34,0.98,0.14,51.0,1.45,-37.92,284,34,1.9,-0.08,49.6,1.7,-33.05,0.45,0.54,3.8,1.2,DROP
+2,amount_tag=거래대금약함 & window_category=직접반응,amount_tag=거래대금약함 + window_category=직접반응,274,34,1.62,0.29,51.5,1.65,-37.92,255,34,1.85,-0.08,49.8,1.7,-38.13,1.09,0.49,4.3,1.4,DROP
+2,flow_category=수급엇갈림 & needs_external_review=False,flow_category=수급엇갈림 + needs_external_review=False,269,34,0.74,-0.16,48.3,1.34,-25.16,226,33,1.81,-0.33,47.8,1.64,-33.05,0.21,0.45,1.1,-0.6,DROP
+2,amount_tag=거래대금급증 & flow_category=수급엇갈림,amount_tag=거래대금급증 + flow_category=수급엇갈림,53,27,1.19,-0.48,45.3,1.47,-16.48,45,26,1.81,-1.28,46.7,1.61,-11.81,0.66,0.45,-1.9,-1.7,DROP
+2,dart_tag=주변공시부재 & needs_external_review=False,dart_tag=주변공시부재 + needs_external_review=False,100,29,0.23,-0.84,47.0,1.07,-21.09,62,24,1.24,1.14,56.5,1.57,-12.46,-0.3,-0.12,-0.2,8.1,DROP
+1,chg_pct<=-3,당일 하락률 3% 이상,569,34,0.88,-0.3,47.8,1.33,-29.08,472,34,1.57,-0.11,49.6,1.54,-42.2,0.35,0.21,0.6,1.2,DROP
+2,amount_tag=거래대금급증 & dart_tag=DART공시동반,amount_tag=거래대금급증 + dart_tag=DART공시동반,108,32,-0.04,-1.52,40.7,0.98,-13.26,68,29,1.46,-0.32,48.5,1.53,-20.71,-0.57,0.1,-6.5,0.1,DROP
+2,amount_tag=거래대금평균상회 & chg_pct<=-5,amount_tag=거래대금평균상회 + 당일 하락률 5% 이상,117,29,0.32,0.31,53.0,1.11,-19.33,136,33,1.44,1.27,54.4,1.44,-33.05,-0.21,0.08,5.8,6.0,DROP
+2,needs_external_review=False & chg_pct<=-5,needs_external_review=False + 당일 하락률 5% 이상,155,30,-0.76,-1.3,43.2,0.78,-21.09,168,32,1.42,-0.67,47.0,1.42,-33.05,-1.29,0.06,-4.0,-1.4,DROP
+2,dart_tag=DART공시동반 & chg_pct<=-3,dart_tag=DART공시동반 + 당일 하락률 3% 이상,436,34,1.34,-0.12,48.9,1.54,-29.08,398,34,1.29,-0.3,48.0,1.42,-42.2,0.81,-0.07,1.7,-0.4,DROP
+2,amount_tag=거래대금평균상회 & flow_category=수급엇갈림,amount_tag=거래대금평균상회 + flow_category=수급엇갈림,243,34,0.42,0.41,54.3,1.21,-23.92,176,34,1.24,0.68,53.4,1.42,-33.05,-0.11,-0.12,7.1,5.0,DROP
+2,amount_tag=거래대금약함 & needs_external_review=False,amount_tag=거래대금약함 + needs_external_review=False,189,34,1.19,-0.44,45.5,1.42,-37.52,184,34,1.21,-0.59,44.0,1.42,-31.74,0.66,-0.15,-1.7,-4.4,DROP
+2,window_category=직접반응 & chg_pct<=-3,window_category=직접반응 + 당일 하락률 3% 이상,497,34,0.8,-0.3,47.1,1.29,-29.08,437,34,1.19,-0.3,48.3,1.4,-42.2,0.27,-0.17,-0.1,-0.1,DROP
+1,dart_tag=DART공시동반,dart_tag=DART공시동반,560,34,0.91,-0.14,48.6,1.37,-29.08,468,34,1.14,-0.45,47.2,1.4,-42.2,0.38,-0.22,1.4,-1.2,DROP
+1,window_category=직접반응,window_category=직접반응,628,34,0.54,-0.3,47.5,1.21,-29.08,508,34,1.05,-0.46,47.4,1.37,-42.2,0.01,-0.31,0.3,-1.0,DROP
+2,amount_tag=거래대금평균상회 & chg_pct<=-3,amount_tag=거래대금평균상회 + 당일 하락률 3% 이상,340,34,0.2,-0.06,49.7,1.08,-29.08,249,34,0.68,-0.3,49.0,1.21,-42.2,-0.33,-0.68,2.5,0.6,DROP
+2,flow_category=외국인기관동반매도 & chg_pct<=-7,flow_category=외국인기관동반매도 + 당일 하락률 7% 이상,32,18,0.3,-0.24,46.9,1.1,-21.09,42,23,0.56,-0.17,50.0,1.16,-23.71,-0.23,-0.8,-0.3,1.6,DROP
+2,amount_tag=거래대금급증 & chg_pct<=-3,amount_tag=거래대금급증 + 당일 하락률 3% 이상,124,33,0.02,-1.05,43.5,1.01,-21.09,84,31,0.51,-0.7,46.4,1.15,-24.72,-0.51,-0.85,-3.7,-2.0,DROP
+1,amount_tag=거래대금평균상회,amount_tag=거래대금평균상회,418,34,0.06,-0.11,49.3,1.02,-29.08,297,34,0.46,-0.3,48.8,1.15,-42.2,-0.47,-0.9,2.1,0.4,DROP
+2,amount_tag=거래대금급증 & chg_pct<=-5,amount_tag=거래대금급증 + 당일 하락률 5% 이상,83,28,0.43,-0.82,45.8,1.15,-21.09,60,25,0.52,-1.23,41.7,1.13,-24.72,-0.1,-0.84,-1.4,-6.7,DROP
+1,amount_tag=거래대금급증,amount_tag=거래대금급증,129,34,-0.08,-1.37,41.9,0.97,-21.09,89,32,0.36,-0.71,46.1,1.11,-24.72,-0.61,-1.0,-5.3,-2.3,DROP
+2,needs_external_review=False & chg_pct<=-3,needs_external_review=False + 당일 하락률 3% 이상,371,33,0.26,-1.21,41.8,1.09,-23.92,319,34,0.33,-1.27,40.8,1.1,-33.05,-0.27,-1.03,-5.4,-7.6,DROP
+1,needs_external_review=False,needs_external_review=False,471,34,-0.01,-0.75,43.5,1.0,-37.52,381,34,0.29,-1.19,40.7,1.1,-33.05,-0.54,-1.07,-3.7,-7.7,DROP
+2,window_category=직접반응 & needs_external_review=False,window_category=직접반응 + needs_external_review=False,454,34,-0.06,-0.79,43.0,0.98,-37.52,373,34,0.25,-1.25,39.9,1.08,-33.05,-0.59,-1.11,-4.2,-8.5,DROP
+2,dart_tag=DART공시동반 & needs_external_review=False,dart_tag=DART공시동반 + needs_external_review=False,398,34,0.32,-0.65,44.0,1.12,-37.52,341,34,0.23,-1.25,39.3,1.07,-33.05,-0.21,-1.13,-3.2,-9.1,DROP
+2,amount_tag=거래대금평균상회 & window_category=직접반응,amount_tag=거래대금평균상회 + window_category=직접반응,379,34,-0.01,-0.12,49.1,1.0,-29.08,279,34,0.05,-0.44,47.3,1.02,-42.2,-0.54,-1.31,1.9,-1.1,DROP
+2,amount_tag=거래대금평균상회 & dart_tag=DART공시동반,amount_tag=거래대금평균상회 + dart_tag=DART공시동반,336,34,0.27,-0.01,50.0,1.12,-29.08,262,34,-0.04,-0.51,46.2,0.99,-42.2,-0.26,-1.4,2.8,-2.2,DROP
+2,amount_tag=거래대금약함 & flow_category=외국인기관동반매도,amount_tag=거래대금약함 + flow_category=외국인기관동반매도,92,31,0.63,-1.18,42.4,1.18,-37.52,93,33,-0.17,-1.19,40.9,0.95,-31.74,0.1,-1.53,-4.8,-7.5,DROP
+2,amount_tag=거래대금평균상회 & needs_external_review=False,amount_tag=거래대금평균상회 + needs_external_review=False,300,34,-0.49,-0.62,46.0,0.81,-23.92,216,34,-0.27,-1.17,42.1,0.91,-33.05,-1.02,-1.63,-1.2,-6.3,DROP
+2,dart_tag=주변공시부재 & window_category=직접반응,dart_tag=주변공시부재 + window_category=직접반응,97,28,-0.33,-2.1,44.3,0.91,-21.09,61,24,-0.33,0.05,50.8,0.88,-24.72,-0.86,-1.69,-2.9,2.4,DROP
+2,amount_tag=거래대금평균상회 & flow_category=외국인기관동반매도,amount_tag=거래대금평균상회 + flow_category=외국인기관동반매도,151,34,-1.49,-1.41,39.7,0.53,-19.08,102,32,-0.47,-1.53,37.3,0.83,-21.76,-2.02,-1.83,-7.5,-11.1,DROP
+2,amount_tag=거래대금급증 & chg_pct<=-10,amount_tag=거래대금급증 + 당일 하락률 10% 이상,26,15,2.06,3.22,57.7,1.88,-16.48,24,16,-0.82,-1.63,41.7,0.81,-24.72,1.53,-2.18,10.5,-6.7,DROP
+2,flow_category=외국인기관동반매도 & chg_pct<=-5,flow_category=외국인기관동반매도 + 당일 하락률 5% 이상,86,27,-2.24,-3.5,34.9,0.5,-21.09,83,28,-0.73,-1.28,38.6,0.79,-23.71,-2.77,-2.09,-12.3,-9.8,DROP
+2,flow_category=외국인기관동반매도 & dart_tag=DART공시동반,flow_category=외국인기관동반매도 + dart_tag=DART공시동반,186,34,-0.56,-1.6,37.1,0.84,-37.52,161,33,-0.95,-1.88,34.2,0.73,-31.74,-1.09,-2.31,-10.1,-14.2,DROP
+1,flow_category=외국인기관동반매도,flow_category=외국인기관동반매도,241,34,-0.91,-1.71,38.6,0.74,-37.52,189,33,-1.07,-1.88,34.4,0.69,-31.74,-1.44,-2.43,-8.6,-14.0,DROP
+2,amount_tag=거래대금급증 & chg_pct<=-7,amount_tag=거래대금급증 + 당일 하락률 7% 이상,47,23,0.32,-0.3,48.9,1.11,-21.09,43,20,-1.48,-2.09,39.5,0.66,-24.72,-0.21,-2.84,1.7,-8.9,DROP
+2,flow_category=외국인기관동반매도 & dart_tag=주변공시부재,flow_category=외국인기관동반매도 + dart_tag=주변공시부재,67,25,0.56,-2.1,46.3,1.15,-21.09,35,19,-0.96,-1.28,42.9,0.63,-12.46,0.03,-2.32,-0.9,-5.5,DROP
+2,flow_category=외국인기관동반매도 & chg_pct<=-3,flow_category=외국인기관동반매도 + 당일 하락률 3% 이상,204,32,-0.39,-1.82,38.7,0.89,-21.09,164,32,-1.5,-1.77,36.6,0.57,-31.74,-0.92,-2.86,-8.5,-11.8,DROP
+2,amount_tag=거래대금급증 & needs_external_review=False,amount_tag=거래대금급증 + needs_external_review=False,99,32,-0.16,-1.63,40.4,0.94,-21.09,60,27,-1.6,-1.34,38.3,0.48,-20.71,-0.69,-2.96,-6.8,-10.1,DROP
+2,amount_tag=거래대금급증 & dart_tag=주변공시부재,amount_tag=거래대금급증 + dart_tag=주변공시부재,22,15,0.07,0.07,50.0,1.02,-21.09,23,15,-3.15,-3.18,34.8,0.33,-24.72,-0.46,-4.51,2.8,-13.6,DROP
+2,amount_tag=거래대금급증 & flow_category=외국인기관동반매도,amount_tag=거래대금급증 + flow_category=외국인기관동반매도,61,29,-0.74,-2.1,36.1,0.76,-21.09,32,21,-2.2,-1.02,37.5,0.26,-20.71,-1.27,-3.56,-11.1,-10.9,DROP
+1,market_regime=금리 인상/긴축장,market_regime=금리 인상/긴축장,405,34,0.76,-0.3,45.9,1.27,-29.08,0,0,,,,,,0.23,,-1.3,,DROP_SAMPLE
+1,market_regime=반도체 반등장,market_regime=반도체 반등장,150,31,-0.38,0.16,51.3,0.84,-25.17,0,0,,,,,,-0.91,,4.1,,DROP_SAMPLE
+1,market_regime=유동성/저금리 후반장,market_regime=유동성/저금리 후반장,167,34,0.84,-0.3,47.3,1.39,-17.3,0,0,,,,,,0.31,,0.1,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & amount_tag=거래대금급증,market_regime=금리 인상/긴축장 + amount_tag=거래대금급증,56,28,-0.62,-1.69,37.5,0.81,-21.09,0,0,,,,,,-1.15,,-9.7,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & amount_tag=거래대금약함,market_regime=금리 인상/긴축장 + amount_tag=거래대금약함,196,34,1.52,-0.0,50.0,1.52,-37.92,0,0,,,,,,0.99,,2.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & amount_tag=거래대금평균상회,market_regime=금리 인상/긴축장 + amount_tag=거래대금평균상회,248,34,0.16,-0.3,48.0,1.06,-29.08,0,0,,,,,,-0.37,,0.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & flow_category=수급엇갈림,market_regime=금리 인상/긴축장 + flow_category=수급엇갈림,265,34,0.55,-0.16,47.9,1.21,-37.92,0,0,,,,,,0.02,,0.7,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & flow_category=외국인기관동반매도,market_regime=금리 인상/긴축장 + flow_category=외국인기관동반매도,123,32,-0.46,-2.02,38.2,0.88,-37.52,0,0,,,,,,-0.99,,-9.0,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & flow_category=외국인기관동반매수,market_regime=금리 인상/긴축장 + flow_category=외국인기관동반매수,82,32,2.0,1.89,61.0,1.83,-29.08,0,0,,,,,,1.47,,13.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & dart_tag=DART공시동반,market_regime=금리 인상/긴축장 + dart_tag=DART공시동반,310,34,1.47,-0.11,49.0,1.57,-29.08,0,0,,,,,,0.94,,1.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & dart_tag=주변공시부재,market_regime=금리 인상/긴축장 + dart_tag=주변공시부재,131,34,0.21,-1.23,41.2,1.06,-23.03,0,0,,,,,,-0.32,,-6.0,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & window_category=누적배경,market_regime=금리 인상/긴축장 + window_category=누적배경,35,22,0.52,0.03,51.4,1.25,-12.67,0,0,,,,,,-0.01,,4.2,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & window_category=선반영,market_regime=금리 인상/긴축장 + window_category=선반영,53,24,-0.5,-1.05,41.5,0.84,-23.03,0,0,,,,,,-1.03,,-5.7,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & window_category=설명부족,market_regime=금리 인상/긴축장 + window_category=설명부족,0,0,,,,,,0,0,,,,,,,,,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & window_category=직접반응,market_regime=금리 인상/긴축장 + window_category=직접반응,349,34,0.81,-0.3,46.4,1.29,-29.08,0,0,,,,,,0.28,,-0.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & needs_external_review=False,market_regime=금리 인상/긴축장 + needs_external_review=False,260,34,0.45,-0.87,42.7,1.15,-37.52,0,0,,,,,,-0.08,,-4.5,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & needs_external_review=True,market_regime=금리 인상/긴축장 + needs_external_review=True,197,34,1.2,0.6,53.8,1.48,-29.08,0,0,,,,,,0.67,,6.6,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & chg_pct<=-3,market_regime=금리 인상/긴축장 + 당일 하락률 3% 이상,328,34,1.19,-0.3,47.3,1.42,-29.08,0,0,,,,,,0.66,,0.1,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & chg_pct<=-5,market_regime=금리 인상/긴축장 + 당일 하락률 5% 이상,134,28,0.19,-0.3,48.5,1.06,-23.03,0,0,,,,,,-0.34,,1.3,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & chg_pct<=-7,market_regime=금리 인상/긴축장 + 당일 하락률 7% 이상,49,22,0.91,0.03,51.0,1.25,-21.09,0,0,,,,,,0.38,,3.8,,DROP_SAMPLE
+2,market_regime=금리 인상/긴축장 & chg_pct<=-10,market_regime=금리 인상/긴축장 + 당일 하락률 10% 이상,11,9,0.45,-2.1,45.5,1.09,-16.48,0,0,,,,,,-0.08,,-1.7,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & amount_tag=거래대금급증,market_regime=반도체 반등장 + amount_tag=거래대금급증,35,21,0.01,-1.37,45.7,1.0,-7.63,0,0,,,,,,-0.52,,-1.5,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & amount_tag=거래대금약함,market_regime=반도체 반등장 + amount_tag=거래대금약함,91,28,0.14,0.57,53.8,1.06,-25.17,0,0,,,,,,-0.39,,6.6,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & amount_tag=거래대금평균상회,market_regime=반도체 반등장 + amount_tag=거래대금평균상회,69,27,-0.71,0.09,50.7,0.71,-15.0,0,0,,,,,,-1.24,,3.5,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & flow_category=수급엇갈림,market_regime=반도체 반등장 + flow_category=수급엇갈림,86,30,0.58,0.75,58.1,1.35,-11.61,0,0,,,,,,0.05,,10.9,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & flow_category=외국인기관동반매도,market_regime=반도체 반등장 + flow_category=외국인기관동반매도,62,23,-1.74,-1.39,41.9,0.49,-15.0,0,0,,,,,,-2.27,,-5.3,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & flow_category=외국인기관동반매수,market_regime=반도체 반등장 + flow_category=외국인기관동반매수,32,20,1.99,0.54,59.4,2.38,-25.17,0,0,,,,,,1.46,,12.2,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & dart_tag=DART공시동반,market_regime=반도체 반등장 + dart_tag=DART공시동반,115,31,-0.47,-0.65,48.7,0.82,-25.17,0,0,,,,,,-1.0,,1.5,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & dart_tag=주변공시부재,market_regime=반도체 반등장 + dart_tag=주변공시부재,44,18,-0.44,0.6,56.8,0.81,-13.16,0,0,,,,,,-0.97,,9.6,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & window_category=누적배경,market_regime=반도체 반등장 + window_category=누적배경,14,9,0.27,-0.44,50.0,1.12,-11.61,0,0,,,,,,-0.26,,2.8,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & window_category=선반영,market_regime=반도체 반등장 + window_category=선반영,20,12,1.0,0.97,70.0,2.12,-6.33,0,0,,,,,,0.47,,22.8,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & window_category=직접반응,market_regime=반도체 반등장 + window_category=직접반응,126,31,-0.66,-0.56,49.2,0.75,-25.17,0,0,,,,,,-1.19,,2.0,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & needs_external_review=False,market_regime=반도체 반등장 + needs_external_review=False,98,30,-0.89,0.24,51.0,0.67,-15.0,0,0,,,,,,-1.42,,3.8,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & needs_external_review=True,market_regime=반도체 반등장 + needs_external_review=True,71,24,0.5,0.53,56.3,1.28,-25.17,0,0,,,,,,-0.03,,9.1,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & chg_pct<=-3,market_regime=반도체 반등장 + 당일 하락률 3% 이상,113,27,-0.45,-0.55,47.8,0.83,-15.0,0,0,,,,,,-0.98,,0.6,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & chg_pct<=-5,market_regime=반도체 반등장 + 당일 하락률 5% 이상,49,21,-0.2,0.02,51.0,0.93,-13.16,0,0,,,,,,-0.73,,3.8,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & chg_pct<=-7,market_regime=반도체 반등장 + 당일 하락률 7% 이상,23,15,2.01,2.68,60.9,2.1,-10.98,0,0,,,,,,1.48,,13.7,,DROP_SAMPLE
+2,market_regime=반도체 반등장 & chg_pct<=-10,market_regime=반도체 반등장 + 당일 하락률 10% 이상,10,9,3.88,3.71,80.0,5.18,-6.0,0,0,,,,,,3.35,,32.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & amount_tag=거래대금급증,market_regime=유동성/저금리 후반장 + amount_tag=거래대금급증,38,22,0.63,-0.65,44.7,1.26,-11.44,0,0,,,,,,0.1,,-2.5,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & amount_tag=거래대금약함,market_regime=유동성/저금리 후반장 + amount_tag=거래대금약함,70,30,1.78,-0.36,47.1,1.96,-17.3,0,0,,,,,,1.25,,-0.1,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & amount_tag=거래대금평균상회,market_regime=유동성/저금리 후반장 + amount_tag=거래대금평균상회,102,33,0.34,0.31,52.0,1.16,-9.43,0,0,,,,,,-0.19,,4.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & flow_category=수급엇갈림,market_regime=유동성/저금리 후반장 + flow_category=수급엇갈림,108,34,1.41,0.03,50.0,1.75,-9.43,0,0,,,,,,0.88,,2.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & flow_category=외국인기관동반매도,market_regime=유동성/저금리 후반장 + flow_category=외국인기관동반매도,56,30,-0.98,-1.73,35.7,0.68,-11.44,0,0,,,,,,-1.51,,-11.5,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & flow_category=외국인기관동반매수,market_regime=유동성/저금리 후반장 + flow_category=외국인기관동반매수,34,18,2.54,1.45,61.8,2.73,-17.3,0,0,,,,,,2.01,,14.6,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & dart_tag=DART공시동반,market_regime=유동성/저금리 후반장 + dart_tag=DART공시동반,138,33,0.87,-0.13,48.6,1.4,-17.3,0,0,,,,,,0.34,,1.4,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & dart_tag=주변공시부재,market_regime=유동성/저금리 후반장 + dart_tag=주변공시부재,46,24,0.89,-0.01,50.0,1.44,-9.43,0,0,,,,,,0.36,,2.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & window_category=누적배경,market_regime=유동성/저금리 후반장 + window_category=누적배경,17,10,1.64,-0.24,47.1,2.05,-5.97,0,0,,,,,,1.11,,-0.1,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & window_category=선반영,market_regime=유동성/저금리 후반장 + window_category=선반영,14,13,4.56,1.06,64.3,5.51,-6.45,0,0,,,,,,4.03,,17.1,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & window_category=직접반응,market_regime=유동성/저금리 후반장 + window_category=직접반응,155,34,0.95,-0.12,49.0,1.44,-17.3,0,0,,,,,,0.42,,1.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & needs_external_review=False,market_regime=유동성/저금리 후반장 + needs_external_review=False,115,34,-0.26,-0.82,40.0,0.89,-11.44,0,0,,,,,,-0.79,,-7.2,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & needs_external_review=True,market_regime=유동성/저금리 후반장 + needs_external_review=True,70,29,3.05,1.76,64.3,3.07,-17.3,0,0,,,,,,2.52,,17.1,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & chg_pct<=-3,market_regime=유동성/저금리 후반장 + 당일 하락률 3% 이상,128,33,1.24,-0.07,49.2,1.53,-17.3,0,0,,,,,,0.71,,2.0,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & chg_pct<=-5,market_regime=유동성/저금리 후반장 + 당일 하락률 5% 이상,46,18,2.73,1.12,54.3,2.36,-8.43,0,0,,,,,,2.2,,7.1,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & chg_pct<=-7,market_regime=유동성/저금리 후반장 + 당일 하락률 7% 이상,18,11,1.77,0.61,50.0,1.93,-7.52,0,0,,,,,,1.24,,2.8,,DROP_SAMPLE
+2,market_regime=유동성/저금리 후반장 & chg_pct<=-10,market_regime=유동성/저금리 후반장 + 당일 하락률 10% 이상,9,7,3.53,3.19,55.6,4.66,-5.86,0,0,,,,,,3.0,,8.4,,DROP_SAMPLE
+2,window_category=선반영 & chg_pct<=-7,window_category=선반영 + 당일 하락률 7% 이상,8,8,1.19,1.18,62.5,2.2,-4.69,6,6,15.56,10.07,100.0,99.9,7.56,0.66,14.2,15.3,51.6,DROP_SAMPLE
+2,window_category=설명부족 & chg_pct<=-7,window_category=설명부족 + 당일 하락률 7% 이상,0,0,,,,,,1,1,12.09,12.09,100.0,99.9,12.09,,10.73,,51.6,DROP_SAMPLE
+2,window_category=선반영 & chg_pct<=-10,window_category=선반영 + 당일 하락률 10% 이상,0,0,,,,,,4,4,11.68,9.84,100.0,99.9,7.56,,10.32,,51.6,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & window_category=설명부족,flow_category=외국인기관동반매수 + window_category=설명부족,0,0,,,,,,2,1,10.94,10.94,100.0,99.9,9.8,,9.58,,51.6,DROP_SAMPLE
+2,amount_tag=거래대금평균상회 & window_category=설명부족,amount_tag=거래대금평균상회 + window_category=설명부족,0,0,,,,,,2,1,7.78,7.78,100.0,99.9,3.47,,6.42,,51.6,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & window_category=설명부족,market_regime=AI/전력기기 테마장 + window_category=설명부족,0,0,,,,,,3,1,5.88,3.47,100.0,99.9,2.09,,4.52,,51.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & window_category=선반영,market_regime=변동성 장세 + window_category=선반영,0,0,,,,,,5,4,11.53,6.58,80.0,79.65,-0.73,,10.17,,31.6,DROP_SAMPLE
+2,amount_tag=거래대금약함 & chg_pct<=-10,amount_tag=거래대금약함 + 당일 하락률 10% 이상,2,2,17.04,17.04,100.0,99.9,13.2,13,8,17.97,12.15,84.6,19.07,-7.36,16.51,16.61,52.8,36.2,DROP_SAMPLE
+2,window_category=선반영 & chg_pct<=-5,window_category=선반영 + 당일 하락률 5% 이상,29,15,2.22,0.55,55.2,1.96,-23.03,11,8,9.99,7.69,81.8,12.78,-8.59,1.69,8.63,8.0,33.4,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & needs_external_review=False,flow_category=외국인기관동반매수 + needs_external_review=False,14,9,2.71,0.16,57.1,4.11,-3.9,4,4,6.38,3.69,75.0,12.23,-2.27,2.18,5.02,9.9,26.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & flow_category=외국인기관동반매수,market_regime=변동성 장세 + flow_category=외국인기관동반매수,0,0,,,,,,32,17,10.43,4.54,81.2,11.51,-9.1,,9.07,,32.8,DROP_SAMPLE
+1,window_category=설명부족,window_category=설명부족,0,0,,,,,,4,2,4.02,2.78,75.0,11.27,-1.57,,2.66,,26.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & window_category=누적배경,market_regime=변동성 장세 + window_category=누적배경,0,0,,,,,,13,9,10.67,1.96,69.2,8.42,-6.13,,9.31,,20.8,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & window_category=선반영,flow_category=외국인기관동반매수 + window_category=선반영,17,11,0.84,1.16,58.8,1.47,-8.89,10,9,6.98,7.62,90.0,7.27,-11.13,0.31,5.62,11.6,41.6,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & window_category=누적배경,flow_category=외국인기관동반매수 + window_category=누적배경,18,14,-0.11,-1.16,38.9,0.95,-9.58,7,6,16.09,12.72,71.4,6.43,-18.46,-0.64,14.73,-8.3,23.0,DROP_SAMPLE
+2,amount_tag=거래대금약함 & chg_pct<=-7,amount_tag=거래대금약함 + 당일 하락률 7% 이상,13,11,5.63,7.2,69.2,4.79,-10.98,29,14,11.54,7.56,75.9,5.77,-23.71,5.1,10.18,22.0,27.5,DROP_SAMPLE
+2,market_regime=변동성 장세 & chg_pct<=-10,market_regime=변동성 장세 + 당일 하락률 10% 이상,0,0,,,,,,18,10,12.32,2.08,55.6,5.76,-11.81,,10.96,,7.2,DROP_SAMPLE
+2,market_regime=변동성 장세 & dart_tag=주변공시부재,market_regime=변동성 장세 + dart_tag=주변공시부재,0,0,,,,,,31,16,5.83,1.96,67.7,5.37,-8.62,,4.47,,19.3,DROP_SAMPLE
+2,window_category=누적배경 & chg_pct<=-7,window_category=누적배경 + 당일 하락률 7% 이상,4,4,10.19,12.59,100.0,99.9,0.03,3,3,8.01,11.39,66.7,5.31,-5.57,9.66,6.65,52.8,18.3,DROP_SAMPLE
+2,amount_tag=거래대금약함 & window_category=선반영,amount_tag=거래대금약함 + window_category=선반영,59,24,0.81,-0.3,49.2,1.31,-23.03,13,9,7.08,6.58,69.2,5.23,-11.13,0.28,5.72,2.0,20.8,DROP_SAMPLE
+2,amount_tag=거래대금평균상회 & window_category=누적배경,amount_tag=거래대금평균상회 + window_category=누적배경,20,12,0.78,-0.11,50.0,1.36,-11.74,18,13,8.93,6.28,77.8,5.1,-18.46,0.25,7.57,2.8,29.4,DROP_SAMPLE
+2,window_category=선반영 & needs_external_review=True,window_category=선반영 + needs_external_review=True,72,26,1.03,0.35,52.8,1.44,-23.03,17,13,6.15,4.6,70.6,5.0,-11.13,0.5,4.79,5.6,22.2,DROP_SAMPLE
+2,market_regime=변동성 장세 & needs_external_review=True,market_regime=변동성 장세 + needs_external_review=True,0,0,,,,,,67,23,5.97,2.77,65.7,4.55,-14.3,,4.61,,17.3,DROP_SAMPLE
+2,window_category=누적배경 & needs_external_review=False,window_category=누적배경 + needs_external_review=False,8,5,0.36,-0.11,50.0,1.3,-4.33,11,10,5.23,1.96,72.7,4.34,-10.8,-0.17,3.87,2.8,24.3,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & chg_pct<=-10,flow_category=외국인기관동반매수 + 당일 하락률 10% 이상,1,1,13.14,13.14,100.0,99.9,13.14,17,11,10.74,8.35,82.4,4.27,-24.72,12.61,9.38,52.8,34.0,DROP_SAMPLE
+2,market_regime=변동성 장세 & chg_pct<=-7,market_regime=변동성 장세 + 당일 하락률 7% 이상,0,0,,,,,,40,17,8.43,2.91,60.0,4.16,-14.3,,7.07,,11.6,DROP_SAMPLE
+2,flow_category=수급엇갈림 & chg_pct<=-10,flow_category=수급엇갈림 + 당일 하락률 10% 이상,16,13,3.67,4.42,62.5,2.2,-16.48,28,19,9.47,2.17,57.1,3.87,-33.05,3.14,8.11,15.3,8.7,DROP_SAMPLE
+2,amount_tag=거래대금평균상회 & chg_pct<=-10,amount_tag=거래대금평균상회 + 당일 하락률 10% 이상,2,2,-6.02,-6.02,50.0,0.21,-15.23,20,16,9.3,6.33,70.0,3.56,-33.05,-6.55,7.94,2.8,21.6,DROP_SAMPLE
+2,flow_category=외국인기관동반매수 & chg_pct<=-7,flow_category=외국인기관동반매수 + 당일 하락률 7% 이상,13,8,2.98,-0.71,46.2,2.09,-13.0,27,15,7.52,7.08,81.5,3.56,-24.72,2.45,6.16,-1.0,33.1,DROP_SAMPLE
+2,flow_category=수급엇갈림 & window_category=설명부족,flow_category=수급엇갈림 + window_category=설명부족,0,0,,,,,,3,2,1.33,2.09,66.7,3.55,-1.57,,-0.03,,18.3,DROP_SAMPLE
+2,needs_external_review=True & chg_pct<=-10,needs_external_review=True + 당일 하락률 10% 이상,6,6,0.21,-1.53,50.0,1.05,-15.23,27,15,7.58,7.56,74.1,3.49,-24.72,-0.32,6.22,2.8,25.7,DROP_SAMPLE
+2,flow_category=수급엇갈림 & window_category=선반영,flow_category=수급엇갈림 + window_category=선반영,78,27,1.01,0.41,53.8,1.44,-23.03,14,12,3.95,3.13,64.3,3.48,-8.59,0.48,2.59,6.6,15.9,DROP_SAMPLE
+2,market_regime=변동성 장세 & amount_tag=거래대금약함,market_regime=변동성 장세 + amount_tag=거래대금약함,0,0,,,,,,102,26,4.46,0.09,52.9,3.08,-15.79,,3.1,,4.5,DROP_SAMPLE
+2,amount_tag=거래대금평균상회 & window_category=선반영,amount_tag=거래대금평균상회 + window_category=선반영,36,19,1.05,1.12,63.9,1.69,-10.75,9,9,2.63,4.6,77.8,3.03,-7.31,0.52,1.27,16.7,29.4,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & window_category=누적배경,market_regime=AI/전력기기 테마장 + window_category=누적배경,0,0,,,,,,28,17,4.9,3.63,64.3,2.84,-18.46,,3.54,,15.9,DROP_SAMPLE
+2,window_category=선반영 & needs_external_review=False,window_category=선반영 + needs_external_review=False,20,15,1.04,0.85,60.0,1.68,-7.05,6,6,2.18,3.69,83.3,2.79,-7.31,0.51,0.82,12.8,34.9,DROP_SAMPLE
+2,flow_category=외국인기관동반매도 & chg_pct<=-10,flow_category=외국인기관동반매도 + 당일 하락률 10% 이상,13,10,0.28,1.37,53.8,1.14,-11.15,16,13,4.78,0.87,56.2,2.78,-9.39,-0.25,3.42,6.6,7.8,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & window_category=선반영,market_regime=AI/전력기기 테마장 + window_category=선반영,0,0,,,,,,17,14,3.42,1.96,70.6,2.78,-11.13,,2.06,,22.2,DROP_SAMPLE
+2,window_category=누적배경 & chg_pct<=-5,window_category=누적배경 + 당일 하락률 5% 이상,14,10,3.52,2.15,64.3,2.73,-11.61,16,9,4.71,3.26,56.2,2.6,-13.26,2.99,3.35,17.1,7.8,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & flow_category=외국인기관동반매수,market_regime=AI/전력기기 테마장 + flow_category=외국인기관동반매수,0,0,,,,,,77,28,3.6,3.18,67.5,2.39,-42.2,,2.24,,19.1,DROP_SAMPLE
+2,market_regime=변동성 장세 & flow_category=수급엇갈림,market_regime=변동성 장세 + flow_category=수급엇갈림,0,0,,,,,,108,25,3.32,0.26,51.9,2.37,-14.32,,1.96,,3.5,DROP_SAMPLE
+2,market_regime=변동성 장세 & chg_pct<=-5,market_regime=변동성 장세 + 당일 하락률 5% 이상,0,0,,,,,,90,25,3.92,-0.24,48.9,2.35,-14.32,,2.56,,0.5,DROP_SAMPLE
+2,market_regime=변동성 장세 & chg_pct<=-3,market_regime=변동성 장세 + 당일 하락률 3% 이상,0,0,,,,,,152,26,3.37,0.4,52.6,2.35,-14.32,,2.01,,4.2,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & needs_external_review=True,market_regime=AI/전력기기 테마장 + needs_external_review=True,0,0,,,,,,160,33,3.27,2.13,63.7,2.34,-42.2,,1.91,,15.3,DROP_SAMPLE
+2,dart_tag=주변공시부재 & chg_pct<=-10,dart_tag=주변공시부재 + 당일 하락률 10% 이상,5,5,-3.27,-2.1,40.0,0.52,-16.48,15,12,3.66,7.56,80.0,2.3,-24.72,-3.8,2.3,-7.2,31.6,DROP_SAMPLE
+1,market_regime=변동성 장세,market_regime=변동성 장세,0,0,,,,,,170,26,2.93,-0.13,49.4,2.19,-14.32,,1.57,,1.0,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & chg_pct<=-10,market_regime=AI/전력기기 테마장 + 당일 하락률 10% 이상,0,0,,,,,,37,22,4.27,4.72,64.9,2.14,-33.05,,2.91,,16.5,DROP_SAMPLE
+2,market_regime=변동성 장세 & window_category=직접반응,market_regime=변동성 장세 + window_category=직접반응,0,0,,,,,,160,26,2.46,-0.03,50.0,1.99,-14.32,,1.1,,1.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & dart_tag=DART공시동반,market_regime=변동성 장세 + dart_tag=DART공시동반,0,0,,,,,,152,26,2.22,-0.37,48.0,1.81,-21.76,,0.86,,-0.4,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & dart_tag=주변공시부재,market_regime=AI/전력기기 테마장 + dart_tag=주변공시부재,0,0,,,,,,87,27,2.14,1.46,57.5,1.79,-24.72,,0.78,,9.1,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & chg_pct<=-7,market_regime=AI/전력기기 테마장 + 당일 하락률 7% 이상,0,0,,,,,,91,32,2.26,1.76,59.3,1.71,-33.05,,0.9,,10.9,DROP_SAMPLE
+2,market_regime=변동성 장세 & needs_external_review=False,market_regime=변동성 장세 + needs_external_review=False,0,0,,,,,,124,26,1.69,-0.95,42.7,1.62,-14.32,,0.33,,-5.7,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & chg_pct<=-5,market_regime=AI/전력기기 테마장 + 당일 하락률 5% 이상,0,0,,,,,,163,32,1.93,1.26,55.2,1.6,-33.05,,0.57,,6.8,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & flow_category=수급엇갈림,market_regime=AI/전력기기 테마장 + flow_category=수급엇갈림,0,0,,,,,,230,34,1.5,0.2,51.3,1.56,-33.05,,0.14,,2.9,DROP_SAMPLE
+2,market_regime=변동성 장세 & amount_tag=거래대금급증,market_regime=변동성 장세 + amount_tag=거래대금급증,0,0,,,,,,20,16,1.18,0.32,50.0,1.49,-11.81,,-0.18,,1.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & amount_tag=거래대금평균상회,market_regime=변동성 장세 + amount_tag=거래대금평균상회,0,0,,,,,,95,26,1.1,-0.85,47.4,1.38,-21.76,,-0.26,,-1.0,DROP_SAMPLE
+2,amount_tag=거래대금약함 & window_category=설명부족,amount_tag=거래대금약함 + window_category=설명부족,0,0,,,,,,2,2,0.26,0.26,50.0,1.33,-1.57,,-1.1,,1.6,DROP_SAMPLE
+2,amount_tag=거래대금급증 & flow_category=외국인기관동반매수,amount_tag=거래대금급증 + flow_category=외국인기관동반매수,16,12,-0.01,-0.35,50.0,0.99,-13.26,13,10,1.51,1.63,61.5,1.32,-24.72,-0.54,0.15,2.8,13.1,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & amount_tag=거래대금약함,market_regime=AI/전력기기 테마장 + amount_tag=거래대금약함,0,0,,,,,,186,34,0.95,-0.33,48.9,1.32,-38.13,,-0.41,,0.5,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & chg_pct<=-3,market_regime=AI/전력기기 테마장 + 당일 하락률 3% 이상,0,0,,,,,,320,34,0.71,-0.45,48.1,1.23,-42.2,,-0.65,,-0.3,DROP_SAMPLE
+1,market_regime=AI/전력기기 테마장,market_regime=AI/전력기기 테마장,0,0,,,,,,376,34,0.64,-0.45,47.9,1.21,-42.2,,-0.72,,-0.5,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & dart_tag=DART공시동반,market_regime=AI/전력기기 테마장 + dart_tag=DART공시동반,0,0,,,,,,318,34,0.63,-0.47,46.9,1.21,-42.2,,-0.73,,-1.5,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & window_category=직접반응,market_regime=AI/전력기기 테마장 + window_category=직접반응,0,0,,,,,,350,34,0.4,-0.65,46.3,1.13,-42.2,,-0.96,,-2.1,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & amount_tag=거래대금평균상회,market_regime=AI/전력기기 테마장 + amount_tag=거래대금평균상회,0,0,,,,,,202,34,0.16,-0.1,49.5,1.05,-42.2,,-1.2,,1.1,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & amount_tag=거래대금급증,market_regime=AI/전력기기 테마장 + amount_tag=거래대금급증,0,0,,,,,,69,31,0.12,-0.97,44.9,1.03,-24.72,,-1.24,,-3.5,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & needs_external_review=False,market_regime=AI/전력기기 테마장 + needs_external_review=False,0,0,,,,,,259,34,-0.38,-1.25,39.8,0.88,-33.05,,-1.74,,-8.6,DROP_SAMPLE
+2,market_regime=변동성 장세 & flow_category=외국인기관동반매도,market_regime=변동성 장세 + flow_category=외국인기관동반매도,0,0,,,,,,61,23,-0.67,-2.04,34.4,0.79,-21.76,,-2.03,,-14.0,DROP_SAMPLE
+2,market_regime=AI/전력기기 테마장 & flow_category=외국인기관동반매도,market_regime=AI/전력기기 테마장 + flow_category=외국인기관동반매도,0,0,,,,,,129,33,-1.21,-1.8,34.9,0.65,-31.74,,-2.57,,-13.5,DROP_SAMPLE
+2,market_regime=변동성 장세 & window_category=설명부족,market_regime=변동성 장세 + window_category=설명부족,0,0,,,,,,1,1,-1.57,-1.57,0.0,0.0,-1.57,,-2.93,,-48.4,DROP_SAMPLE
+2,window_category=누적배경 & chg_pct<=-10,window_category=누적배경 + 당일 하락률 10% 이상,1,1,13.2,13.2,100.0,99.9,13.2,1,1,-5.57,-5.57,0.0,0.0,-5.57,12.67,-6.93,52.8,-48.4,DROP_SAMPLE
