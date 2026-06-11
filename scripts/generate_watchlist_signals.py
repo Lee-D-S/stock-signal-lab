@@ -178,24 +178,28 @@ def match_strategy(signal: dict[str, Any], strategies: pd.DataFrame) -> list[dic
     matches = []
     for _, strategy in strategies.iterrows():
         status = str(strategy.get("status", "active")).strip().lower()
-        if status and status != "active":
+        if status and status not in {"active", "research_candidate"}:
             continue
-        if signal["market_regime"] != strategy["market_regime"]:
+        exact_columns = ["market_regime", "direction", "amount_tag", "dart_tag", "window_category"]
+        if any(
+            str(strategy.get(column, "*")).strip() not in {"", "*"}
+            and signal[column] != strategy[column]
+            for column in exact_columns
+        ):
             continue
-        if signal["direction"] != strategy["direction"]:
+        min_chg_pct = pd.to_numeric(pd.Series([strategy.get("min_chg_pct")]), errors="coerce").iloc[0]
+        max_chg_pct = pd.to_numeric(pd.Series([strategy.get("max_chg_pct")]), errors="coerce").iloc[0]
+        if pd.notna(min_chg_pct) and signal["chg_pct"] < float(min_chg_pct):
             continue
-        if signal["amount_tag"] != strategy["amount_tag"]:
+        if pd.notna(max_chg_pct) and signal["chg_pct"] > float(max_chg_pct):
             continue
         flow_match_quality = "exact"
-        if signal["flow_category"] != strategy["flow_category"]:
+        required_flow = str(strategy.get("flow_category", "*")).strip()
+        if required_flow not in {"", "*"} and signal["flow_category"] != required_flow:
             if signal["flow_category"] == "수급정보부족":
                 flow_match_quality = "flow_check_required"
             else:
                 continue
-        if signal["dart_tag"] != strategy["dart_tag"]:
-            continue
-        if signal["window_category"] != strategy["window_category"]:
-            continue
         matches.append(
             {
                 "hypothesis_id": strategy["hypothesis_id"],
@@ -208,7 +212,7 @@ def match_strategy(signal: dict[str, Any], strategies: pd.DataFrame) -> list[dic
                 "backtest_hit_rate": float(strategy["hit_rate"]),
                 "risk_note": strategy.get("risk_note", ""),
                 "match_quality": flow_match_quality,
-                "required_flow_category": strategy["flow_category"],
+                "required_flow_category": required_flow,
             }
         )
     return matches

@@ -192,6 +192,27 @@ def run_backtest(args: argparse.Namespace) -> None:
     snapshot_backtest_outputs(args.snapshot_date, dry_run=args.dry_run)
 
 
+def run_event_discovery(args: argparse.Namespace) -> None:
+    step_args = [
+        "--snapshot-date",
+        args.snapshot_date,
+        "--direction",
+        args.event_direction,
+        "--hold-days",
+        str(args.event_hold_days),
+        "--train-end",
+        args.event_train_end,
+        "--validation-end",
+        args.event_validation_end,
+        "--min-samples",
+        str(args.event_min_samples),
+    ]
+    run_step(
+        Step("이벤트 전략 신규 조건 탐색", "run_event_condition_discovery.py", tuple(step_args)),
+        dry_run=args.dry_run,
+    )
+
+
 def snapshot_backtest_outputs(snapshot_date: str, dry_run: bool = False) -> None:
     out_dir = SNAPSHOT_DIR / snapshot_date
     print("\n==> 백테스트 산출물 날짜 스냅샷")
@@ -252,7 +273,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="주가 변동 원인 분석 파이프라인 실행기")
     parser.add_argument(
         "--mode",
-        choices=["daily", "backtest", "full", "outputs"],
+        choices=["daily", "backtest", "event-discovery", "full", "outputs"],
         default="daily",
         help="daily=오늘 후보 산출, backtest=로컬 이벤트/가설 검증 재계산, full=보고서 선택 재생성 후 백테스트",
     )
@@ -275,6 +296,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--ntm-per-pool-size", type=int, default=80, help="NTM PER 조회 대상 거래대금 유니버스 상위 N개 (기본: 80)")
     parser.add_argument("--snapshot-date", default=date.today().isoformat(), help="backtest 산출물 스냅샷 기준일 YYYY-MM-DD")
     parser.add_argument("--promote-strategy", action="store_true", help="backtest로 만든 조건 초안을 active 전략 조건으로 승격")
+    parser.add_argument("--event-direction", choices=["up", "down"], default="down")
+    parser.add_argument("--event-hold-days", type=int, default=5)
+    parser.add_argument("--event-train-end", default="2023-12-31")
+    parser.add_argument("--event-validation-end", default="2026-03-31")
+    parser.add_argument("--event-min-samples", type=int, default=20)
     parser.add_argument("--include-reports", action="store_true", help="full 모드에서 분기 보고서 배치 생성까지 실행")
     parser.add_argument("--daily", action="store_true", help="full 모드 마지막에 일별 후보 산출까지 실행")
     parser.add_argument("--dry-run", action="store_true", help="실행할 단계만 출력하고 실제 실행하지 않음")
@@ -287,6 +313,8 @@ def main() -> None:
         run_daily(args)
     elif args.mode == "backtest":
         run_backtest(args)
+    elif args.mode == "event-discovery":
+        run_event_discovery(args)
     elif args.mode == "full":
         run_full(args)
     elif args.mode == "outputs":

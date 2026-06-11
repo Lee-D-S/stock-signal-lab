@@ -104,6 +104,8 @@ rtk git pull --rebase origin main
 
 `daily`는 후보 탐지, 신규 조건 관찰, 기존 관찰 로그 D+ 업데이트, 성과 요약, 일일 요약, 결과 커밋/푸시까지 수행한다.
 
+`event-discovery`는 daily와 분리된 로컬 연구 모드다. 이벤트 당일 특성의 단일/2개 조건을 실제 다음 거래일 시가 진입 성과로 train/validation 검증하고 `09_조건스냅샷/YYYY-MM-DD/`에 신규 후보를 저장한다. 로컬 OHLCV 캐시가 필요하므로 GitHub Actions 자동 실행에는 포함하지 않는다.
+
 ### 1. 한국 거래일 확인
 
 - 자동 schedule 실행이고 한국 휴장일이면 이후 step을 모두 건너뛴다.
