@@ -177,6 +177,9 @@ def window_category(ohlcv: pd.DataFrame, investor: pd.DataFrame, event_date: pd.
 def match_strategy(signal: dict[str, Any], strategies: pd.DataFrame) -> list[dict[str, Any]]:
     matches = []
     for _, strategy in strategies.iterrows():
+        status = str(strategy.get("status", "active")).strip().lower()
+        if status and status != "active":
+            continue
         if signal["market_regime"] != strategy["market_regime"]:
             continue
         if signal["direction"] != strategy["direction"]:
