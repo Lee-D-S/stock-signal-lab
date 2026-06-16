@@ -65,9 +65,13 @@ STRATEGY_COLUMNS = [
 def latest_snapshot_dir(snapshot_date: str | None) -> Path:
     if snapshot_date:
         return SNAPSHOT_DIR / snapshot_date
-    dirs = [path for path in SNAPSHOT_DIR.iterdir() if path.is_dir()]
+    dirs = [
+        path
+        for path in SNAPSHOT_DIR.iterdir()
+        if path.is_dir() and (path / "신규_조건_검토.csv").exists()
+    ]
     if not dirs:
-        raise SystemExit(f"snapshot directory not found: {SNAPSHOT_DIR}")
+        raise SystemExit(f"review snapshot directory not found: {SNAPSHOT_DIR}")
     return sorted(dirs, key=lambda path: path.name)[-1]
 
 
