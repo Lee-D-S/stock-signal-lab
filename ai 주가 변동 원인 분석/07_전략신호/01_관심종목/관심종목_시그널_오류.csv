@@ -1,3 +1,2 @@
 ﻿ticker,name,status,error
-009150,삼성전기,error,ConnectError('All connection attempts failed')
-086520,에코프로,error,ConnectError('All connection attempts failed')
+000270,기아,error,ReadTimeout('')
