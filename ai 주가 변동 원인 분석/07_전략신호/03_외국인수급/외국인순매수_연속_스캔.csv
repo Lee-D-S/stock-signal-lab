@@ -1,12 +1,17 @@
 ﻿signal_date,ticker,name,condition_id,matched_conditions,foreign_net_buy_streak,foreign_qty,foreign_net_buy_2d_qty,foreign_net_buy_3d_qty,foreign_volume_ratio_pct,event_close
-2026-08-26,009150,삼성전기,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct",2,8320,46217,26229,1.70,1330000
-2026-08-26,003490,대한항공,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,1981858,2095695,1886599,31.96,28150
-2026-08-26,010120,LS ELECTRIC,foreign_buy_streak_3,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",3,158556,199685,265158,27.44,201500
-2026-08-26,001820,삼화콘덴서,foreign_buy_streak_4,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",4,50962,193302,230876,5.10,107800
-2026-08-26,066570,LG전자,foreign_buy_streak_6,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",6,34492,53997,192176,6.41,200500
-2026-08-26,278470,에이피알,foreign_buy_streak_5,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",5,30600,45522,90292,13.42,442000
-2026-08-26,417030,니어스랩,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,86352,139474,56602,3.46,32300
-2026-08-26,080220,제주반도체,foreign_buy_streak_7,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct",7,9637,153729,159849,1.29,76100
-2026-08-26,257720,실리콘투,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,95973,257707,249207,10.16,51800
-2026-08-26,039030,이오테크닉스,foreign_buy_streak_4,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",4,2617,14341,35868,3.19,400500
-2026-08-26,319660,피에스케이,foreign_buy_streak_4,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",4,50130,102768,223527,24.10,129500
+2026-08-27,005930,삼성전자,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,1381786,3900112,-1103205,8.21,266000
+2026-08-27,009150,삼성전기,foreign_buy_streak_3,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",3,111235,119555,157452,15.97,1385000
+2026-08-27,402340,SK스퀘어,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,46736,64931,-17746,9.69,1068000
+2026-08-27,257720,실리콘투,foreign_buy_streak_3,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",3,3563925,3659898,3821632,44.22,49150
+2026-08-27,010120,LS ELECTRIC,foreign_buy_streak_4,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",4,283435,441991,483120,24.96,219500
+2026-08-27,267260,HD현대일렉트릭,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,28423,36042,27205,12.52,821000
+2026-08-27,012450,한화에어로스페이스,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct",2,1581,6606,487,1.13,1150000
+2026-08-27,000500,가온전선,foreign_buy_streak_4,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",4,18059,73779,103498,2.28,211500
+2026-08-27,196170,알테오젠,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,41866,117255,91879,11.35,311500
+2026-08-27,178320,서진시스템,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,316230,454112,409622,11.21,41350
+2026-08-27,086520,에코프로,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,267176,436793,362966,22.30,92000
+2026-08-27,080220,제주반도체,foreign_buy_streak_8,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",8,69486,79133,223225,7.19,77700
+2026-08-27,277810,레인보우로보틱스,foreign_buy_streak_7,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",7,26326,32095,35600,25.94,471000
+2026-08-27,095610,테스,foreign_buy_streak_5,"foreign_buy_streak_2,foreign_buy_streak_3,foreign_buy_2d_all,foreign_buy_3d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",5,89839,142194,183846,31.88,146000
+2026-08-27,214450,파마리서치,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,2084,43100,42970,2.41,432500
+2026-08-27,108490,로보티즈,foreign_buy_streak_2,"foreign_buy_streak_2,foreign_buy_2d_all,foreign_buy_vol_0_5pct,foreign_buy_vol_1pct,foreign_buy_vol_2pct",2,19071,19458,6054,15.21,255000
