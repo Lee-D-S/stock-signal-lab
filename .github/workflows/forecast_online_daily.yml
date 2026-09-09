@@ -1,0 +1,50 @@
+name: numeric forecast online daily
+
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      as_of:
+        description: "Optional KST reference date YYYY-MM-DD"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forecast-online-daily-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: KIS/DART numeric collection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Collect KIS/DART numeric snapshot
+        env:
+          KIS_REAL_APP_KEY: ${{ secrets.KIS_REAL_APP_KEY }}
+          KIS_REAL_APP_SECRET: ${{ secrets.KIS_REAL_APP_SECRET }}
+          KIS_IS_MOCK: "true"
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          AS_OF: ${{ inputs.as_of }}
+        shell: bash
+        run: |
+          if [ -n "$AS_OF" ]; then
+            python -m forecast.online_auto --as-of "$AS_OF" --artifact-root forecast_artifacts
+          else
+            python -m forecast.online_auto --artifact-root forecast_artifacts
+          fi
+      - name: Upload numeric artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-online-daily-${{ github.run_id }}
+          path: forecast_artifacts/
