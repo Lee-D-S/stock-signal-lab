@@ -1,31 +1,40 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`main.py` starts the app, initializes SQLite, and launches the scheduler and dashboard. Core trading and broker integration live in `core/` and `core/api/`; persistent models are in `models/`; scheduled jobs in `scheduler/`; strategies in `strategies/`; notifications in `notifier/`; and the FastAPI dashboard in `dashboard/`. One-off research scripts live in `scripts/`. The analysis workspace is `ai 주가 변동 원인 분석/`, with `00_기업별분석/` for company reports and numbered folders for shared outputs.
+
+`forecast/` is the active numeric forecasting package. It collects read-only KIS/DART data, builds point-in-time numeric features, creates T+1/T+5/T+20 labels, trains pooled scikit-learn candidates, evaluates them with walk-forward splits, and writes prediction artifacts. `core/api/` contains the read-only KIS client used by the forecast universe collector. Historical auto-trading, LLM, and research code is preserved under `legacy/` and must not be imported by active code. `ai 주가 변동 원인 분석/` and `data/` are preserved as historical/raw artifacts; they are not direct model inputs.
 
 ## Build, Test, and Development Commands
+
 Always prefix commands with `rtk`.
-- `rtk python main.py`: run the app, scheduler, and dashboard.
-- `rtk python -m uvicorn dashboard.main:app --reload`: run API/dashboard only.
-- `rtk python scripts/run_backtest.py --help`: inspect backtest options.
-- `rtk python scripts/run_discovery.py --help`: inspect discovery options.
-- `rtk python -u scripts/run_signal_research_pipeline.py --mode daily --recheck`: run the daily signal pipeline.
+
+- `rtk python -m forecast.cli --help`: inspect the active forecast CLI.
+- `rtk python -m forecast.shadow`: run the offline numeric shadow fixture.
+- `rtk python -m forecast.online_auto`: collect read-only KIS/DART data when credentials are available.
+- `rtk python -m forecast.weekly`: train and evaluate weekly candidate models from a labelled Parquet input.
+- `rtk python scripts/check_docs_sync.py --all --scan-md`: review documentation impact.
+- `rtk python scripts/sync_analysis_paths.py --check`: verify preserved historical analysis paths.
 
 ## Coding Style & Naming Conventions
-Use standard Python style: 4-space indentation, `snake_case` for functions/modules, `PascalCase` for classes, and type hints where practical. Keep changes aligned with nearby code and reuse `config.py`’s `settings` instead of reading environment variables directly. For analysis assets, keep folder names numeric and stable, e.g. `03_원천데이터`, `07_전략신호`, `08_관찰기록`.
 
-When adding or removing stable analysis documents under `ai 주가 변동 원인 분석/`, sync `scripts/analysis_paths.py` with `rtk python scripts/sync_analysis_paths.py`. Use `rtk python scripts/sync_analysis_paths.py --check` to verify it is current.
+Use standard Python style: 4-space indentation, `snake_case` for functions/modules, `PascalCase` for classes, and type hints where practical. Keep active changes inside `forecast/`, `core/api/`, `scripts/`, or the active workflows. Do not import from `legacy/`.
+
+When adding or removing stable historical analysis documents under `ai 주가 변동 원인 분석/`, sync `scripts/analysis_paths.py` with `rtk python scripts/sync_analysis_paths.py`. Do not add historical text, news, Gemini output, Telegram output, or broker/order fields to active `forecast/` schemas.
 
 ## Testing Guidelines
-This repo does not have a dedicated `tests/` package yet. Validate changes by running the affected script or endpoint, for example `rtk python scripts/test_gemini.py` or `GET /health` against the dashboard. For research changes, rerun the narrowest relevant pipeline step first, then the full pipeline if outputs changed.
+
+The active tests are under `forecast/tests/`. Validate changes with the narrowest relevant test first, then run the full forecast test suite. For data-contract changes, also run AST/import checks and the shadow fixture. No dashboard health check or broker/order test is part of the active system.
 
 ## Commit & Pull Request Guidelines
-Use short, imperative commit messages such as `Add signal pipeline path fix`. Keep one logical change per commit. PRs should include a brief summary, the commands used to verify the change, and screenshots or sample output when dashboard or report paths change.
+
+Use short, imperative commit messages such as `Add forecast schema guard`. Keep one logical change per commit. PRs should include a brief summary and the commands used to verify the change.
 
 ## Git Sync Guard
-Before making edits, run `rtk git fetch origin` and `rtk git status --short --branch`. If the current branch is behind `origin/main` and the worktree is clean, run `rtk git pull --rebase origin main` before editing. If the worktree is dirty, do not auto-pull; report the behind/dirty state and ask whether to commit, stash, or defer the sync.
+
+Before making edits, run `rtk git fetch origin` and `rtk git status --short --branch`. If the current branch is behind `origin/main` and the worktree is clean, run `rtk git pull --rebase origin main` before editing. If the worktree is dirty, do not auto-pull; report the behind/dirty state.
 
 Before pushing, run `rtk git fetch origin` and `rtk git status --short --branch`. Do not push while behind `origin/main`; rebase first when the worktree is clean, or stop and report the required sync when local changes are present.
 
 ## Security & Configuration Tips
-Copy `.env.example` to `.env` locally and do not commit secrets. Use `KIS_IS_MOCK=true` unless you are explicitly testing live trading. Treat `auto_invest.db`, `data/`, and token cache files as local artifacts, not source files.
+
+Copy `.env.example` to `.env` locally and do not commit secrets. Active workflows use read-only market-data access; never invoke KIS order endpoints. Treat `auto_invest.db`, `data/`, `.local/`, token caches, and dependency caches as local artifacts, not source files. Raw and Parquet forecast artifacts belong in GitHub Actions Artifacts or Releases, not Git.

@@ -17,7 +17,7 @@ GENERATED_MD_PREFIXES = (
     "ai 주가 변동 원인 분석/00_기업별분석/",
     "ai 주가 변동 원인 분석/10_일일요약/",
 )
-INSTRUCTION_MD = {"AGENTS.md", "CLAUDE.md", "GEMINI.md"}
+INSTRUCTION_MD = {"AGENTS.md"}
 NOISY_TERMS = {
     "from",
     "import",
