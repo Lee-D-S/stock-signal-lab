@@ -1,0 +1,41 @@
+name: numeric forecast shadow full
+
+on:
+  workflow_dispatch:
+    inputs:
+      input_path:
+        description: "Optional checked-out Parquet/CSV raw numeric snapshot"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  shadow:
+    name: collect-to-predict numeric shadow
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install -r requirements.txt
+      - name: Run full numeric shadow pipeline
+        shell: bash
+        env:
+          INPUT_PATH: ${{ inputs.input_path }}
+        run: |
+          if [ -n "$INPUT_PATH" ]; then
+            python -m forecast.shadow --input "$INPUT_PATH" --artifact-root forecast_artifacts
+          else
+            python -m forecast.shadow --artifact-root forecast_artifacts
+          fi
+      - name: Upload shadow bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-shadow-full-${{ github.run_id }}
+          path: forecast_artifacts/

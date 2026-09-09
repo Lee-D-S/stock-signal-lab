@@ -1,0 +1,54 @@
+name: numeric forecast daily
+
+on:
+  schedule:
+    - cron: "30 7 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      input_path:
+        description: "Optional checked-out Parquet/CSV numeric snapshot"
+        required: false
+        default: ""
+      dry_run:
+        description: "Use deterministic fixture instead of external data"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forecast-daily-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  daily:
+    name: collect features labels and predictions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run daily numeric pipeline
+        shell: bash
+        env:
+          INPUT_PATH: ${{ inputs.input_path }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          if [ "$DRY_RUN" = "true" ]; then
+            python -m forecast.shadow --artifact-root forecast_artifacts
+          elif [ -n "$INPUT_PATH" ] && [ -f "$INPUT_PATH" ]; then
+            python -m forecast.shadow --input "$INPUT_PATH" --artifact-root forecast_artifacts
+          else
+            echo "A point-in-time numeric snapshot is required when dry_run=false."
+            exit 2
+          fi
+      - name: Upload daily forecast artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-daily-${{ github.run_id }}
+          path: forecast_artifacts/
