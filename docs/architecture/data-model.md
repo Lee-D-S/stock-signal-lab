@@ -26,7 +26,7 @@ KIS/DART/기업 보고서
   → 10_일일요약/
 ```
 
-`scripts/analysis_paths.py`가 이 경로를 중앙 관리하며, `sync_analysis_paths.py --check`는 2026-09-09 기준 통과했다.
+`legacy/research/scripts/analysis_paths.py`가 이 경로를 중앙 관리하며, `sync_analysis_paths.py --check`는 2026-09-09 기준 통과했다.
 
 ## 백테스트 데이터 모델
 

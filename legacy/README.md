@@ -8,6 +8,7 @@
 - `text_llm/`: 과거 Agent, guardrail, Gemini/LLM 및 텍스트 분석 코드
 - `research/scripts/`: 과거 백테스트, discovery, scoring, screener, 관찰·보고서 생성 스크립트
 - `research/diagnostics/`: 과거 실시간 종목·포트폴리오 검증용 일회성 스크립트
+- `research_data/`: 과거 리서치 산출물·보고서·이벤트·전략·관찰 데이터
 - `docs/`: 과거 자동매매·Agent·스크리너·캔들 분석 문서
 - `plans/`: 과거 자동매매·Agent·위원회·규칙형 연구 계획
 - `workflows/`: 비활성화된 과거 GitHub Actions

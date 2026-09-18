@@ -65,7 +65,7 @@ v1 현재 구현에서는 ResearchFile이 파일 검색과 품질 검사를 직�
 기본 리서치 루트:
 
 ```text
-ai 주가 변동 원인 분석/00_기업별분석/
+legacy/research_data/ai 주가 변동 원인 분석/00_기업별분석/
 ```
 
 현재 구조는 기업별 폴더 아래에 분기별 Markdown과 이벤트 JSONL이 쌓이는 형태다.

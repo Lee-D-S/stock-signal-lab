@@ -22,7 +22,7 @@
 | `scripts/scoring/` | 조건 점수·임계값·가중치 | `scorer.py`, `threshold.py`, `weight_tuner.py` |
 | `scripts/backtest/` | OHLCV 기반 백테스트 엔진 | `engine.py`, `portfolio.py`, `metrics.py` |
 | `scripts/` 루트 | 리서치 파이프라인과 64개 CLI 진입점의 대부분 | `run_signal_research_pipeline.py` 등 |
-| `ai 주가 변동 원인 분석/` | 기업 보고서, 이벤트, 패턴, 전략, 관찰 산출물 | `00_기업별분석`~`10_일일요약` |
+| `legacy/research_data/ai 주가 변동 원인 분석/` | 기업 보고서, 이벤트, 패턴, 전략, 관찰 산출물 | `00_기업별분석`~`10_일일요약` |
 | `.github/workflows/` | 원격 오전·일일 자동화 | `daily_auto.yml` |
 
 ## 운영 애플리케이션 의존 흐름
@@ -87,5 +87,5 @@ Trailmark와 AST 스캔에서 146개 Python 파일을 모두 발견했다. `__in
 - `.token_cache.json`, `.token_cache_real.json`: KIS OAuth 토큰 캐시
 - `auto_invest.db`: SQLite 운영 상태
 - `data/`: OHLCV/DART 캐시, 포트폴리오 입력·snapshot, Agent 실행 결과
-- `ai 주가 변동 원인 분석/`: 대규모 연구 문서와 CSV/JSONL 산출물
+- `legacy/research_data/ai 주가 변동 원인 분석/`: 대규모 연구 문서와 CSV/JSONL 산출물
 

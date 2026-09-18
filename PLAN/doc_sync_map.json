@@ -24,9 +24,9 @@
     {
       "id": "historical_analysis_paths",
       "patterns": [
-        "scripts/analysis_paths.py",
-        "scripts/sync_analysis_paths.py",
-        "ai 주가 변동 원인 분석/**"
+        "legacy/research/scripts/analysis_paths.py",
+        "legacy/research/scripts/sync_analysis_paths.py",
+        "legacy/research_data/ai 주가 변동 원인 분석/**"
       ],
       "docs": [
         "AGENTS.md",

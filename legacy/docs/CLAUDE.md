@@ -212,14 +212,14 @@ python scripts/run_asset_allocation_backtest.py --weights 069500=0.6,360750=0.4
 - `stop_loss_pct` — 손절 기준 수익률 (default: -0.05, 즉 -5%)
 - `take_profit_pct` — 익절 기준 수익률 (default: 0.10, 즉 +10%)
 
-## 주가 변동 원인 분석 프로젝트 (`ai 주가 변동 원인 분석/`)
+## 주가 변동 원인 분석 프로젝트 (`legacy/research_data/ai 주가 변동 원인 분석/`)
 
 개별 종목의 주가 변동 원인을 분기별로 분석해 반복 패턴을 찾고, 실전 매매 시그널로 연결하는 리서치 프로젝트. 자동매매 시스템과는 별개로 동작한다. 전체 현황은 `프로젝트_현황_총정리.md` 참고.
 
 ### 디렉토리 구조
 
 ```
-ai 주가 변동 원인 분석/
+legacy/research_data/ai 주가 변동 원인 분석/
   00_기업별분석/   # 종목별 분기 보고서 + events.jsonl
   01_기획/        # 종합기획.md, 전략세트 정리
   02_기준/        # 원인후보 분석기준.md

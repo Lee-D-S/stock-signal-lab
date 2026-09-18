@@ -8,7 +8,7 @@ The system includes:
 - **Strategy Layer**: Implements specific trading logics (e.g., MA Cross, News Sentiment analysis via Gemini AI). Strategies are registered in `scheduler/runner.py`.
 - **Scheduler**: Automates trading ticks during market hours (09:00–15:30 KST) and runs nightly maintenance tasks (Daily Summary, Sector Validation).
 - **Dashboard**: A FastAPI-based web interface for monitoring positions, trades, and strategy status.
-- **Research Workspace**: An extensive suite of scripts for screening, backtesting, and a specialized "Stock Price Cause Analysis" pipeline (`ai 주가 변동 원인 분석/`).
+- **Research Workspace**: An extensive suite of scripts for screening, backtesting, and a specialized "Stock Price Cause Analysis" pipeline (`legacy/research_data/ai 주가 변동 원인 분석/`).
 
 ### Technologies
 - **Language**: Python 3.10+ (Async-first)
@@ -65,7 +65,7 @@ The system includes:
 - `scheduler/`: `APScheduler` job definitions and runner.
 - `dashboard/`: FastAPI routers and application for the monitoring UI.
 - `scripts/`: Extensive library of research, screening, and backtesting scripts.
-- `ai 주가 변동 원인 분석/`: Dedicated research folder for quarterly analysis and pattern discovery.
+- `legacy/research_data/ai 주가 변동 원인 분석/`: Dedicated research folder for quarterly analysis and pattern discovery.
 - `notifier/`: Telegram bot integration for real-time alerts.
 
 ---
@@ -93,7 +93,7 @@ The system includes:
     4.  **Pattern Analysis**: Identify recurring patterns (`collect_event_patterns.py`).
     5.  **Backtesting**: Validate hypotheses (`realistic_backtest_hypotheses.py`).
     6.  **Observation**: Track daily signals in `08_관찰기록` for performance review.
-- When modifying analysis paths, run `python scripts/sync_analysis_paths.py` to keep path definitions synchronized.
+- When modifying analysis paths, run `python legacy/research/scripts/sync_analysis_paths.py` to keep path definitions synchronized.
 
 ---
 

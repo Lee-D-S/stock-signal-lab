@@ -340,7 +340,7 @@ data/integrated_discovery/
 검토 결과:
 
 ```text
-ai 주가 변동 원인 분석/09_조건스냅샷/YYYY-MM-DD/
+legacy/research_data/ai 주가 변동 원인 분석/09_조건스냅샷/YYYY-MM-DD/
   통합조건_탐색요약.md
   통합조건_후보.csv
   통합조건_검증상세.csv

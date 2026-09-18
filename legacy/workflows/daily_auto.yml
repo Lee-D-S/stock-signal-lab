@@ -53,7 +53,7 @@ jobs:
           python-version: "3.12"
 
       - name: 텔레그램 테스트 메시지 전송
-        run: python -u scripts/send_github_action_telegram_alert.py --status test --job-name "텔레그램 알림 테스트"
+        run: python -u legacy/research/scripts/send_github_action_telegram_alert.py --status test --job-name "텔레그램 알림 테스트"
 
   morning-dart-check:
     name: 오전 DART 공시 확인 (08:50 KST)
@@ -97,14 +97,14 @@ jobs:
 
       - name: DART 공시 확인 실행
         if: steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/auto_morning_dart_check.py
+        run: python -u legacy/research/scripts/auto_morning_dart_check.py
 
       - name: 결과 커밋 및 푸시
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "ai 주가 변동 원인 분석/"
+          git add "legacy/research_data/ai 주가 변동 원인 분석/"
           if git diff --cached --quiet; then
             echo "변경 없음"
             exit 0
@@ -124,11 +124,11 @@ jobs:
 
       - name: 성공 텔레그램 알림
         if: success() && steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
+        run: python -u legacy/research/scripts/send_github_action_telegram_alert.py --status success --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
 
       - name: 실패 텔레그램 알림
         if: failure() && steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
+        run: python -u legacy/research/scripts/send_github_action_telegram_alert.py --status failure --job-name "오전 DART 공시 확인 (08:50 KST)" --soft-fail
 
   daily-research-pipeline:
     name: 일일 후보 탐지 + 관찰 추적 (16:10 KST)
@@ -182,40 +182,40 @@ jobs:
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python -u scripts/run_signal_research_pipeline.py --mode daily --date "${{ github.event.inputs.date }}" --refresh-universe --recheck
+            python -u legacy/research/scripts/run_signal_research_pipeline.py --mode daily --date "${{ github.event.inputs.date }}" --refresh-universe --recheck
           else
-            python -u scripts/run_signal_research_pipeline.py --mode daily --refresh-universe --recheck
+            python -u legacy/research/scripts/run_signal_research_pipeline.py --mode daily --refresh-universe --recheck
           fi
 
       - name: 신규 조건 별도 관찰
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python -u scripts/run_new_condition_observation.py --date "${{ github.event.inputs.date }}" --delay 0.35
+            python -u legacy/research/scripts/run_new_condition_observation.py --date "${{ github.event.inputs.date }}" --delay 0.35
           else
-            python -u scripts/run_new_condition_observation.py --delay 0.35
+            python -u legacy/research/scripts/run_new_condition_observation.py --delay 0.35
           fi
 
       - name: 관찰 로그 D+ 추적 업데이트
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python -u scripts/run_observation_tracking_update.py --as-of "${{ github.event.inputs.date }}"
+            python -u legacy/research/scripts/run_observation_tracking_update.py --as-of "${{ github.event.inputs.date }}"
           else
-            python -u scripts/run_observation_tracking_update.py
+            python -u legacy/research/scripts/run_observation_tracking_update.py
           fi
 
       - name: 관찰 성과 요약 생성
         if: steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/run_observation_performance_summary.py
+        run: python -u legacy/research/scripts/run_observation_performance_summary.py
 
       - name: 일일 운영 요약 생성
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           if [ -n "${{ github.event.inputs.date }}" ]; then
-            python -u scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}" --telegram
+            python -u legacy/research/scripts/run_daily_research_summary.py --date "${{ github.event.inputs.date }}" --telegram
           else
-            python -u scripts/run_daily_research_summary.py --telegram
+            python -u legacy/research/scripts/run_daily_research_summary.py --telegram
           fi
 
       - name: 결과 커밋 및 푸시
@@ -223,7 +223,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "ai 주가 변동 원인 분석/"
+          git add "legacy/research_data/ai 주가 변동 원인 분석/"
           if git diff --cached --quiet; then
             echo "변경 없음"
             exit 0
@@ -243,8 +243,8 @@ jobs:
 
       - name: 성공 텔레그램 알림
         if: success() && steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/send_github_action_telegram_alert.py --status success --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
+        run: python -u legacy/research/scripts/send_github_action_telegram_alert.py --status success --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
 
       - name: 실패 텔레그램 알림
         if: failure() && steps.market-day.outputs.should_run == 'true'
-        run: python -u scripts/send_github_action_telegram_alert.py --status failure --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail
+        run: python -u legacy/research/scripts/send_github_action_telegram_alert.py --status failure --job-name "일일 후보 탐지 + 관찰 추적 (16:10 KST)" --soft-fail

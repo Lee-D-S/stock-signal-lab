@@ -19,7 +19,7 @@ Pipeline은 매수 종목을 자동으로 확정하는 도구가 아니라, 투�
 포트폴리오 스냅샷이 있는 상태에서 삼성전자를 100,000원 검토 금액으로 넣는 예시다.
 
 ```powershell
-rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "ai 주가 변동 원인 분석\00_기업별분석"
+rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "legacy\research_data\ai 주가 변동 원인 분석\00_기업별분석"
 ```
 
 날짜를 생략하면 오늘 날짜가 투자 판단 기준일로 들어간다.
@@ -27,7 +27,7 @@ rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:10
 기준일을 명시하고 싶으면 `--as-of-date`를 쓴다.
 
 ```powershell
-rtk python scripts/run_free_agent_pipeline.py --as-of-date 2026-05-11 --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "ai 주가 변동 원인 분석\00_기업별분석"
+rtk python scripts/run_free_agent_pipeline.py --as-of-date 2026-05-11 --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "legacy\research_data\ai 주가 변동 원인 분석\00_기업별분석"
 ```
 
 주의할 점:
@@ -566,19 +566,19 @@ rtk python scripts/run_agent_committee.py --discover-limit 10 --test-portfolio b
 수동 테스트:
 
 ```powershell
-rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "ai 주가 변동 원인 분석\00_기업별분석"
+rtk python scripts/run_free_agent_pipeline.py --candidate 005930:삼성전자:100000 --portfolio-json data\portfolio_snapshot.json --research-root "legacy\research_data\ai 주가 변동 원인 분석\00_기업별분석"
 ```
 
 전략 신호 기반 실행:
 
 ```powershell
-rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 10 --portfolio-json data\portfolio_snapshot.json --research-root "ai 주가 변동 원인 분석\00_기업별분석"
+rtk python scripts/run_free_agent_pipeline.py --discover --discover-limit 10 --portfolio-json data\portfolio_snapshot.json --research-root "legacy\research_data\ai 주가 변동 원인 분석\00_기업별분석"
 ```
 
 기준일 명시 실행:
 
 ```powershell
-rtk python scripts/run_free_agent_pipeline.py --as-of-date 2026-05-11 --discover --discover-limit 10 --portfolio-json data\portfolio_snapshot.json --research-root "ai 주가 변동 원인 분석\00_기업별분석"
+rtk python scripts/run_free_agent_pipeline.py --as-of-date 2026-05-11 --discover --discover-limit 10 --portfolio-json data\portfolio_snapshot.json --research-root "legacy\research_data\ai 주가 변동 원인 분석\00_기업별분석"
 ```
 
 실운영에서는 보통 `--as-of-date`를 생략해 오늘 날짜를 쓰는 편이 안전하다.

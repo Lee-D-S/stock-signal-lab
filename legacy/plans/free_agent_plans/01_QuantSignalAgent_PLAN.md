@@ -40,7 +40,7 @@
 자동 발견 후보는 `discover_candidates_from_csv()`가 다음 폴더를 탐색해 만든다.
 
 ```text
-ai 주가 변동 원인 분석/07_전략신호/
+legacy/research_data/ai 주가 변동 원인 분석/07_전략신호/
 ```
 
 ### 2.2 주요 CSV 입력

@@ -14,8 +14,8 @@ ROOT = Path(__file__).resolve().parent.parent
 MAP_PATH = ROOT / "PLAN" / "doc_sync_map.json"
 TOKEN_RE = re.compile(r"[A-Za-z0-9_가-힣]{2,}")
 GENERATED_MD_PREFIXES = (
-    "ai 주가 변동 원인 분석/00_기업별분석/",
-    "ai 주가 변동 원인 분석/10_일일요약/",
+    "legacy/research_data/ai 주가 변동 원인 분석/00_기업별분석/",
+    "legacy/research_data/ai 주가 변동 원인 분석/10_일일요약/",
 )
 INSTRUCTION_MD = {"AGENTS.md"}
 NOISY_TERMS = {

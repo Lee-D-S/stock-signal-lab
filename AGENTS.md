@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`forecast/` is the active numeric forecasting package. It collects read-only KIS/DART data, builds point-in-time numeric features, creates T+1/T+5/T+20 labels, trains pooled scikit-learn candidates, evaluates them with walk-forward splits, and writes prediction artifacts. `core/api/` contains the read-only KIS client used by the forecast universe collector. Historical auto-trading, LLM, and research code is preserved under `legacy/` and must not be imported by active code. `ai 주가 변동 원인 분석/` and `data/` are preserved as historical/raw artifacts; they are not direct model inputs.
+`forecast/` is the active numeric forecasting package. It collects read-only KIS/DART data, builds point-in-time numeric features, creates T+1/T+5/T+20 labels, trains pooled scikit-learn candidates, evaluates them with walk-forward splits, and writes prediction artifacts. `core/api/` contains the read-only KIS client used by the forecast universe collector. Historical auto-trading, LLM, and research code is preserved under `legacy/` and must not be imported by active code. `legacy/research_data/ai 주가 변동 원인 분석/` and `data/` are preserved as historical/raw artifacts; they are not direct model inputs.
 
 ## Build, Test, and Development Commands
 
@@ -13,13 +13,13 @@ Always prefix commands with `rtk`.
 - `rtk python -m forecast.online_auto`: collect read-only KIS/DART data when credentials are available.
 - `rtk python -m forecast.weekly`: train and evaluate weekly candidate models from a labelled Parquet input.
 - `rtk python scripts/check_docs_sync.py --all --scan-md`: review documentation impact.
-- `rtk python scripts/sync_analysis_paths.py --check`: verify preserved historical analysis paths.
+- `rtk python legacy/research/scripts/sync_analysis_paths.py --check`: verify preserved historical analysis paths.
 
 ## Coding Style & Naming Conventions
 
 Use standard Python style: 4-space indentation, `snake_case` for functions/modules, `PascalCase` for classes, and type hints where practical. Keep active changes inside `forecast/`, `core/api/`, `scripts/`, or the active workflows. Do not import from `legacy/`.
 
-When adding or removing stable historical analysis documents under `ai 주가 변동 원인 분석/`, sync `scripts/analysis_paths.py` with `rtk python scripts/sync_analysis_paths.py`. Do not add historical text, news, Gemini output, Telegram output, or broker/order fields to active `forecast/` schemas.
+When adding or removing stable historical analysis documents under `legacy/research_data/ai 주가 변동 원인 분석/`, sync `legacy/research/scripts/analysis_paths.py` with `rtk python legacy/research/scripts/sync_analysis_paths.py`. Do not add historical text, news, Gemini output, Telegram output, or broker/order fields to active `forecast/` schemas.
 
 ## Testing Guidelines
 

@@ -36,7 +36,7 @@
 
 ### 2. 주가 변동 원인 리서치 플랫폼
 
-`ai 주가 변동 원인 분석/`은 본 앱과 별도로 동작하는 파일 기반 연구 공간이다.
+`legacy/research_data/ai 주가 변동 원인 분석/`은 본 앱과 별도로 동작하는 파일 기반 연구 공간이다.
 
 ```text
 거래대금 상위 유니버스
@@ -84,7 +84,7 @@ QuantSignalAgent
 
 - `core/`, `models/`, `scheduler/`, `strategies/`, `dashboard/`, `notifier/`: 운영 자동매매 런타임
 - `scripts/`: 리서치·스크리닝·백테스트·관찰·보고서 생성 CLI
-- `ai 주가 변동 원인 분석/`: 대규모 연구 산출물과 문서 저장소
+- `legacy/research_data/ai 주가 변동 원인 분석/`: 대규모 연구 산출물과 문서 저장소
 - `data/`: 캐시, 테스트 포트폴리오, 리서치 중간 산출물
 - `.github/workflows/`: 원격 일일 자동화와 결과 commit/push
 
