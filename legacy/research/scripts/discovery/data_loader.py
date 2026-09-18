@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 
 from core.api.client import get_marketdata
 
-CACHE_DIR = ROOT / "data" / "ohlcv_cache"
+CACHE_DIR = ROOT / "legacy" / "data" / "ohlcv_cache"
 _CHUNK_DAYS = 380
 _API_DELAY  = 0.35
 

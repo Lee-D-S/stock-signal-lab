@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`forecast/` is the active numeric forecasting package. It collects read-only KIS/DART data, builds point-in-time numeric features, creates T+1/T+5/T+20 labels, trains pooled scikit-learn candidates, evaluates them with walk-forward splits, and writes prediction artifacts. `core/api/` contains the read-only KIS client used by the forecast universe collector. Historical auto-trading, LLM, and research code is preserved under `legacy/` and must not be imported by active code. `legacy/research_data/ai 주가 변동 원인 분석/` and `data/` are preserved as historical/raw artifacts; they are not direct model inputs.
+`forecast/` is the active numeric forecasting package. It collects read-only KIS/DART data, builds point-in-time numeric features, creates T+1/T+5/T+20 labels, trains pooled scikit-learn candidates, evaluates them with walk-forward splits, and writes prediction artifacts. `core/api/` contains the read-only KIS client used by the forecast universe collector. Historical auto-trading, LLM, and research code is preserved under `legacy/` and must not be imported by active code. `legacy/research_data/` and `legacy/data/` preserve historical/raw artifacts; `data/forecast/` contains active generated forecast artifacts. Legacy artifacts are not direct model inputs.
 
 ## Build, Test, and Development Commands
 
@@ -37,4 +37,4 @@ Before pushing, run `rtk git fetch origin` and `rtk git status --short --branch`
 
 ## Security & Configuration Tips
 
-Copy `.env.example` to `.env` locally and do not commit secrets. Active workflows use read-only market-data access; never invoke KIS order endpoints. Treat `auto_invest.db`, `data/`, `.local/`, token caches, and dependency caches as local artifacts, not source files. Raw and Parquet forecast artifacts belong in GitHub Actions Artifacts or Releases, not Git.
+Copy `.env.example` to `.env` locally and do not commit secrets. Active workflows use read-only market-data access; never invoke KIS order endpoints. Treat `auto_invest.db`, `data/`, `legacy/data/`, `.local/`, token caches, and dependency caches as local artifacts, not source files. Raw and Parquet forecast artifacts belong in GitHub Actions Artifacts or Releases, not Git.

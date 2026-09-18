@@ -3,7 +3,7 @@
 다연도 DART 재무 데이터를 수집하고, point-in-time 조인으로
 records DataFrame에 펀더멘털 컬럼을 추가한다.
 
-캐시: data/dart_fundamental_cache/fund_{year}.parquet
+캐시: legacy/data/dart_fundamental_cache/fund_{year}.parquet
 
 Look-ahead bias 방지 원칙
     FY(Y) 사업보고서는 Y+1년 4월 1일 이후 records에만 조인한다.
@@ -37,7 +37,7 @@ try:
 except ImportError:
     _aiohttp = None  # type: ignore
 
-FUND_CACHE_DIR = ROOT / "data" / "dart_fundamental_cache"
+FUND_CACHE_DIR = ROOT / "legacy" / "data" / "dart_fundamental_cache"
 _REPRT_CODE    = "11011"  # 사업보고서
 _BATCH_SIZE    = 100
 _API_DELAY     = 0.35

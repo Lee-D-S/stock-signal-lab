@@ -176,7 +176,7 @@ jobs:
         if: steps.market-day.outputs.should_run == 'true'
         run: |
           git rev-parse --short HEAD
-          ls -l data/dart_corp_codes.json data/dart_corp_info.json || true
+          ls -l legacy/legacy/data/dart_corp_codes.json legacy/data/dart_corp_info.json || true
 
       - name: 일별 후보 탐지 및 관찰 로그 추가
         if: steps.market-day.outputs.should_run == 'true'

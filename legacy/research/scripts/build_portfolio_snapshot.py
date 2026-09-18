@@ -21,8 +21,8 @@ from core.market_data import get_current_price  # noqa: E402
 from screener_lib.data import get_kis_valuation, get_ohlcv  # noqa: E402
 
 
-DEFAULT_INPUT = ROOT / "data" / "manual_portfolio_input.json"
-DEFAULT_OUTPUT = ROOT / "data" / "portfolios" / "my_real_portfolio.json"
+DEFAULT_INPUT = ROOT / "legacy" / "data" / "manual_portfolio_input.json"
+DEFAULT_OUTPUT = ROOT / "legacy" / "data" / "portfolios" / "my_real_portfolio.json"
 
 KNOWN_TICKERS = {
     "한화오션": "042660",
@@ -41,7 +41,7 @@ DEFAULT_SECTORS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="수동 입력 보유내역과 KIS 시장 데이터를 바탕으로 data/portfolios/my_real_portfolio.json을 생성합니다."
+        description="수동 입력 보유내역과 KIS 시장 데이터를 바탕으로 legacy/data/portfolios/my_real_portfolio.json을 생성합니다."
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)

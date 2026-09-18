@@ -10,7 +10,7 @@
     - 정확한 상장/폐지일 대신 분기 단위 근사치 사용
 
 캐시:
-    data/dart_universe_cache/{start}_{end}.json 에 조회 결과 저장
+    legacy/data/dart_universe_cache/{start}_{end}.json 에 조회 결과 저장
     → 동일 기간 재실행 시 API 재호출 없음
 """
 
@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 DART_API_KEY  = os.getenv("DART_API_KEY", "")
 DART_BASE_URL = "https://opendart.fss.or.kr/api"
-CACHE_DIR     = ROOT / "data" / "dart_universe_cache"
+CACHE_DIR     = ROOT / "legacy" / "data" / "dart_universe_cache"
 
 
 def _yyyymmdd(date_str: str) -> str:

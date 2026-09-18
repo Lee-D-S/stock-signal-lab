@@ -39,7 +39,7 @@ except Exception:  # pragma: no cover - optional dependency
 from analysis_paths import COMPANY_DIR  # noqa: E402
 
 OUT_DIR = COMPANY_DIR
-GEMINI_CACHE_PATH = ROOT / "data" / "gemini_external_cache.json"
+GEMINI_CACHE_PATH = ROOT / "legacy" / "data" / "gemini_external_cache.json"
 GEMINI_SEARCH_MODEL = "gemini-2.5-flash"
 GEMINI_CACHE_VERSION = "external-v2"
 PERIODS = [

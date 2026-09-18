@@ -72,7 +72,7 @@ def build_markdown(summary: pd.DataFrame, trades: pd.DataFrame) -> str:
         "- 보유 기간: 5/10/20거래일",
         "- 거래비용: 편도 15bp",
         "- 동일 후보/동일 종목 중복 신호는 제거",
-        "- 기존 `data/ohlcv_cache`에 있는 일봉만 사용",
+        "- 기존 `legacy/data/ohlcv_cache`에 있는 일봉만 사용",
         "",
         "## 후보별 최고 조합",
         "",

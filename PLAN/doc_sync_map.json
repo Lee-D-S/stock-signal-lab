@@ -2,7 +2,7 @@
   "default_docs": [
     "AGENTS.md",
     "forecast/README.md",
-    "docs/architecture/README.md"
+    "forecast/experiment/README.md"
   ],
   "rules": [
     {
@@ -16,8 +16,7 @@
       "docs": [
         "AGENTS.md",
         "forecast/README.md",
-        "docs/architecture/runtime-flows.md",
-        "docs/architecture/data-model.md"
+        "forecast/experiment/README.md"
       ],
       "reason": "Forecast data contracts, schedules, dependencies, or runtime behavior changed."
     },
@@ -30,7 +29,8 @@
       ],
       "docs": [
         "AGENTS.md",
-        "docs/architecture/README.md"
+        "legacy/README.md",
+        "legacy/research/README.md"
       ],
       "reason": "Preserved historical analysis paths or their maintenance tooling changed."
     },

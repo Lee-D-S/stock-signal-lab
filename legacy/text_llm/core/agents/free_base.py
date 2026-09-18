@@ -48,7 +48,7 @@ class AgentContext:
     run_id: str = ""
     portfolio: list[PortfolioPosition] = field(default_factory=list)
     cash: float = 0.0
-    output_dir: Path = Path("data/agent_runs")
+    output_dir: Path = Path("legacy/data/agent_runs")
     research_root: Path = Path("legacy/research_data/ai 주가 변동 원인 분석/00_기업별분석")
     config: dict[str, Any] = field(default_factory=dict)
 

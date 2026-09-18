@@ -18,7 +18,7 @@ from core.api.client import get_marketdata  # noqa: E402
 from .data_loader import _API_DELAY  # noqa: E402
 
 
-CACHE_DIR = ROOT / "data" / "investor_flow_cache"
+CACHE_DIR = ROOT / "legacy" / "data" / "investor_flow_cache"
 _MAX_CHUNKS = 80
 logger = logging.getLogger(__name__)
 _PARQUET_ENGINE_AVAILABLE: bool | None = None

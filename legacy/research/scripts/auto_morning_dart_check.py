@@ -43,7 +43,7 @@ from analysis_paths import (  # noqa: E402
 
 DART_API_KEY = settings.dart_api_key
 DART_BASE_URL = "https://opendart.fss.or.kr/api"
-CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
+CORP_CODE_CACHE = ROOT / "legacy" / "data" / "dart_corp_codes.json"
 OBS_UTF8_CSV = OBS_COMMON_ERROR_CSV
 OBS_CP949_CSV = OBS_COMMON_CSV
 OBS_MD = OBS_COMMON_MD
@@ -847,7 +847,7 @@ def append_markdown_notes(
 
 
 def load_corp_codes() -> dict[str, str]:
-    """data/dart_corp_codes.json → {stock_code: corp_code}"""
+    """legacy/data/dart_corp_codes.json → {stock_code: corp_code}"""
     if not CORP_CODE_CACHE.exists():
         return {}
     with open(CORP_CODE_CACHE, encoding="utf-8") as f:

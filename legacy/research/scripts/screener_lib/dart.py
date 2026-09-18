@@ -3,7 +3,7 @@
 환경변수:
     DART_API_KEY: DART OpenAPI 인증키 (https://opendart.fss.or.kr 에서 발급)
 
-종목코드 → DART 고유번호 매핑은 data/dart_corp_codes.json 에 캐시.
+종목코드 → DART 고유번호 매핑은 legacy/data/dart_corp_codes.json 에 캐시.
 캐시가 30일 이상 지나면 자동 갱신.
 """
 
@@ -22,8 +22,8 @@ from config import settings
 DART_API_KEY  = settings.dart_api_key
 DART_BASE_URL = "https://opendart.fss.or.kr/api"
 ROOT = Path(__file__).resolve().parents[2]
-CORP_CODE_CACHE = ROOT / "data" / "dart_corp_codes.json"
-CORP_INFO_CACHE = ROOT / "data" / "dart_corp_info.json"
+CORP_CODE_CACHE = ROOT / "legacy" / "data" / "dart_corp_codes.json"
+CORP_INFO_CACHE = ROOT / "legacy" / "data" / "dart_corp_info.json"
 CACHE_TTL_DAYS  = 30
 DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(total=120, sock_connect=30, sock_read=120)
 DOWNLOAD_RETRIES = 3

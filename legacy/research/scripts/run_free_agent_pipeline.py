@@ -19,10 +19,10 @@ from core.agents.free_pipeline import (  # noqa: E402
 from scripts.build_portfolio_snapshot import build_portfolio_snapshot  # noqa: E402
 
 
-DEFAULT_RESEARCH_ROOT = ROOT / "ai 주가 변동 원인 분석" / "00_기업별분석"
-DEFAULT_DISCOVERY_ROOT = ROOT / "ai 주가 변동 원인 분석" / "07_전략신호"
-DEFAULT_OUTPUT_DIR = ROOT / "data" / "agent_runs"
-PORTFOLIO_DIR = ROOT / "data" / "portfolios"
+DEFAULT_RESEARCH_ROOT = ROOT / "legacy" / "research_data" / "ai 주가 변동 원인 분석" / "00_기업별분석"
+DEFAULT_DISCOVERY_ROOT = ROOT / "legacy" / "research_data" / "ai 주가 변동 원인 분석" / "07_전략신호"
+DEFAULT_OUTPUT_DIR = ROOT / "legacy" / "data" / "agent_runs"
+PORTFOLIO_DIR = ROOT / "legacy" / "data" / "portfolios"
 TEST_PORTFOLIOS = {
     "balanced": PORTFOLIO_DIR / "test_inputs" / "balanced.json",
     "cash-heavy": PORTFOLIO_DIR / "test_inputs" / "cash_heavy.json",

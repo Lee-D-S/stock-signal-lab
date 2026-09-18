@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT))
 from core.api.client import get_marketdata  # noqa: E402
 
 
-PORTFOLIO_DIR = ROOT / "data" / "portfolios"
+PORTFOLIO_DIR = ROOT / "legacy" / "data" / "portfolios"
 TEST_INPUT_DIR = PORTFOLIO_DIR / "test_inputs"
 REPORT_DIR = PORTFOLIO_DIR / "validation_reports"
 PORTFOLIO_PRESETS = {

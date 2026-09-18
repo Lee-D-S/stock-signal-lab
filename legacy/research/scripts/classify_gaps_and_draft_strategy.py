@@ -15,7 +15,7 @@ from analysis_paths import (  # noqa: E402
     STRATEGY_PLAN_DIR,
 )
 
-CACHE_DIR = ROOT / "data" / "ohlcv_cache"
+CACHE_DIR = ROOT / "legacy" / "data" / "ohlcv_cache"
 
 TRADES_CSV = BACKTEST_DIR / "가설_실전_백테스트_거래.csv"
 ALL_CONFIGS_CSV = BACKTEST_DIR / "가설_실전_백테스트_전체_설정.csv"

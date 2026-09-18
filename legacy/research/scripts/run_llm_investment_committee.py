@@ -19,7 +19,7 @@ from core.llm.committee import (  # noqa: E402
 from core.llm.local_client import LocalLLMConfig  # noqa: E402
 
 
-DEFAULT_OUTPUT_DIR = ROOT / "data" / "agent_runs"
+DEFAULT_OUTPUT_DIR = ROOT / "legacy" / "data" / "agent_runs"
 
 
 def parse_args() -> argparse.Namespace:

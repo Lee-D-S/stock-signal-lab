@@ -10,7 +10,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 from analysis_paths import BACKTEST_DIR, REVIEW_DIR  # noqa: E402
 
-CACHE_DIR = ROOT / "data" / "ohlcv_cache"
+CACHE_DIR = ROOT / "legacy" / "data" / "ohlcv_cache"
 
 REVIEW_CSV = REVIEW_DIR / "가설_이벤트_검토.csv"
 SUMMARY_CSV = REVIEW_DIR / "가설_이벤트_요약.csv"

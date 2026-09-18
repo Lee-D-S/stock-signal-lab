@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 from analysis_paths import RAW_DIR, SNAPSHOT_DIR  # noqa: E402
 
 EVENTS_CSV = RAW_DIR / "이벤트.csv"
-CACHE_DIR = ROOT / "data" / "ohlcv_cache"
+CACHE_DIR = ROOT / "legacy" / "data" / "ohlcv_cache"
 
 CATEGORICAL_FEATURES = [
     "market_regime",
