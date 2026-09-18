@@ -1,0 +1,18 @@
+{
+  "selection_date": "2024-12-31",
+  "market_data_asof": "2024-12-30",
+  "size": 50,
+  "min_history_days": 1250,
+  "min_avg_value_20d_krw": 1000000000,
+  "source": "FinanceData/marcap KRX-derived daily market-cap dataset",
+  "source_files": [
+    "marcap-2019.parquet",
+    "marcap-2020c.parquet",
+    "marcap-2021.parquet",
+    "marcap-2022b.parquet",
+    "marcap-2023b.parquet",
+    "marcap-2024.parquet"
+  ],
+  "candidate_count": 2697,
+  "selected_count": 50
+}
