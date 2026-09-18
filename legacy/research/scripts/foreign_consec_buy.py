@@ -1,11 +1,11 @@
 """외국인 N일 이상 연속 순매수/순매도 종목 스크리너
 
 Usage:
-    python scripts/foreign_consec_buy.py                      # 순매수 10일 이상
-    python scripts/foreign_consec_buy.py --days 20            # 순매수 20일 이상
-    python scripts/foreign_consec_buy.py --mode sell          # 순매도 10일 이상
-    python scripts/foreign_consec_buy.py --mode sell --days 15
-    python scripts/foreign_consec_buy.py --mode both --days 10 # 매수+매도 동시 출력
+    python legacy/research/scripts/foreign_consec_buy.py                      # 순매수 10일 이상
+    python legacy/research/scripts/foreign_consec_buy.py --days 20            # 순매수 20일 이상
+    python legacy/research/scripts/foreign_consec_buy.py --mode sell          # 순매도 10일 이상
+    python legacy/research/scripts/foreign_consec_buy.py --mode sell --days 15
+    python legacy/research/scripts/foreign_consec_buy.py --mode both --days 10 # 매수+매도 동시 출력
 """
 
 import argparse

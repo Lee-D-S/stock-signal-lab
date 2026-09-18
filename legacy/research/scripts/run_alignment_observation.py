@@ -1,9 +1,9 @@
 """단기/장기 이동평균선 정배열 일별 관찰 기록 및 D+ 수익률 추적.
 
 Usage:
-    python scripts/run_alignment_observation.py                        # 오늘 기준
-    python scripts/run_alignment_observation.py --pool-size 500
-    python scripts/run_alignment_observation.py --date 2026-04-30     # 과거 날짜 재실행
+    python legacy/research/scripts/run_alignment_observation.py                        # 오늘 기준
+    python legacy/research/scripts/run_alignment_observation.py --pool-size 500
+    python legacy/research/scripts/run_alignment_observation.py --date 2026-04-30     # 과거 날짜 재실행
 
 --date를 지정하면 OHLCV를 그 날짜까지만 잘라 계산한다 (과거 재현 가능).
 """

@@ -2,21 +2,21 @@
 
 Usage:
     # 기본 실행 (2020~2022, 보유 20일)
-    python scripts/run_discovery.py \\
+    python legacy/research/scripts/run_discovery.py \\
       --start 2020-01-01 --end 2022-12-31
 
     # 단기 급등(10일 +10%) 패턴, 상위 10개 지표만 출력
-    python scripts/run_discovery.py \\
+    python legacy/research/scripts/run_discovery.py \\
       --start 2020-01-01 --end 2022-12-31 \\
       --hold-days 10 --up-threshold 0.10 --top-n 10
 
     # 시가총액 상위 100개, 캐시 강제 갱신
-    python scripts/run_discovery.py \\
+    python legacy/research/scripts/run_discovery.py \\
       --start 2021-01-01 --end 2023-12-31 \\
       --to 100 --force-refresh
 
     # 샘플 저장 후 재분석 (캐시된 레코드 재사용)
-    python scripts/run_discovery.py --load-records scripts/discovery/results/records.parquet
+    python legacy/research/scripts/run_discovery.py --load-records scripts/discovery/results/records.parquet
 """
 
 import argparse

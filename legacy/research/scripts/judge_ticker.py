@@ -2,8 +2,8 @@
 """단일 종목을 저장소의 조건 로직으로 판정한다.
 
 Usage:
-    python scripts/judge_ticker.py 두산에너빌리티
-    python scripts/judge_ticker.py 034020
+    python legacy/research/scripts/judge_ticker.py 두산에너빌리티
+    python legacy/research/scripts/judge_ticker.py 034020
 """
 
 from __future__ import annotations

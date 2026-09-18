@@ -4,9 +4,9 @@
 Buy-and-Hold 대비 성과를 비교한다.
 
 Usage:
-    python scripts/run_dca_backtest.py --ticker 069500 --start 2019-01-01 --end 2024-12-31
-    python scripts/run_dca_backtest.py --ticker 360750 --start 2021-06-01 --end 2024-12-31
-    python scripts/run_dca_backtest.py --ticker 069500 360750
+    python legacy/research/scripts/run_dca_backtest.py --ticker 069500 --start 2019-01-01 --end 2024-12-31
+    python legacy/research/scripts/run_dca_backtest.py --ticker 360750 --start 2021-06-01 --end 2024-12-31
+    python legacy/research/scripts/run_dca_backtest.py --ticker 069500 360750
 """
 from __future__ import annotations
 

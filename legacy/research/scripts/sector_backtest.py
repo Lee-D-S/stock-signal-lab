@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """섹터 감성 분석 vs 실제 등락률 비교
 
-실행: python scripts/sector_backtest.py
+실행: python legacy/research/scripts/sector_backtest.py
 
 흐름:
   1. 최신 뉴스 크롤링 → Gemini 섹터 판단 → DB 저장

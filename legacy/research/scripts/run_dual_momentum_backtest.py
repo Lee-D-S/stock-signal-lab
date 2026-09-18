@@ -12,9 +12,9 @@
   (360750 상장 2021-04 + 12개월 룩백 안정화)
 
 Usage:
-    python scripts/run_dual_momentum_backtest.py
-    python scripts/run_dual_momentum_backtest.py --capital 20000000
-    python scripts/run_dual_momentum_backtest.py --lookback 6
+    python legacy/research/scripts/run_dual_momentum_backtest.py
+    python legacy/research/scripts/run_dual_momentum_backtest.py --capital 20000000
+    python legacy/research/scripts/run_dual_momentum_backtest.py --lookback 6
 """
 from __future__ import annotations
 

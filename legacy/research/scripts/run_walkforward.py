@@ -5,20 +5,20 @@
 
 Usage:
     # 장기 정배열 + RSI 과매도 전략: 훈련 3년 / 검증 1년
-    python scripts/run_walkforward.py \\
+    python legacy/research/scripts/run_walkforward.py \\
       --ma-align 60,120,240 --rsi-max 40 \\
       --start 2020-01-01 --end 2024-12-31 \\
       --train-years 3 --test-years 1 \\
       --hold-days 10 --stop-loss -0.05 --take-profit 0.10
 
     # 훈련 2년 / 검증 1년, MACD 골든크로스
-    python scripts/run_walkforward.py \\
+    python legacy/research/scripts/run_walkforward.py \\
       --macd-cross-up --obv-rising \\
       --start 2020-01-01 --end 2024-12-31 \\
       --train-years 2 --test-years 1
 
     # 생존 편향 제거 (DART 유니버스)
-    python scripts/run_walkforward.py \\
+    python legacy/research/scripts/run_walkforward.py \\
       --ma-align 60,120,240 \\
       --start 2020-01-01 --end 2024-12-31 \\
       --train-years 3 --test-years 1 \\

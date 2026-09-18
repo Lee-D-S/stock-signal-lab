@@ -2,22 +2,22 @@
 
 Usage:
     # Train 구간 스코어 통계 -> 임계값 결정
-    python scripts/run_scoring.py --mode threshold \\
+    python legacy/research/scripts/run_scoring.py --mode threshold \\
       --start 2020-01-01 --end 2022-12-31 --hold-days 20
 
     # 오늘 시총 상위 300개 스코어링 (임계값 60% 이상)
-    python scripts/run_scoring.py --mode screen --threshold 0.60
+    python legacy/research/scripts/run_scoring.py --mode screen --threshold 0.60
 
     # Factor Research IC 결과로 군 가중치 조정
-    python scripts/run_scoring.py --mode screen --threshold 0.70 \\
+    python legacy/research/scripts/run_scoring.py --mode screen --threshold 0.70 \\
       --ic-weights scripts/discovery/results/2020_2022_hold20_ic_ranking.csv
 
     # threshold 결과 저장 후 재분석 (API 재호출 없음)
-    python scripts/run_scoring.py --mode threshold \\
+    python legacy/research/scripts/run_scoring.py --mode threshold \\
       --start 2020-01-01 --end 2022-12-31 \\
       --save-raw scripts/scoring/results/raw.parquet
 
-    python scripts/run_scoring.py --mode threshold \\
+    python legacy/research/scripts/run_scoring.py --mode threshold \\
       --load-raw scripts/scoring/results/raw.parquet --hold-days 10
 """
 

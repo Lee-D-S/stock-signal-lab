@@ -11,10 +11,10 @@
   (360750 상장 2021-04 + 데이터 안정화)
 
 Usage:
-    python scripts/run_asset_allocation_backtest.py
-    python scripts/run_asset_allocation_backtest.py --capital 20000000
-    python scripts/run_asset_allocation_backtest.py --rebalance-freq quarterly
-    python scripts/run_asset_allocation_backtest.py --weights 069500=0.6,360750=0.4
+    python legacy/research/scripts/run_asset_allocation_backtest.py
+    python legacy/research/scripts/run_asset_allocation_backtest.py --capital 20000000
+    python legacy/research/scripts/run_asset_allocation_backtest.py --rebalance-freq quarterly
+    python legacy/research/scripts/run_asset_allocation_backtest.py --weights 069500=0.6,360750=0.4
 """
 from __future__ import annotations
 

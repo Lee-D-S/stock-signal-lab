@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gemini API 동작 확인용 — 뉴스 기사 1건 분석
 
-실행: python scripts/test_gemini.py
+실행: python legacy/research/scripts/test_gemini.py
 """
 import asyncio
 import json

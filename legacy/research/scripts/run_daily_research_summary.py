@@ -492,7 +492,7 @@ def build_telegram_message(target_date: str) -> str:
             f"신규 폴더: {new_universe_count}개 | 보고서 필요: {len(report_needed)}개",
             f"대상: {', '.join(names) + suffix if names else '(목록 없음)'}",
             "보고서 생성 명령:",
-            "rtk python -u scripts/run_new_company_reports.py --include-existing-missing",
+            "rtk python -u legacy/research/scripts/run_new_company_reports.py --include-existing-missing",
         ]
 
     if perf_lines:

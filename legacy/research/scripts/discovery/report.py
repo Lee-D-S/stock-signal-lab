@@ -74,7 +74,7 @@ def print_condition_candidates(ranked: pd.DataFrame, top_n: int = 5) -> None:
         if arg:
             args_set.add(arg)
 
-    cmd = "python scripts/screener.py --by marcap --to 300 " + " ".join(sorted(args_set))
+    cmd = "python legacy/research/scripts/screener.py --by marcap --to 300 " + " ".join(sorted(args_set))
     print(f"  {cmd}")
     print()
 

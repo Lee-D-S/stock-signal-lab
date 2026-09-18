@@ -3,11 +3,11 @@
 60일 > 120일 > 240일 이평선이 정배열인 종목 탐색.
 
 Usage:
-    python scripts/ma_alignment_240.py                          # 거래량순 전체
-    python scripts/ma_alignment_240.py --by marcap              # 시가총액순
-    python scripts/ma_alignment_240.py --sort amount            # 거래 대금 내림차순
-    python scripts/ma_alignment_240.py --min-amount 100000000000  # 거래 대금 1000억 이상
-    python scripts/ma_alignment_240.py --from 1 --to 300
+    python legacy/research/scripts/ma_alignment_240.py                          # 거래량순 전체
+    python legacy/research/scripts/ma_alignment_240.py --by marcap              # 시가총액순
+    python legacy/research/scripts/ma_alignment_240.py --sort amount            # 거래 대금 내림차순
+    python legacy/research/scripts/ma_alignment_240.py --min-amount 100000000000  # 거래 대금 1000억 이상
+    python legacy/research/scripts/ma_alignment_240.py --from 1 --to 300
 """
 
 import argparse

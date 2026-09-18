@@ -5,9 +5,9 @@ run_scoring.py --mode screen 이 저장한 CSV를 읽어
 기존 행의 D+ 수익률을 업데이트한다.
 
 Usage:
-    python scripts/run_scoring_observation.py                    # 오늘 기준
-    python scripts/run_scoring_observation.py --threshold 0.70
-    python scripts/run_scoring_observation.py --date 2026-05-01  # 과거 재실행
+    python legacy/research/scripts/run_scoring_observation.py                    # 오늘 기준
+    python legacy/research/scripts/run_scoring_observation.py --threshold 0.70
+    python legacy/research/scripts/run_scoring_observation.py --date 2026-05-01  # 과거 재실행
 """
 from __future__ import annotations
 

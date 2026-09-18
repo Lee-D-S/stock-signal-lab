@@ -2,25 +2,25 @@
 
 Usage:
     # 장기 정배열 전략 (2020~2022 Train 구간)
-    python scripts/run_backtest.py \\
+    python legacy/research/scripts/run_backtest.py \\
       --ma-align 60,120,240 \\
       --start 2020-01-01 --end 2022-12-31 \\
       --hold-days 20 --max-positions 10
 
     # RSI 과매도 반등 전략
-    python scripts/run_backtest.py \\
+    python legacy/research/scripts/run_backtest.py \\
       --ma-align 60,120,240 --rsi-max 40 \\
       --start 2020-01-01 --end 2022-12-31 \\
       --hold-days 10 --stop-loss -0.05 --take-profit 0.10
 
     # MACD 골든크로스 + OBV 상승
-    python scripts/run_backtest.py \\
+    python legacy/research/scripts/run_backtest.py \\
       --macd-cross-up --obv-rising \\
       --start 2020-01-01 --end 2022-12-31 \\
       --hold-days 15
 
     # 기존 OHLCV 캐시 재사용 (API 호출 없음)
-    python scripts/run_backtest.py \\
+    python legacy/research/scripts/run_backtest.py \\
       --ma-align 60,120,240 --rsi-max 50 \\
       --start 2021-01-01 --end 2021-12-31
 """

@@ -1,11 +1,11 @@
 """멀티 조건 기술적 지표 종목 스크리너
 
 Usage:
-    python scripts/screener.py --by marcap --to 300 --ma-align 60,120,240 --sort amount
-    python scripts/screener.py --ma-align 5,20,60,120 --rsi-max 50 --macd-positive
-    python scripts/screener.py --bb-breakout --min-amount 50000000000
-    python scripts/screener.py --obv-rising --vol-above-ma --stoch-max 50
-    python scripts/screener.py --fib-support --ma-align 60,120,240
+    python legacy/research/scripts/screener.py --by marcap --to 300 --ma-align 60,120,240 --sort amount
+    python legacy/research/scripts/screener.py --ma-align 5,20,60,120 --rsi-max 50 --macd-positive
+    python legacy/research/scripts/screener.py --bb-breakout --min-amount 50000000000
+    python legacy/research/scripts/screener.py --obv-rising --vol-above-ma --stoch-max 50
+    python legacy/research/scripts/screener.py --fib-support --ma-align 60,120,240
 """
 
 import argparse

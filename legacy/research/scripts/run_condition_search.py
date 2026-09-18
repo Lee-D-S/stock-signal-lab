@@ -18,40 +18,40 @@ IC·평균수익률·승률·Profit Factor를 train/validation 구간으로 분�
 ## 권장 실행 예시
 
     # 단기 조건 검증 (records: hold_days=1, 5, 10 또는 20)
-    python scripts/run_condition_search.py \\
+    python legacy/research/scripts/run_condition_search.py \\
         --load-records scripts/discovery/results/records_hold1.parquet \\
         --train-end 2022-12-31 --val-end 2024-12-31 --horizon short
 
     # 장기 조건 검증 (records: hold_days=60 이상)
-    python scripts/run_condition_search.py \\
+    python legacy/research/scripts/run_condition_search.py \\
         --load-records scripts/discovery/results/records_hold60.parquet \\
         --train-end 2022-12-31 --val-end 2024-12-31 --horizon long
 
     # hold_days 없이 전체 (horizon 경고만 표시)
-    python scripts/run_condition_search.py \\
+    python legacy/research/scripts/run_condition_search.py \\
         --load-records scripts/discovery/results/records.parquet \\
         --train-end 2022-12-31 --val-end 2024-12-31
 
     # 특정 조건만
-    python scripts/run_condition_search.py \\
+    python legacy/research/scripts/run_condition_search.py \\
         --load-records scripts/discovery/results/records.parquet \\
         --conditions rsi_low,stoch_low,vol_surge
 
     # 외국인 순매수 연속 조건 검증
-    python scripts/run_condition_search.py \\
+    python legacy/research/scripts/run_condition_search.py \\
         --load-records scripts/discovery/results/records_hold5.parquet \\
         --with-investor-flow \\
         --conditions foreign_buy_streak,foreign_buy_all,foreign_buy_strength
 
 ## records 파일 준비 (hold_days별 분리 수집)
 
-    python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
+    python legacy/research/scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
         --hold-days 1  --save-records scripts/discovery/results/records_hold1.parquet
-    python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
+    python legacy/research/scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
         --hold-days 5  --save-records scripts/discovery/results/records_hold5.parquet
-    python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
+    python legacy/research/scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
         --hold-days 20 --save-records scripts/discovery/results/records_hold20.parquet
-    python scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
+    python legacy/research/scripts/run_discovery.py --start 2020-01-01 --end 2024-12-31 \\
         --hold-days 60 --save-records scripts/discovery/results/records_hold60.parquet
 """
 

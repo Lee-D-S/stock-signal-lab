@@ -3,8 +3,8 @@
 5일 > 20일 > 60일 > 120일 이평선이 정배열인 종목 탐색.
 
 Usage:
-    python scripts/ma_alignment.py               # 거래량 상위 200개
-    python scripts/ma_alignment.py --top 500
+    python legacy/research/scripts/ma_alignment.py               # 거래량 상위 200개
+    python legacy/research/scripts/ma_alignment.py --top 500
 """
 
 import argparse
