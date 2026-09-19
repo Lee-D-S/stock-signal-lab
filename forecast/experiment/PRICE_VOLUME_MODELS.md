@@ -1,12 +1,12 @@
-﻿# Price-volume model benchmark
+# Price-volume model benchmark
 
-Run the current baseline experiment with the 50 price-volume features:
+Run the current price-volume experiment with the 58 price-volume features:
 
 ```powershell
 rtk python -m forecast.experiment.price_volume_models --output-dir data/forecast_experiment
 ```
 
-The runner evaluates a majority baseline, Logistic Regression, Random Forest, and HistGradientBoosting with expanding year-based validation folds from 2020 through 2024. The current feature schema adds nine OHLC price-shape features: gap/open-close returns, candle body and wick ratios, 20/60-day close positions, and 20-day distance from the rolling high/low. It then fits the selected roster on all 2015-2024 training rows, builds 2025 features from the combined historical and 2025 raw prices, and compares daily predictions with `labels_2025.parquet`.
+The runner evaluates a majority baseline, Logistic Regression, Random Forest, and HistGradientBoosting with expanding year-based validation folds from 2020 through 2024. The current feature schema includes the v2 OHLC price-shape features plus eight v3 price-volume interaction features: volume and turnover z-scores, up/down volume shares, and return-volume interactions. It then fits the selected roster on all 2015-2024 training rows, builds 2025 features from the combined historical and 2025 raw prices, and compares daily predictions with `labels_2025.parquet`.
 
 The output includes candidate evaluations, a selected model roster, saved model bundles, model-level 2025 predictions, an equal-weight ensemble, and summary metrics.
 

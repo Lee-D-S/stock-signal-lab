@@ -1,0 +1,51 @@
+{
+  "validation": {
+    "hist_gradient_boosting": {
+      "2020": 0.515277,
+      "2021": 0.519319,
+      "2022": 0.519233,
+      "2023": 0.513326,
+      "2024": 0.515932,
+      "worst_year_balanced_accuracy": 0.5133263500,
+      "baseline_beaten_years": 5,
+      "rank": 1
+    },
+    "random_forest": {
+      "2020": 0.511108,
+      "2021": 0.519487,
+      "2022": 0.514137,
+      "2023": 0.514614,
+      "2024": 0.515935,
+      "worst_year_balanced_accuracy": 0.5111076928,
+      "baseline_beaten_years": 5,
+      "rank": 2
+    },
+    "logistic": {
+      "2020": 0.510869,
+      "2021": 0.521492,
+      "2022": 0.520096,
+      "2023": 0.511560,
+      "2024": 0.521246,
+      "worst_year_balanced_accuracy": 0.5108687603,
+      "baseline_beaten_years": 5,
+      "rank": 3
+    },
+    "baseline": {
+      "2020": 0.5,
+      "2021": 0.5,
+      "2022": 0.5,
+      "2023": 0.5,
+      "2024": 0.5,
+      "worst_year_balanced_accuracy": 0.5,
+      "baseline_beaten_years": 0,
+      "rank": 4
+    }
+  },
+  "holdout_2025": {
+    "random_forest": {"balanced_accuracy": 0.521943, "roc_auc": 0.534777, "brier": 0.250169, "log_loss": 0.693546},
+    "hist_gradient_boosting": {"balanced_accuracy": 0.520870, "roc_auc": 0.540367, "brier": 0.249449, "log_loss": 0.692061},
+    "logistic": {"balanced_accuracy": 0.520158, "roc_auc": 0.544730, "brier": 0.249465, "log_loss": 0.692082},
+    "ensemble": {"balanced_accuracy": 0.512396, "roc_auc": 0.545128, "brier": 0.249309, "log_loss": 0.691762},
+    "baseline": {"balanced_accuracy": 0.5, "roc_auc": 0.5, "brier": 0.250623, "log_loss": 0.694397}
+  }
+}

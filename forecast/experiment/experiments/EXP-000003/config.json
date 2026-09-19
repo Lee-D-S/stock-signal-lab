@@ -1,0 +1,25 @@
+{
+  "experiment_id": "EXP-000003",
+  "status": "completed_on_hold",
+  "universe": "universe_2024-12-31",
+  "training_data_snapshot": "e028cad0a217c88c",
+  "feature_schema_version": "price-volume-v3",
+  "feature_count": 58,
+  "added_features": [
+    "volume_zscore_20d",
+    "volume_zscore_60d",
+    "turnover_zscore_20d",
+    "turnover_zscore_60d",
+    "up_volume_share_20d",
+    "down_volume_share_20d",
+    "return_volume_interaction_1d",
+    "return_volume_interaction_5d"
+  ],
+  "training_period": ["2015-01-01", "2024-12-30"],
+  "validation_years": [2020, 2021, 2022, 2023, 2024],
+  "holdout": "2025",
+  "model_candidates": ["baseline", "logistic", "random_forest", "hist_gradient_boosting"],
+  "selection_policy": "worst-year balanced accuracy, baseline-beaten years, worst-year ROC-AUC, worst-year Brier, worst-year log loss",
+  "git_commit": "pending-v3-experiment-commit",
+  "model_snapshot": "2820e389ccb175b9"
+}
