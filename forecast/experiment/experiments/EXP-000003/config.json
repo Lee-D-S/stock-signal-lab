@@ -20,6 +20,6 @@
   "holdout": "2025",
   "model_candidates": ["baseline", "logistic", "random_forest", "hist_gradient_boosting"],
   "selection_policy": "worst-year balanced accuracy, baseline-beaten years, worst-year ROC-AUC, worst-year Brier, worst-year log loss",
-  "git_commit": "pending-v3-experiment-commit",
+  "git_commit": "85395116ef6d0e06d6f04a6a03e7f9d9413fc679",
   "model_snapshot": "2820e389ccb175b9"
 }

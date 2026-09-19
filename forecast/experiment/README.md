@@ -21,7 +21,7 @@ rtk python -m forecast.experiment.daily_cli --input data/forecast/raw.parquet --
 
 ### Price-volume baseline experiment
 
-The fixed-universe experiment uses the 50-company 2024-12-31 roster, 58 price-volume features, and next-trading-day direction labels. The current v3 feature set includes v2 price shape plus volume-price interaction features. It evaluates four candidates with 2020-2024 expanding folds and writes 2025 model-level plus equal-weight ensemble predictions.
+The fixed-universe experiment uses the 50-company 2024-12-31 roster, 50 active price-volume features, and next-trading-day direction labels. The active feature schema is price-volume-v2, including local OHLC price-shape features. EXP-000003 evaluated eight additional volume-price interaction features separately and held them out because they did not improve the selection baseline. It evaluates four candidates with 2020-2024 expanding folds and writes 2025 model-level plus equal-weight ensemble predictions.
 
     rtk python -m forecast.experiment.price_volume_models --output-dir data/forecast_experiment
 

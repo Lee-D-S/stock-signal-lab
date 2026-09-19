@@ -64,15 +64,15 @@ class TrainingDatasetTests(unittest.TestCase):
         self.assertIn("close_position_60d", features.columns)
         self.assertIn("distance_to_high_20d", features.columns)
         self.assertIn("distance_from_low_20d", features.columns)
-        self.assertTrue(features["feature_schema_version"].eq("price-volume-v3").all())
-        self.assertIn("volume_zscore_20d", features.columns)
-        self.assertIn("volume_zscore_60d", features.columns)
-        self.assertIn("turnover_zscore_20d", features.columns)
-        self.assertIn("turnover_zscore_60d", features.columns)
-        self.assertIn("up_volume_share_20d", features.columns)
-        self.assertIn("down_volume_share_20d", features.columns)
-        self.assertIn("return_volume_interaction_1d", features.columns)
-        self.assertIn("return_volume_interaction_5d", features.columns)
+        self.assertTrue(features["feature_schema_version"].eq("price-volume-v2").all())
+
+
+
+
+
+
+
+
 
 
 

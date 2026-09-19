@@ -18,6 +18,6 @@ Outputs:
 
 The v2 price-volume schema adds nine local OHLCV-derived features without new API calls: gap_return, open_close_return, candle_body_pct, upper_wick_pct, lower_wick_pct, close_position_20d, close_position_60d, distance_to_high_20d, and distance_from_low_20d.
 
-The v3 price-volume schema adds eight local price-volume interaction features without new API calls: volume_zscore_20d, volume_zscore_60d, turnover_zscore_20d, turnover_zscore_60d, up_volume_share_20d, down_volume_share_20d, return_volume_interaction_1d, and return_volume_interaction_5d.
+EXP-000003 evaluated a v3 price-volume schema that adds eight local price-volume interaction features without new API calls: volume_zscore_20d, volume_zscore_60d, turnover_zscore_20d, turnover_zscore_60d, up_volume_share_20d, down_volume_share_20d, return_volume_interaction_1d, and return_volume_interaction_5d. The v3 schema is preserved as a held-out experiment and is not the active training baseline.
 
 The first model dataset intentionally excludes investor flows, DART fundamentals, valuation, news, and text-derived fields. Those will be added as separate feature groups after this baseline is validated.

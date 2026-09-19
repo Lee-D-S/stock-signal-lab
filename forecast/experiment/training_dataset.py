@@ -58,27 +58,6 @@ def _add_ratio_features(result: pd.DataFrame) -> pd.DataFrame:
         if "turnover" in result:
             turnover_mean = groups["turnover"].transform(lambda values: values.rolling(window, min_periods=window).mean())
             result[f"turnover_ratio_{window}d"] = result["turnover"] / turnover_mean - 1
-    for window in (20, 60):
-        volume_mean = groups["volume"].transform(lambda values: values.rolling(window, min_periods=window).mean())
-        volume_std = groups["volume"].transform(lambda values: values.rolling(window, min_periods=window).std())
-        safe_volume_std = volume_std.where(volume_std.ne(0))
-        result[f"volume_zscore_{window}d"] = ((result["volume"] - volume_mean) / safe_volume_std).fillna(0.0)
-        if "turnover" in result:
-            turnover_mean = groups["turnover"].transform(lambda values: values.rolling(window, min_periods=window).mean())
-            turnover_std = groups["turnover"].transform(lambda values: values.rolling(window, min_periods=window).std())
-            safe_turnover_std = turnover_std.where(turnover_std.ne(0))
-            result[f"turnover_zscore_{window}d"] = ((result["turnover"] - turnover_mean) / safe_turnover_std).fillna(0.0)
-
-    total_volume = groups["volume"].transform(lambda values: values.rolling(20, min_periods=20).sum())
-    up_volume = result["volume"].where(result["daily_return"].gt(0), 0.0)
-    down_volume = result["volume"].where(result["daily_return"].le(0), 0.0)
-    up_volume_sum = up_volume.groupby(result["ticker"], sort=False).transform(lambda values: values.rolling(20, min_periods=20).sum())
-    down_volume_sum = down_volume.groupby(result["ticker"], sort=False).transform(lambda values: values.rolling(20, min_periods=20).sum())
-    safe_total_volume = total_volume.where(total_volume.ne(0))
-    result["up_volume_share_20d"] = up_volume_sum / safe_total_volume
-    result["down_volume_share_20d"] = down_volume_sum / safe_total_volume
-    result["return_volume_interaction_1d"] = result["daily_return"] * result["volume_ratio_5d"]
-    result["return_volume_interaction_5d"] = result["return_5d"] * result["volume_ratio_20d"]
     if {"high", "low", "close"}.issubset(result.columns):
         result["intraday_range"] = (result["high"] - result["low"]) / result["close"]
         candle_range = (result["high"] - result["low"]).where(lambda values: values.ne(0))
@@ -98,7 +77,7 @@ def build_price_volume_features(
     result = add_price_volume_features(raw, windows=PRICE_WINDOWS)
     result = _add_ratio_features(result)
     result["feature_asof"] = result["date"]
-    result["feature_schema_version"] = "price-volume-v3"
+    result["feature_schema_version"] = "price-volume-v2"
 
     excluded = {
         "ticker", "name", "market", "date", "feature_asof", "price_basis", "price_source",
@@ -205,9 +184,9 @@ def write_training_dataset_artifacts(
     train_csv_path = output_dir / "train_price_volume_1d_2015_2024.csv"
     summary_path = output_dir / "training_dataset_2015_2024.md"
 
-    write_parquet(features, features_path, artifact_type="experiment_price_volume_features", schema_version="price-volume-features-3", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-3")
-    write_parquet(labels, labels_path, artifact_type="experiment_1d_labels", schema_version="direction-1d-labels-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-3")
-    write_parquet(train, train_path, artifact_type="experiment_training_dataset", schema_version="price-volume-direction-1d-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-3")
+    write_parquet(features, features_path, artifact_type="experiment_price_volume_features", schema_version="price-volume-features-2", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
+    write_parquet(labels, labels_path, artifact_type="experiment_1d_labels", schema_version="direction-1d-labels-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
+    write_parquet(train, train_path, artifact_type="experiment_training_dataset", schema_version="price-volume-direction-1d-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
     train.to_csv(train_csv_path, index=False, encoding="utf-8-sig")
 
     feature_columns = _model_feature_columns(features)
@@ -268,7 +247,7 @@ def main() -> int:
     feature_start = date.fromisoformat(args.feature_start)
     feature_end = date.fromisoformat(args.feature_end)
     raw = pd.read_parquet(args.raw)
-    snapshot = snapshot_id("price-volume-direction-1d-v3", args.raw, feature_start, feature_end, len(raw))
+    snapshot = snapshot_id("price-volume-direction-1d-v2", args.raw, feature_start, feature_end, len(raw))
     features = build_price_volume_features(raw, feature_start=feature_start, feature_end=feature_end, snapshot=snapshot)
     labels = build_one_day_labels(raw, feature_start=feature_start, target_cutoff=feature_end, snapshot=snapshot)
     train = build_training_frame(features, labels)
