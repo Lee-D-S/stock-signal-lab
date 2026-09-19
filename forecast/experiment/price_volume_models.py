@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import pickle
@@ -56,16 +56,16 @@ DEFAULT_CANDIDATES = (
 
 
 SELECTION_POLICY = {
-    "primary_metric": "balanced_accuracy",
+    "averaging": "none",
+    "primary_metric": "balanced_accuracy_worst_year",
     "primary_direction": "maximize",
     "tie_breakers": [
-        {"metric": "balanced_accuracy_std", "direction": "minimize"},
-        {"metric": "roc_auc", "direction": "maximize"},
-        {"metric": "brier", "direction": "minimize"},
-        {"metric": "log_loss", "direction": "minimize"},
+        {"metric": "baseline_beaten_years", "direction": "maximize"},
+        {"metric": "roc_auc_worst_year", "direction": "maximize"},
+        {"metric": "brier_worst_year", "direction": "minimize"},
+        {"metric": "log_loss_worst_year", "direction": "minimize"},
     ],
 }
-
 
 def _year_folds(frame: pd.DataFrame, validation_years: tuple[int, ...]) -> list[tuple[int, pd.DataFrame, pd.DataFrame]]:
     feature_dates = pd.to_datetime(frame["feature_asof"], errors="raise").dt.normalize()
@@ -132,7 +132,7 @@ def evaluate_candidates(
     feature_columns: list[str],
     validation_years: tuple[int, ...] = DEFAULT_VALIDATION_YEARS,
 ) -> tuple[pd.DataFrame, dict[str, list[dict[str, object]]]]:
-    """Evaluate price-volume candidates with expanding year-based folds."""
+    """Evaluate price-volume candidates with separate year-based fold rows."""
     rows: list[dict[str, object]] = []
     fold_details: dict[str, list[dict[str, object]]] = {}
     folds = _year_folds(train, validation_years)
@@ -145,6 +145,8 @@ def evaluate_candidates(
             probability, _ = _predict_candidate(spec, fold_train, fold_test, feature_columns=feature_columns)
             metrics = classification_metrics(fold_test["direction"], probability)
             details.append({
+                "candidate": spec.name,
+                "model_name": spec.model_name or "majority_probability",
                 "validation_year": year,
                 "train_rows": len(fold_train),
                 "test_rows": len(fold_test),
@@ -152,30 +154,73 @@ def evaluate_candidates(
                 **metrics,
             })
         fold_details[spec.name] = details
-        metric_frame = pd.DataFrame(details)
-        rows.append({
-            "candidate": spec.name,
-            "model_name": spec.model_name or "majority_probability",
-            "folds": len(details),
-            "rows": int(metric_frame["test_rows"].sum()),
-            "accuracy": float(metric_frame["accuracy"].mean()),
-            "balanced_accuracy": float(metric_frame["balanced_accuracy"].mean()),
-            "balanced_accuracy_std": float(metric_frame["balanced_accuracy"].std(ddof=0)),
-            "balanced_accuracy_min": float(metric_frame["balanced_accuracy"].min()),
-            "roc_auc": float(metric_frame["roc_auc"].dropna().mean()) if metric_frame["roc_auc"].notna().any() else None,
-            "pr_auc": float(metric_frame["pr_auc"].dropna().mean()) if metric_frame["pr_auc"].notna().any() else None,
-            "brier": float(metric_frame["brier"].mean()),
-            "log_loss": float(metric_frame["log_loss"].mean()),
-            "calibration_error": float(metric_frame["calibration_error"].dropna().mean()) if metric_frame["calibration_error"].notna().any() else None,
-        })
+        rows.extend(details)
+
     evaluations = pd.DataFrame(rows).sort_values(
-        ["balanced_accuracy", "balanced_accuracy_std", "roc_auc", "brier", "log_loss"],
-        ascending=[False, True, False, True, True],
+        ["validation_year", "balanced_accuracy", "roc_auc", "brier", "log_loss"],
+        ascending=[True, False, False, True, True],
         na_position="last",
     ).reset_index(drop=True)
-    evaluations["rank"] = evaluations.index + 1
+    evaluations["year_rank"] = (
+        evaluations.groupby("validation_year")["balanced_accuracy"]
+        .rank(method="min", ascending=False)
+        .astype("int64")
+    )
     return evaluations, fold_details
 
+
+def _worst_year(frame: pd.DataFrame, metric: str, *, higher_is_better: bool) -> float | None:
+    values = pd.to_numeric(frame[metric], errors="coerce").dropna()
+    if values.empty:
+        return None
+    return float(values.min() if higher_is_better else values.max())
+
+
+def _selection_summary(per_fold: pd.DataFrame) -> pd.DataFrame:
+    """Build a no-averaging model ranking from the separate validation years."""
+    baseline = per_fold.loc[
+        per_fold["candidate"].eq("baseline"),
+        ["validation_year", "balanced_accuracy"],
+    ].rename(columns={"balanced_accuracy": "baseline_balanced_accuracy"})
+    rows: list[dict[str, object]] = []
+    for candidate, frame in per_fold.groupby("candidate", sort=False):
+        comparison = frame[["validation_year", "balanced_accuracy"]].merge(
+            baseline,
+            on="validation_year",
+            how="left",
+            validate="one_to_one",
+        )
+        beaten_years = int(
+            (comparison["balanced_accuracy"] > comparison["baseline_balanced_accuracy"]).sum()
+        )
+        rows.append({
+            "candidate": candidate,
+            "model_name": str(frame["model_name"].iloc[0]),
+            "folds": int(frame["validation_year"].nunique()),
+            "rows": int(frame["test_rows"].sum()),
+            "balanced_accuracy_worst_year": _worst_year(frame, "balanced_accuracy", higher_is_better=True),
+            "balanced_accuracy_best_year": _worst_year(frame, "balanced_accuracy", higher_is_better=False),
+            "baseline_beaten_years": beaten_years,
+            "accuracy_worst_year": _worst_year(frame, "accuracy", higher_is_better=True),
+            "roc_auc_worst_year": _worst_year(frame, "roc_auc", higher_is_better=True),
+            "pr_auc_worst_year": _worst_year(frame, "pr_auc", higher_is_better=True),
+            "brier_worst_year": _worst_year(frame, "brier", higher_is_better=False),
+            "log_loss_worst_year": _worst_year(frame, "log_loss", higher_is_better=False),
+            "calibration_error_worst_year": _worst_year(frame, "calibration_error", higher_is_better=False),
+        })
+    summary = pd.DataFrame(rows).sort_values(
+        [
+            "balanced_accuracy_worst_year",
+            "baseline_beaten_years",
+            "roc_auc_worst_year",
+            "brier_worst_year",
+            "log_loss_worst_year",
+        ],
+        ascending=[False, False, False, True, True],
+        na_position="last",
+    ).reset_index(drop=True)
+    summary["rank"] = summary.index + 1
+    return summary
 
 def _load_2025_prediction_frame(
     raw_training: pd.DataFrame,
@@ -289,7 +334,8 @@ def run_price_volume_experiment(
         raise ValueError("No model feature columns were found")
     snapshot = snapshot_id("price-volume-model-experiment", len(train), len(features), len(labels_2025), tuple(feature_columns))
     evaluations, fold_details = evaluate_candidates(train, feature_columns=feature_columns, validation_years=validation_years)
-    roster = evaluations.head(max(1, top_k)).copy()
+    selection_summary = _selection_summary(evaluations)
+    roster = selection_summary.head(max(1, top_k)).copy()
     model_dir.mkdir(parents=True, exist_ok=True)
     prediction_features, prediction_frame = _load_2025_prediction_frame(raw_training, raw_2025, labels_2025, snapshot=snapshot)
     predictions = _build_2025_predictions(
@@ -310,7 +356,8 @@ def run_price_volume_experiment(
     summary_path = output_dir / "price_volume_model_experiment_2025.md"
     evaluation_payload = {
         "selection_policy": SELECTION_POLICY,
-        "summary": evaluations.to_dict(orient="records"),
+        "summary": selection_summary.to_dict(orient="records"),
+        "per_fold": evaluations.to_dict(orient="records"),
         "folds": fold_details,
     }
     evaluations_path.write_text(json.dumps(evaluation_payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
@@ -324,13 +371,14 @@ def run_price_volume_experiment(
         {
             "Method": (
                 "- candidates: majority baseline, Logistic Regression, Random Forest, HistGradientBoosting\n"
-                "- model selection: maximize mean balanced_accuracy; tie-break by lower fold standard deviation, higher ROC-AUC, lower Brier, then lower log loss\n"
+                "- model selection: no fold averaging; rank by worst-year balanced_accuracy, baseline-beaten years, worst-year ROC-AUC, worst-year Brier, then worst-year log loss\n"
                 f"- validation years: `{list(validation_years)}`\n"
                 f"- selected roster size: `{len(roster)}`\n"
                 "- training cutoff: 2024-12-31\n"
                 "- prediction features: price-volume only"
             ),
-            "Validation": f"```\n{evaluations.to_string(index=False)}\n```",
+            "Selection summary": selection_summary.to_string(index=False),
+            "Per-fold validation": evaluations.to_string(index=False),
             "2025 result": f"```\n{summary.to_string(index=False)}\n```",
             "Artifacts": (
                 f"- evaluations: `{evaluations_path}`\n"

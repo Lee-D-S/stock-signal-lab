@@ -1,4 +1,4 @@
-# Fixed-universe experiment package
+﻿# Fixed-universe experiment package
 
 `forecast/experiment/` is the additive active path for the fixed-company stock forecasting experiment. It does not import `legacy/` and it does not call order, Telegram, news, or LLM code.
 
@@ -26,7 +26,7 @@ The first fixed-universe benchmark uses the 50-company 2024-12-31 roster, 41 pri
     rtk python -m forecast.experiment.price_volume_models --output-dir data/forecast_experiment
 
 The detailed contract is documented in forecast/experiment/PRICE_VOLUME_MODELS.md; generated evaluation and prediction artifacts are written under data/forecast_experiment/.
-Model selection uses mean balanced accuracy first, then fold stability, ROC-AUC, Brier score, and log loss as tie-breakers; the 2025 output is held out for final reporting.
+Model selection keeps each validation year separate: rank by worst-year balanced accuracy, then the number of years beating the majority baseline, worst-year ROC-AUC, worst-year Brier score, and worst-year log loss; the 2025 output is held out for final reporting.
 The daily runner treats the requested `feature_asof` as the information cutoff. Current-year labels remain `pending` until the year is explicitly included in `complete_years`.
 
 Weekly Excel output is implemented by `reporting.write_weekly_report`; the optional `openpyxl` package must be installed in the runtime used for report generation.

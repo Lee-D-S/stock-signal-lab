@@ -1,4 +1,4 @@
-# Price-volume model benchmark
+﻿# Price-volume model benchmark
 
 Run the current baseline experiment with only the 41 price-volume features:
 
@@ -12,6 +12,6 @@ The output includes candidate evaluations, a selected model roster, saved model 
 
 ### Evaluation policy
 
-Candidate selection uses mean balanced accuracy across the 2020-2024 expanding walk-forward folds as the primary score. Tie-breakers are lower fold-to-fold balanced-accuracy standard deviation, higher ROC-AUC, lower Brier score, and lower log loss. The report also keeps PR-AUC, calibration error, hit rate, and per-fold metrics for diagnosis.
+Candidate selection keeps one row per model and validation year; it does not average the folds. The primary score is each model's worst-year balanced accuracy. Tie-breakers are the number of validation years beating the majority baseline, worst-year ROC-AUC, worst-year Brier score, and worst-year log loss. The report also keeps per-year PR-AUC, calibration error, hit rate, and all per-fold metrics for diagnosis.
 
 Balanced accuracy is the directional selection metric; probability quality is evaluated separately with Brier score and log loss. The 2025 replay remains a final out-of-sample report and is not used to choose the roster or policy. No DART, investor-flow, news, or text-derived data is used at this stage.

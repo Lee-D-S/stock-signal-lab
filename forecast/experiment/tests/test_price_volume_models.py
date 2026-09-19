@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import unittest
 
@@ -35,6 +35,8 @@ class PriceVolumeModelTests(unittest.TestCase):
             validation_years=(2018, 2019),
         )
         self.assertEqual(set(evaluations["candidate"]), {"baseline", "logistic", "random_forest", "hist_gradient_boosting"})
+        self.assertEqual(len(evaluations), 8)
+        self.assertEqual(set(evaluations["validation_year"]), {2018, 2019})
         self.assertEqual(set(folds), set(evaluations["candidate"]))
 
 
