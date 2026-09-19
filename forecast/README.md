@@ -10,6 +10,7 @@
 - Horizons: T+1, T+5, T+20 trading days.
 - Evaluation: date-based walk-forward with horizon purge/embargo.
 - Storage: Parquet artifacts plus Markdown summaries. Large artifacts belong in GitHub Actions Artifacts or Release assets.
+- The fixed-universe experiment also provides a first-stage price-volume-only benchmark under forecast/experiment/, with model evaluation and 2025 replay artifacts under data/forecast_experiment/.
 
 No order, broker, Telegram, news, keyword, or LLM module is imported by this package.
 
