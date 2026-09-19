@@ -31,4 +31,6 @@ The log is an index table only; detailed records live under forecast/experiment/
 Model selection keeps each validation year separate: rank by worst-year balanced accuracy, then the number of years beating the majority baseline, worst-year ROC-AUC, worst-year Brier score, and worst-year log loss; the 2025 output is held out for final reporting.
 The daily runner treats the requested `feature_asof` as the information cutoff. Current-year labels remain `pending` until the year is explicitly included in `complete_years`.
 
+The active v2 price-volume daily runner is documented in DAILY_PRICE_VOLUME.md. It predicts each roster candidate plus an ensemble using only raw rows on or before feature_asof, then scores saved predictions after the next trading day is available.
+
 Weekly Excel output is implemented by `reporting.write_weekly_report`; the optional `openpyxl` package must be installed in the runtime used for report generation.
