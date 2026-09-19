@@ -1,4 +1,4 @@
-﻿# Fixed-universe experiment package
+# Fixed-universe experiment package
 
 `forecast/experiment/` is the additive active path for the fixed-company stock forecasting experiment. It does not import `legacy/` and it does not call order, Telegram, news, or LLM code.
 
@@ -27,6 +27,7 @@ The first fixed-universe benchmark uses the 50-company 2024-12-31 roster, 50 pri
 
 The detailed contract is documented in forecast/experiment/PRICE_VOLUME_MODELS.md; generated evaluation and prediction artifacts are written under data/forecast_experiment/.
 The canonical experiment history is maintained in forecast/experiment/EXPERIMENT_LOG.md; register every completed or rejected experiment there with its snapshot, feature schema, model policy, results, conclusion, and Git commit.
+The log is an index table only; detailed records live under forecast/experiment/experiments/EXP-000001-style folders, while generated data artifacts are preserved under data/forecast_experiment/experiments/.
 Model selection keeps each validation year separate: rank by worst-year balanced accuracy, then the number of years beating the majority baseline, worst-year ROC-AUC, worst-year Brier score, and worst-year log loss; the 2025 output is held out for final reporting.
 The daily runner treats the requested `feature_asof` as the information cutoff. Current-year labels remain `pending` until the year is explicitly included in `complete_years`.
 

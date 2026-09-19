@@ -1,0 +1,15 @@
+{
+  "validation": {
+    "random_forest": {"2020": 0.5128995096, "2021": 0.5134322823, "2022": 0.5140963231, "2023": 0.5131251584, "2024": 0.5168118459, "worst_year_balanced_accuracy": 0.5128995096, "rank": 1},
+    "hist_gradient_boosting": {"2020": 0.5172019292, "2021": 0.5237189669, "2022": 0.5138554339, "2023": 0.5105315968, "2024": 0.5133646812, "worst_year_balanced_accuracy": 0.5105315968, "rank": 2},
+    "logistic": {"2020": 0.5140759797, "2021": 0.5253232209, "2022": 0.5195273913, "2023": 0.5100411062, "2024": 0.5239567221, "worst_year_balanced_accuracy": 0.5100411062, "rank": 3},
+    "baseline": {"2020": 0.5, "2021": 0.5, "2022": 0.5, "2023": 0.5, "2024": 0.5, "worst_year_balanced_accuracy": 0.5, "rank": 4}
+  },
+  "holdout_2025": {
+    "random_forest": {"balanced_accuracy": 0.521464},
+    "logistic": {"balanced_accuracy": 0.519786},
+    "hist_gradient_boosting": {"balanced_accuracy": 0.518914},
+    "ensemble": {"balanced_accuracy": 0.515807},
+    "baseline": {"balanced_accuracy": 0.5}
+  }
+}

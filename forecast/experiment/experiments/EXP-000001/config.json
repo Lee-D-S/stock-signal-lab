@@ -1,0 +1,14 @@
+{
+  "experiment_id": "EXP-000001",
+  "status": "completed",
+  "universe": "universe_2024-12-31",
+  "feature_schema_version": "price-volume-v1",
+  "feature_count": 41,
+  "training_period": ["2015-01-01", "2024-12-30"],
+  "validation_years": [2020, 2021, 2022, 2023, 2024],
+  "holdout": "2025",
+  "model_candidates": ["baseline", "logistic", "random_forest", "hist_gradient_boosting"],
+  "selection_policy": "worst-year balanced accuracy, baseline-beaten years, worst-year ROC-AUC, worst-year Brier, worst-year log loss",
+  "git_commit": "3ba4eaa",
+  "model_snapshot": "27d86a58a74cc089"
+}

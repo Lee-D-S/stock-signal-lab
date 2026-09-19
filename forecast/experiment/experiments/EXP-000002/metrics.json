@@ -1,0 +1,15 @@
+{
+  "validation": {
+    "random_forest": {"worst_year_balanced_accuracy": 0.5135603547, "baseline_beaten_years": 5, "rank": 1},
+    "logistic": {"worst_year_balanced_accuracy": 0.5129016268, "baseline_beaten_years": 5, "rank": 2},
+    "hist_gradient_boosting": {"worst_year_balanced_accuracy": 0.5118450746, "baseline_beaten_years": 5, "rank": 3},
+    "baseline": {"worst_year_balanced_accuracy": 0.5, "baseline_beaten_years": 0, "rank": 4}
+  },
+  "holdout_2025": {
+    "random_forest": {"balanced_accuracy": 0.524145, "roc_auc": 0.536784, "brier": 0.250008, "log_loss": 0.693219},
+    "logistic": {"balanced_accuracy": 0.519944, "roc_auc": 0.546402, "brier": 0.249350, "log_loss": 0.691850},
+    "ensemble": {"balanced_accuracy": 0.518091, "roc_auc": 0.545832, "brier": 0.249249, "log_loss": 0.691643},
+    "hist_gradient_boosting": {"balanced_accuracy": 0.516925, "roc_auc": 0.540142, "brier": 0.249746, "log_loss": 0.692683},
+    "baseline": {"balanced_accuracy": 0.5, "roc_auc": 0.5, "brier": 0.250623, "log_loss": 0.694397}
+  }
+}
