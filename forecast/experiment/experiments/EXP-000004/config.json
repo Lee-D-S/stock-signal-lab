@@ -1,0 +1,27 @@
+{
+  "experiment_id": "EXP-000004",
+  "status": "completed_on_hold",
+  "universe": "universe_2024-12-31",
+  "training_data_snapshot": "a2bbd2f1abd02775",
+  "feature_schema_version": "price-volume-v4",
+  "feature_count": 58,
+  "added_features": [
+    "market_return_1d",
+    "market_return_5d",
+    "market_return_20d",
+    "market_return_60d",
+    "market_relative_return_1d",
+    "market_relative_return_5d",
+    "market_relative_return_20d",
+    "market_relative_return_60d"
+  ],
+  "market_grouping": "equal_weight_mean_by_date_and_market",
+  "sector_features": "not_included_missing_dated_sector_source",
+  "training_period": ["2015-01-01", "2024-12-30"],
+  "validation_years": [2020, 2021, 2022, 2023, 2024],
+  "holdout": "2025",
+  "model_candidates": ["baseline", "logistic", "random_forest", "hist_gradient_boosting"],
+  "selection_policy": "worst-year balanced accuracy, baseline-beaten years, worst-year ROC-AUC, worst-year Brier, worst-year log loss",
+  "git_commit": "pending-v4-experiment-commit",
+  "model_snapshot": "79b2952e4b9b8654"
+}

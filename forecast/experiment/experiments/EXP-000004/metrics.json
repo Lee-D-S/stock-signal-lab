@@ -1,0 +1,82 @@
+{
+  "validation": {
+    "logistic": {
+      "2020": 0.5109055767,
+      "2021": 0.5176357771,
+      "2022": 0.5185126925,
+      "2023": 0.5127983278,
+      "2024": 0.5204028594,
+      "worst_year_balanced_accuracy": 0.5109055767,
+      "baseline_beaten_years": 5,
+      "rank": 1
+    },
+    "random_forest": {
+      "2020": 0.5141150610,
+      "2021": 0.5232060055,
+      "2022": 0.5186569829,
+      "2023": 0.5103330391,
+      "2024": 0.5138951977,
+      "worst_year_balanced_accuracy": 0.5103330391,
+      "baseline_beaten_years": 5,
+      "rank": 2
+    },
+    "hist_gradient_boosting": {
+      "2020": 0.5057552477,
+      "2021": 0.5309592290,
+      "2022": 0.5233499870,
+      "2023": 0.5141757481,
+      "2024": 0.5085553120,
+      "worst_year_balanced_accuracy": 0.5057552477,
+      "baseline_beaten_years": 5,
+      "rank": 3
+    },
+    "baseline": {
+      "2020": 0.5,
+      "2021": 0.5,
+      "2022": 0.5,
+      "2023": 0.5,
+      "2024": 0.5,
+      "worst_year_balanced_accuracy": 0.5,
+      "baseline_beaten_years": 0,
+      "rank": 4
+    }
+  },
+  "holdout_2025": {
+    "random_forest": {
+      "balanced_accuracy": 0.519979,
+      "roc_auc": 0.527188,
+      "brier": 0.250864,
+      "log_loss": 0.694962
+    },
+    "logistic": {
+      "balanced_accuracy": 0.518754,
+      "roc_auc": 0.549119,
+      "brier": 0.249241,
+      "log_loss": 0.691635
+    },
+    "ensemble": {
+      "balanced_accuracy": 0.514013,
+      "roc_auc": 0.532368,
+      "brier": 0.250042,
+      "log_loss": 0.693253
+    },
+    "hist_gradient_boosting": {
+      "balanced_accuracy": 0.511101,
+      "roc_auc": 0.516668,
+      "brier": 0.254881,
+      "log_loss": 0.703606
+    },
+    "baseline": {
+      "balanced_accuracy": 0.5,
+      "roc_auc": 0.5,
+      "brier": 0.250623,
+      "log_loss": 0.694397
+    }
+  },
+  "comparison": {
+    "exp_000002_worst_year_balanced_accuracy": 0.513560,
+    "exp_000004_worst_year_balanced_accuracy": 0.510906,
+    "exp_000002_random_forest_2025_balanced_accuracy": 0.524145,
+    "exp_000004_random_forest_2025_balanced_accuracy": 0.519979
+  }
+}
