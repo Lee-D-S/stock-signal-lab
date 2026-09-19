@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import unittest
 from datetime import date
@@ -14,7 +14,7 @@ from forecast.experiment.training_dataset import (
 
 class TrainingDatasetTests(unittest.TestCase):
     def setUp(self) -> None:
-        dates = pd.date_range("2014-01-01", periods=260, freq="B")
+        dates = pd.date_range("2014-01-01", periods=520, freq="B")
         self.raw = pd.DataFrame({
             "ticker": ["000001"] * len(dates),
             "name": ["A"] * len(dates),
@@ -55,6 +55,16 @@ class TrainingDatasetTests(unittest.TestCase):
         train = build_training_frame(features, labels)
         self.assertIn("return_252d", features.columns)
         self.assertIn("volume_ratio_20d", features.columns)
+        self.assertIn("gap_return", features.columns)
+        self.assertIn("open_close_return", features.columns)
+        self.assertIn("candle_body_pct", features.columns)
+        self.assertIn("upper_wick_pct", features.columns)
+        self.assertIn("lower_wick_pct", features.columns)
+        self.assertIn("close_position_20d", features.columns)
+        self.assertIn("close_position_60d", features.columns)
+        self.assertIn("distance_to_high_20d", features.columns)
+        self.assertIn("distance_from_low_20d", features.columns)
+        self.assertTrue(features["feature_schema_version"].eq("price-volume-v2").all())
         self.assertTrue((train["target_end"] > train["feature_asof"]).all())
         self.assertTrue(train["feature_ready"].all())
 
