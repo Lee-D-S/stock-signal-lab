@@ -3,13 +3,13 @@ from __future__ import annotations
 import math
 
 import pandas as pd
-from sklearn.metrics import average_precision_score, balanced_accuracy_score, brier_score_loss, mean_absolute_error, mean_squared_error, roc_auc_score
+from sklearn.metrics import average_precision_score, balanced_accuracy_score, brier_score_loss, log_loss, mean_absolute_error, mean_squared_error, roc_auc_score
 
 
 def classification_metrics(y_true: pd.Series, probability_up: pd.Series) -> dict[str, float | None]:
     frame = pd.DataFrame({"y": y_true, "p": probability_up}).dropna()
     if frame.empty:
-        return {"balanced_accuracy": None, "roc_auc": None, "pr_auc": None, "brier": None, "calibration_error": None}
+        return {"balanced_accuracy": None, "roc_auc": None, "pr_auc": None, "brier": None, "log_loss": None, "calibration_error": None}
     y = frame["y"].astype(int)
     probability = frame["p"].astype(float)
     predicted = (probability >= .5).astype(int)
@@ -22,6 +22,7 @@ def classification_metrics(y_true: pd.Series, probability_up: pd.Series) -> dict
         "roc_auc": float(roc_auc_score(y, probability)) if y.nunique() > 1 else None,
         "pr_auc": float(average_precision_score(y, probability)) if y.nunique() > 1 else None,
         "brier": float(brier_score_loss(y, probability)),
+        "log_loss": float(log_loss(y, probability, labels=[0, 1])),
         "calibration_error": float(calibration) if not math.isnan(float(calibration)) else None,
     }
 

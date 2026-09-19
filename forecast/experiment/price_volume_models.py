@@ -55,6 +55,18 @@ DEFAULT_CANDIDATES = (
 )
 
 
+SELECTION_POLICY = {
+    "primary_metric": "balanced_accuracy",
+    "primary_direction": "maximize",
+    "tie_breakers": [
+        {"metric": "balanced_accuracy_std", "direction": "minimize"},
+        {"metric": "roc_auc", "direction": "maximize"},
+        {"metric": "brier", "direction": "minimize"},
+        {"metric": "log_loss", "direction": "minimize"},
+    ],
+}
+
+
 def _year_folds(frame: pd.DataFrame, validation_years: tuple[int, ...]) -> list[tuple[int, pd.DataFrame, pd.DataFrame]]:
     feature_dates = pd.to_datetime(frame["feature_asof"], errors="raise").dt.normalize()
     target_dates = pd.to_datetime(frame["target_end"], errors="raise").dt.normalize()
@@ -148,14 +160,17 @@ def evaluate_candidates(
             "rows": int(metric_frame["test_rows"].sum()),
             "accuracy": float(metric_frame["accuracy"].mean()),
             "balanced_accuracy": float(metric_frame["balanced_accuracy"].mean()),
+            "balanced_accuracy_std": float(metric_frame["balanced_accuracy"].std(ddof=0)),
+            "balanced_accuracy_min": float(metric_frame["balanced_accuracy"].min()),
             "roc_auc": float(metric_frame["roc_auc"].dropna().mean()) if metric_frame["roc_auc"].notna().any() else None,
             "pr_auc": float(metric_frame["pr_auc"].dropna().mean()) if metric_frame["pr_auc"].notna().any() else None,
             "brier": float(metric_frame["brier"].mean()),
+            "log_loss": float(metric_frame["log_loss"].mean()),
             "calibration_error": float(metric_frame["calibration_error"].dropna().mean()) if metric_frame["calibration_error"].notna().any() else None,
         })
     evaluations = pd.DataFrame(rows).sort_values(
-        ["balanced_accuracy", "roc_auc", "brier"],
-        ascending=[False, False, True],
+        ["balanced_accuracy", "balanced_accuracy_std", "roc_auc", "brier", "log_loss"],
+        ascending=[False, True, False, True, True],
         na_position="last",
     ).reset_index(drop=True)
     evaluations["rank"] = evaluations.index + 1
@@ -293,8 +308,13 @@ def run_price_volume_experiment(
     predictions_path = output_dir / "predictions_2025_price_volume.parquet"
     predictions_csv_path = output_dir / "predictions_2025_price_volume.csv"
     summary_path = output_dir / "price_volume_model_experiment_2025.md"
-    evaluations_path.write_text(json.dumps({"summary": evaluations.to_dict(orient="records"), "folds": fold_details}, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
-    roster_path.write_text(json.dumps({"snapshot_id": snapshot, "feature_columns": feature_columns, "models": roster.to_dict(orient="records")}, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    evaluation_payload = {
+        "selection_policy": SELECTION_POLICY,
+        "summary": evaluations.to_dict(orient="records"),
+        "folds": fold_details,
+    }
+    evaluations_path.write_text(json.dumps(evaluation_payload, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    roster_path.write_text(json.dumps({"snapshot_id": snapshot, "selection_policy": SELECTION_POLICY, "feature_columns": feature_columns, "models": roster.to_dict(orient="records")}, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     write_parquet(predictions, predictions_path, artifact_type="experiment_2025_price_volume_predictions", schema_version="price-volume-predictions-1", as_of="2025-12-31", code_version="forecast-price-volume-models-1")
     predictions.to_csv(predictions_csv_path, index=False, encoding="utf-8-sig")
     summary.to_csv(output_dir / "price_volume_model_summary_2025.csv", index=False, encoding="utf-8-sig")
@@ -304,6 +324,7 @@ def run_price_volume_experiment(
         {
             "Method": (
                 "- candidates: majority baseline, Logistic Regression, Random Forest, HistGradientBoosting\n"
+                "- model selection: maximize mean balanced_accuracy; tie-break by lower fold standard deviation, higher ROC-AUC, lower Brier, then lower log loss\n"
                 f"- validation years: `{list(validation_years)}`\n"
                 f"- selected roster size: `{len(roster)}`\n"
                 "- training cutoff: 2024-12-31\n"
