@@ -13,7 +13,7 @@
 - feature schema: price-volume-v4
 - 피처 수: 58
 - 실행 결과 폴더: data/forecast_experiment/experiments/EXP-000004
-- Git commit: v4 실험 구현 커밋 반영 예정
+- Git commit: d7d4581b32a16053a4a24dd922be4a210fc3e165
 
 ## 변경 내용
 

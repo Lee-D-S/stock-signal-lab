@@ -65,20 +65,6 @@ def _add_ratio_features(result: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def _add_market_relative_features(result: pd.DataFrame) -> pd.DataFrame:
-    """Add same-day market and market-relative return features."""
-    required = {"market", "date", "daily_return"}
-    missing = required - set(result.columns)
-    if missing:
-        raise ValueError(f"Market-relative features require columns: {sorted(missing)}")
-    groups = result.groupby(["date", "market"], sort=False, dropna=False)
-    for window in (1, 5, 20, 60):
-        return_column = "daily_return" if window == 1 else f"return_{window}d"
-        market_return = groups[return_column].transform("mean")
-        result[f"market_return_{window}d"] = market_return
-        result[f"market_relative_return_{window}d"] = result[return_column] - market_return
-    return result
-
 def build_price_volume_features(
     raw_prices: pd.DataFrame,
     *,
@@ -90,9 +76,9 @@ def build_price_volume_features(
     raw = _normalise_price_frame(raw_prices)
     result = add_price_volume_features(raw, windows=PRICE_WINDOWS)
     result = _add_ratio_features(result)
-    result = _add_market_relative_features(result)
+
     result["feature_asof"] = result["date"]
-    result["feature_schema_version"] = "price-volume-v4"
+    result["feature_schema_version"] = "price-volume-v2"
 
     excluded = {
         "ticker", "name", "market", "date", "feature_asof", "price_basis", "price_source",
@@ -199,9 +185,9 @@ def write_training_dataset_artifacts(
     train_csv_path = output_dir / "train_price_volume_1d_2015_2024.csv"
     summary_path = output_dir / "training_dataset_2015_2024.md"
 
-    write_parquet(features, features_path, artifact_type="experiment_price_volume_features", schema_version="price-volume-features-4", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-4")
-    write_parquet(labels, labels_path, artifact_type="experiment_1d_labels", schema_version="direction-1d-labels-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-4")
-    write_parquet(train, train_path, artifact_type="experiment_training_dataset", schema_version="price-volume-direction-1d-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-4")
+    write_parquet(features, features_path, artifact_type="experiment_price_volume_features", schema_version="price-volume-features-2", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
+    write_parquet(labels, labels_path, artifact_type="experiment_1d_labels", schema_version="direction-1d-labels-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
+    write_parquet(train, train_path, artifact_type="experiment_training_dataset", schema_version="price-volume-direction-1d-1", as_of=feature_end.isoformat(), code_version="forecast-training-dataset-2")
     train.to_csv(train_csv_path, index=False, encoding="utf-8-sig")
 
     feature_columns = _model_feature_columns(features)
@@ -262,7 +248,7 @@ def main() -> int:
     feature_start = date.fromisoformat(args.feature_start)
     feature_end = date.fromisoformat(args.feature_end)
     raw = pd.read_parquet(args.raw)
-    snapshot = snapshot_id("price-volume-direction-1d-v4", args.raw, feature_start, feature_end, len(raw))
+    snapshot = snapshot_id("price-volume-direction-1d-v2", args.raw, feature_start, feature_end, len(raw))
     features = build_price_volume_features(raw, feature_start=feature_start, feature_end=feature_end, snapshot=snapshot)
     labels = build_one_day_labels(raw, feature_start=feature_start, target_cutoff=feature_end, snapshot=snapshot)
     train = build_training_frame(features, labels)
