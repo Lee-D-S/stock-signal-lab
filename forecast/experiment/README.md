@@ -25,7 +25,8 @@ The first fixed-universe benchmark uses the 50-company 2024-12-31 roster, 50 pri
 
     rtk python -m forecast.experiment.price_volume_models --output-dir data/forecast_experiment
 
-The detailed contract is documented in forecast/experiment/PRICE_VOLUME_MODELS.md; generated evaluation and prediction artifacts are written under data/forecast_experiment/.
+The detailed contract is documented in forecast/experiment/PRICE_VOLUME_MODELS.md; generated evaluation and prediction artifacts are written under data/forecast_experiment/.
+The canonical experiment history is maintained in forecast/experiment/EXPERIMENT_LOG.md; register every completed or rejected experiment there with its snapshot, feature schema, model policy, results, conclusion, and Git commit.
 Model selection keeps each validation year separate: rank by worst-year balanced accuracy, then the number of years beating the majority baseline, worst-year ROC-AUC, worst-year Brier score, and worst-year log loss; the 2025 output is held out for final reporting.
 The daily runner treats the requested `feature_asof` as the information cutoff. Current-year labels remain `pending` until the year is explicitly included in `complete_years`.
 
